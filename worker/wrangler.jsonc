@@ -28,7 +28,7 @@
 	"vars": {
 		"ALLOWED_ORIGIN": "https://mistwe-chefe.github.io",
 		"VAPID_SUBJECT": "https://mistwe-chefe.github.io/mistwe-mobile/",
-		"VAPID_PUBLIC_KEY": "BPRQymviJfNQiKmBbEskm9YJsBgGucCjkpGyeKSQE3oWNeYegFbIOQGS6DXugmoOMgD7p1xyYFg3RaabBYkYC7s"
+		"VAPID_PUBLIC_KEY": "BAJgkQSNoNVNHLPKTmp6HNzi0hUCvcUS1voAi_HZOiFZrvvuYargcq_VAE1ZqnxTLl2A7fGmDHkEMPvabMXy2y8"
 	},
 	"observability": {
 		"enabled": true
