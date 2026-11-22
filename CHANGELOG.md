@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.2 – 2026-11-22
+
+Fehlerbehebung Push auf dem iPhone.
+
+- Kern: Berechtigung für Mitteilungen wird über die Push-API geprüft. iOS meldet in Home-Screen-Apps nach dem Antippen einer Benachrichtigung fälschlich „nicht gefragt“; die App fragt deshalb nicht mehr erneut.
+- Kern: Ein vorhandenes Push-Abo wird beim Start und beim Zurückkehren in die App erkannt und dem Server gemeldet (alle 6 Stunden aufgefrischt).
+- Worker 1.1.0: speichert die Antwort des Push-Dienstes (z. B. Apple) je Abo und den Zeitpunkt des letzten Cron-Laufs. Neue Route `GET /v1/status`, Test-Push liefert das Ergebnis je Gerät. Optionales Secret `VAPID_CONTACT` (z. B. `mailto:…`) ersetzt `VAPID_SUBJECT`.
+- Modul `einstellungen`: „Push-Diagnose“ unter *Push & Sync*.
+- Neue D1-Migration `worker/migrations/0002_push_status.sql`. **Worker zuerst deployen** (inkl. Migration), dann gilt die neue App.
+
 ## 1.1.1 – 2026-11-22
 
 - Neue Stufe „1 Minute (Test)“ (ID `1m`) zum Ausprobieren von Erinnerungen und Push. Ruhezeiten gelten auch hier.

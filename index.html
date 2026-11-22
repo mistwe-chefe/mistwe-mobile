@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.1.1">
+  <meta name="app-version" content="1.1.2">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
@@ -204,7 +204,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.1.1',
+    APP_VERSION: '1.1.2',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -220,6 +220,11 @@
   };
 
   const CHANGELOG = [
+    { version: '1.1.2', date: '2026-11-22', items: [
+      'Kern: Berechtigung für Mitteilungen wird zuverlässig erkannt (Umgehung eines iOS-Fehlers, der nach dem Antippen einer Benachrichtigung „nicht gefragt“ meldet) – keine wiederholten Nachfragen mehr',
+      'Kern: Ein vorhandenes Push-Abo wird beim Start erkannt und beim Server erneuert, statt erneut aktiviert werden zu müssen',
+      'Modul einstellungen: Push-Diagnose (Server-Takt, letzter Versand an dieses Gerät mit Antwort des Push-Dienstes), Test-Push zeigt das Ergebnis je Gerät',
+    ] },
     { version: '1.1.1', date: '2026-11-22', items: [
       'Kern: neue Stufe „1 Minute (Test)“ zum Ausprobieren von Erinnerungen und Push',
     ] },
@@ -1400,9 +1405,30 @@
     reg: null,
     audio: null,
     supported: () => 'Notification' in window,
-    permission() { return this.supported() ? Notification.permission : 'unsupported'; },
+    pushGranted: false,  // iOS-Workaround: Push-Berechtigung/Abo zählt als „erlaubt“
+    permission() {
+      if (!this.supported()) return 'unsupported';
+      const p = Notification.permission;
+      // iOS-Home-Screen-Apps melden nach einem Fenster-Öffnen aus einer Benachrichtigung fälschlich „default“
+      return p === 'default' && this.pushGranted ? 'granted' : p;
+    },
+    /** Tatsächlichen Zustand über die Push-API prüfen (zuverlässiger als Notification.permission auf iOS) */
+    async refreshPermission() {
+      const before = this.permission();
+      try {
+        const reg = this.reg || (navigator.serviceWorker && await Promise.race([navigator.serviceWorker.getRegistration(), new Promise(r => setTimeout(r, 3000))]));
+        if (reg && reg.pushManager) {
+          const st = reg.pushManager.permissionState ? await reg.pushManager.permissionState({ userVisibleOnly: true }).catch(() => null) : null;
+          const sub = await reg.pushManager.getSubscription().catch(() => null);
+          this.pushGranted = st === 'granted' || !!sub;
+        }
+      } catch (_) {}
+      if (this.permission() !== before) Events.emit('notify:permission', this.permission());
+      return this.permission();
+    },
     async request() {
       if (!this.supported()) return 'unsupported';
+      if (this.permission() === 'granted') return 'granted'; // nie erneut fragen, wenn schon erlaubt
       try { const p = await Notification.requestPermission(); Events.emit('notify:permission', p); return p; } catch (_) { return Notification.permission; }
     },
     unlockAudio() {
@@ -1655,12 +1681,22 @@
     /** Beim Start: Abo prüfen und einmal täglich beim Server auffrischen */
     async refresh() {
       const st = await Store.metaGet('push', {});
-      this.subscribedHere = !!st.subscribed && Notify.permission() === 'granted';
-      if (!st.subscribed || !Sync.enabled() || !this.supported()) return;
-      const sub = await this.current();
-      if (!sub) { this.subscribedHere = false; await Store.metaSet('push', { subscribed: false }); Events.emit('push:changed', {}); return; }
-      if (sub.endpoint !== st.endpoint || Date.now() - (st.at || 0) > 86400000) {
-        try { await Api.req('PUT', '/v1/subscription', sub.toJSON()); await Store.metaSet('push', { ...st, endpoint: sub.endpoint, at: Date.now() }); }
+      if (!Sync.enabled() || !this.supported()) { this.subscribedHere = false; return; }
+      const reg = await this.reg();
+      if (!reg || !reg.pushManager) return;              // Service Worker (noch) nicht bereit: Zustand nicht verändern
+      const sub = await reg.pushManager.getSubscription().catch(() => null);
+      const was = this.subscribedHere;
+      if (!sub) {
+        this.subscribedHere = false;
+        if (st.subscribed) { await Store.metaSet('push', { subscribed: false }); Log.warn('Push-Abo wurde vom Browser entfernt – bitte erneut aktivieren'); }
+        if (was) Events.emit('push:changed', {});
+        return;
+      }
+      // Vorhandenes Abo gilt immer als aktiv (unabhängig von Notification.permission, siehe iOS-Fehler)
+      this.subscribedHere = true; Notify.pushGranted = true;
+      if (!was) Events.emit('push:changed', {});
+      if (!st.subscribed || sub.endpoint !== st.endpoint || Date.now() - (st.at || 0) > 6 * 3600000) {
+        try { await Api.req('PUT', '/v1/subscription', sub.toJSON()); await Store.metaSet('push', { ...st, subscribed: true, endpoint: sub.endpoint, at: Date.now() }); }
         catch (e) { Log.warn('Push-Abo auffrischen: ' + e.message); }
       }
     },
@@ -1760,7 +1796,8 @@
       await Log.load();
       await Settings.load();
       await Sync.load();
-      Push.subscribedHere = !!(await Store.metaGet('push', {})).subscribed && Notify.permission() === 'granted';
+      Push.subscribedHere = !!(await Store.metaGet('push', {})).subscribed;
+      Notify.pushGranted = Push.subscribedHere;
       Tabs.start();
       await VersionGuard.check();
       await Migrator.runAll();
@@ -1769,7 +1806,8 @@
       VersionGuard.start();
       SWReg.register();
       await Sync.start();
-      Push.refresh().catch(e => Log.warn('Push: ' + e.message));
+      Notify.refreshPermission().then(() => Push.refresh()).catch(e => Log.warn('Push: ' + e.message));
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') Notify.refreshPermission().then(() => Push.refresh()).catch(() => {}); });
       Outbox.process();
       for (const def of Registry.list()) if (typeof def.background === 'function') Registry.call(def.id, 'background').catch(() => {});
       Reminders.start();
@@ -1955,7 +1993,30 @@
           b.push = h('button', { class: 'btn' + (P.subscribedHere ? '' : ' btn-primary') }, P.subscribedHere ? 'Push hier deaktivieren' : '🔔 Push auf diesem Gerät aktivieren');
           b.push.onclick = busy(b.push, async () => { if (P.subscribedHere) { await P.disable(); toast('Push auf diesem Gerät deaktiviert'); } else { await P.enable(); toast('Push aktiviert – jetzt Test-Push probieren'); } });
           b.test = h('button', { class: 'btn' }, 'Test-Push');
-          b.test.onclick = busy(b.test, async () => { const r = await P.test(); toast(r.total ? `Test-Push an ${r.sent} von ${r.total} Geräten gesendet` : 'Kein Gerät hat Push aktiviert'); });
+          b.test.onclick = busy(b.test, async () => {
+            const r = await P.test();
+            if (!r.total) { toast('Kein Gerät hat Push aktiviert'); return; }
+            const bad = (r.results || []).filter(x => !x.ok);
+            toast(bad.length ? `Test-Push: ${r.sent} von ${r.total} angenommen. Abgelehnt: ${bad.map(x => `${x.host} → ${x.status} ${x.reason}`).join('; ')}` : `Test-Push an ${r.sent} von ${r.total} Geräten gesendet`, { type: bad.length ? 'error' : undefined, timeout: bad.length ? 15000 : 4000 });
+          });
+          const diagBox = h('div', { class: 'small' });
+          const loadDiag = async () => {
+            try {
+              const d = await S.Api.req('GET', '/v1/status');
+              const cronAge = d.cronAt ? (d.now - d.cronAt) / 1000 : null;
+              const rows = [
+                h('dt', {}, 'Server-Takt'), h('dd', {}, cronAge == null ? '⚠️ Cron ist noch nie gelaufen (Cron-Trigger im Worker prüfen)' : cronAge < 150 ? `✅ läuft (zuletzt vor ${Math.round(cronAge)} s)` : `⚠️ zuletzt vor ${U.formatDuration(cronAge / 60)} – Cron-Trigger prüfen`),
+                h('dt', {}, 'Absender'), h('dd', {}, d.vapidSubject === 'ungültig' ? '⚠️ VAPID_SUBJECT fehlt/ungültig' : d.vapidSubject),
+              ];
+              if (!d.subscriptions.length) rows.push(h('dt', {}, 'Abo'), h('dd', {}, P.subscribedHere ? '⚠️ Server kennt kein Abo dieses Geräts – „Push hier deaktivieren“ und neu aktivieren' : 'keins'));
+              d.subscriptions.forEach(s => rows.push(h('dt', {}, 'Letzter Push'), h('dd', {}, s.lastAt
+                ? `${U.relTime(s.lastAt)} an ${s.host}: ${s.lastStatus >= 200 && s.lastStatus < 300 ? '✅ angenommen (' + s.lastStatus + ')' : '❌ ' + s.lastStatus + ' ' + (s.lastReason || '')}${s.failCount ? ` · ${s.failCount} Fehler in Folge` : ''}`
+                : `noch keiner an ${s.host}`)));
+              if (d.migrationMissing) rows.push(h('dt', {}, 'Hinweis'), h('dd', {}, '⚠️ D1-Migration 0002 fehlt: npx wrangler d1 migrations apply pa-db --remote'));
+              diagBox.replaceChildren(h('dl', { class: 'kv', style: { marginTop: '8px' } }, rows));
+            } catch (err) { diagBox.replaceChildren(h('span', { class: 'muted' }, err.status === 404 ? 'Diagnose braucht Worker-Version 1.1 (Worker neu deployen).' : 'Diagnose nicht verfügbar: ' + err.message)); }
+          };
+          loadDiag();
           b.dev = h('button', { class: 'btn btn-sm' }, 'Geräte anzeigen');
           b.dev.onclick = async () => {
             try {
@@ -2008,6 +2069,7 @@
             h('div', { class: 'row', style: { marginTop: '12px' } }, b.sync, P.supported() ? b.push : null, b.test),
             !P.supported() && U.isIOS() ? h('p', { class: 'small muted' }, '📱 ' + P.unsupportedReason()) : null,
             h('p', { class: 'small muted' }, 'Erinnerungen löst jetzt der Server aus – auch wenn alle Geräte die App geschlossen haben. Die Ruhezeiten unten gelten auch dort. Inhalte (Titel, Notizen) sind Ende-zu-Ende-verschlüsselt.'),
+            h('details', { class: 'fold' }, h('summary', {}, 'Push-Diagnose'), diagBox, h('button', { class: 'btn btn-sm', style: { marginTop: '8px' }, onclick: loadDiag }, 'Aktualisieren')),
             h('details', { class: 'fold' }, h('summary', {}, 'Geräte & Konto'),
               h('div', { class: 'row' }, b.dev, b.pw, b.off), devBox)));
         };

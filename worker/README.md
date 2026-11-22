@@ -50,6 +50,18 @@ npx wrangler login
 - Neue D1-Migration = neue Datei `migrations/0002_….sql`. Bestehende Migrationen nie ändern.
 - Die Eskalationsregel steht in `src/schedule.js` **und** in `index.html` (Kern: Schedule). Änderungen immer an beiden Stellen, dann `npm test`.
 
+## Fehlersuche Push
+
+In der App: *Einstellungen → Push & Sync → Push-Diagnose* und *Test-Push*.
+
+| Anzeige | Bedeutung / Abhilfe |
+|---|---|
+| Server-Takt ⚠️ | Der Cron läuft nicht. Im Cloudflare-Dashboard beim Worker unter *Settings → Triggers* prüfen, ob `* * * * *` eingetragen ist. |
+| ❌ 403 BadJwtToken | Apple lehnt den Absender ab. Secret setzen: `npx wrangler secret put VAPID_CONTACT` mit Wert `mailto:deine@adresse` (ohne Leerzeichen/Klammern). Bleibt es bei 403, prüfen, ob `VAPID_PUBLIC_KEY` und das Secret `VAPID_PRIVATE_KEY` zusammengehören. |
+| ❌ 410 / 404 | Abo ungültig. In der App „Push hier deaktivieren“ und wieder aktivieren. |
+| ✅ 201, aber nichts erscheint | iPhone: Fokus/„Nicht stören“ aus? *Einstellungen → Mitteilungen → (App)* erlaubt? |
+| Diagnose: Migration 0002 fehlt | `npx wrangler d1 migrations apply pa-db --remote` ausführen. |
+
 ## Tests
 
 ```bash

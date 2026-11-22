@@ -117,6 +117,9 @@ export async function sendPush(sub, payload, vapid, { ttl = 3600, urgency = 'hig
   if (topic) headers.Topic = topic;
   let res;
   try { res = await fetch(sub.endpoint, { method: 'POST', headers, body }); }
-  catch (e) { return { ok: false, status: 0, gone: false, error: e.message }; }
-  return { ok: res.status >= 200 && res.status < 300, status: res.status, gone: res.status === 404 || res.status === 410 };
+  catch (e) { return { ok: false, status: 0, gone: false, reason: 'Netzwerk: ' + e.message }; }
+  const ok = res.status >= 200 && res.status < 300;
+  let reason = '';
+  if (!ok) { try { const t = await res.text(); try { reason = JSON.parse(t).reason || t; } catch (_) { reason = t; } } catch (_) {} }
+  return { ok, status: res.status, gone: res.status === 404 || res.status === 410, reason: String(reason || '').slice(0, 200) };
 }

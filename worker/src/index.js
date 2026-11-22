@@ -7,7 +7,7 @@ import { pull, push, ack, putSettings, putSubscription, deleteSubscription } fro
 import { nextAt, quietDefer } from './schedule.js';
 import { sendPush } from './webpush.js';
 
-const WORKER_VERSION = '1.0.0';
+const WORKER_VERSION = '1.1.0';
 
 /* ---------- HTTP ---------- */
 function allowedOrigin(request, env) {
@@ -55,29 +55,50 @@ async function route(request, env) {
   if (M === 'PUT' && p === '/v1/settings') return putSettings(request, env);
   if (M === 'POST' && p === '/v1/test-push') return testPush(env, dev);
   if (M === 'POST' && p === '/v1/account/rekey') return rekey(request, env, dev);
+  if (M === 'GET' && p === '/v1/status') return status(env, dev);
   throw new HttpError(404, 'Unbekannte Route', 'not_found');
 }
 
 /* ---------- Push-Versand ---------- */
 function vapid(env) {
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) throw new HttpError(500, 'VAPID-Schlüssel fehlen im Worker', 'misconfigured');
-  return { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_SUBJECT || 'mailto:admin@example.invalid' };
+  // VAPID_CONTACT (Secret, z. B. mailto:…) hat Vorrang – so steht keine E-Mail-Adresse im Repo
+  return { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_CONTACT || env.VAPID_SUBJECT || 'mailto:admin@example.invalid' };
 }
 
 async function sendToAll(env, payload, { where = '', bind = [] } = {}) {
   const { results: subs } = await env.DB.prepare(`SELECT * FROM subscriptions ${where}`).bind(...bind).all();
   const v = vapid(env);
   const out = await Promise.all(subs.map(async s => ({ s, r: await sendPush(s, payload, v, { topic: 'pa-reminders' }) })));
-  const stmts = [];
+  const stmts = [], diag = [];
+  const now = Date.now();
   let sent = 0;
   for (const { s, r } of out) {
+    diag.push(env.DB.prepare('UPDATE subscriptions SET last_status = ?, last_reason = ?, last_at = ? WHERE endpoint = ?').bind(r.status, r.reason || null, now, s.endpoint));
     if (r.ok) { sent++; if (s.fail_count) stmts.push(env.DB.prepare('UPDATE subscriptions SET fail_count = 0 WHERE endpoint = ?').bind(s.endpoint)); }
     else if (r.gone || s.fail_count + 1 >= 20) stmts.push(env.DB.prepare('DELETE FROM subscriptions WHERE endpoint = ?').bind(s.endpoint));
     else stmts.push(env.DB.prepare('UPDATE subscriptions SET fail_count = fail_count + 1 WHERE endpoint = ?').bind(s.endpoint));
-    if (!r.ok) console.warn(`Push an ${new URL(s.endpoint).host} fehlgeschlagen: ${r.status} ${r.error || ''}`);
+    if (!r.ok) console.warn(`Push an ${new URL(s.endpoint).host} fehlgeschlagen: ${r.status} ${r.reason || ''}`);
   }
   if (stmts.length) await env.DB.batch(stmts);
-  return { sent, total: subs.length };
+  // Diagnose getrennt schreiben: fehlt Migration 0002, darf das den Versand nicht stören
+  if (diag.length) await env.DB.batch(diag).catch(e => console.warn('Diagnose nicht gespeichert (Migration 0002 angewendet?): ' + e.message));
+  const results = out.map(({ s, r }) => ({ host: new URL(s.endpoint).host, device: s.device_id, status: r.status, ok: r.ok, reason: r.reason || '' }));
+  return { sent, total: subs.length, results };
+}
+
+/** GET /v1/status – Diagnose: Cron-Takt und letzter Versand an dieses Gerät */
+async function status(env, dev) {
+  const c = await env.DB.prepare("SELECT value FROM counters WHERE name = 'cron_at'").first();
+  let results, migrationMissing = false;
+  try { ({ results } = await env.DB.prepare('SELECT endpoint, created_at, fail_count, last_status, last_reason, last_at FROM subscriptions WHERE device_id = ?').bind(dev.id).all()); }
+  catch (_) { migrationMissing = true; ({ results } = await env.DB.prepare('SELECT endpoint, created_at, fail_count FROM subscriptions WHERE device_id = ?').bind(dev.id).all()); }
+  const subject = String(env.VAPID_CONTACT || env.VAPID_SUBJECT || '');
+  return {
+    workerVersion: WORKER_VERSION, now: Date.now(), cronAt: c && c.value ? c.value : null, migrationMissing,
+    vapidSubject: subject.startsWith('mailto:') ? 'mailto' : subject.startsWith('https:') ? 'https' : 'ungültig',
+    subscriptions: results.map(s => ({ host: new URL(s.endpoint).host, endpointTail: s.endpoint.slice(-8), createdAt: s.created_at, failCount: s.fail_count, lastStatus: s.last_status, lastReason: s.last_reason, lastAt: s.last_at })),
+  };
 }
 
 async function testPush(env, dev) {
@@ -97,6 +118,7 @@ function buildPayload(list) {
 
 /* ---------- Cron (jede Minute) ---------- */
 async function runCron(env, now = Date.now()) {
+  await env.DB.prepare("UPDATE counters SET value = ? WHERE name = 'cron_at'").bind(now).run().catch(() => {});
   const acc = await env.DB.prepare('SELECT * FROM account WHERE id = 1').first();
   if (!acc) return { due: 0, sent: 0 };
   const { results: due } = await env.DB.prepare(
