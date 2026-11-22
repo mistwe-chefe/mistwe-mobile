@@ -1,5 +1,12 @@
 # Changelog
 
+## Symbol – 2026-11-22
+
+- Neues App-Symbol: Taschenmesser (roter Griff mit weißem Kreuz) in allen Größen. App-Version bleibt 1.3.0, Daten unverändert.
+- iPhone: Das Symbol auf dem Home-Bildschirm ändert sich erst, wenn die App neu hinzugefügt wird.
+
+Geänderte Dateien: `icons/icon-192.png`, `icons/icon-512.png`, `icons/icon-maskable-512.png`, `icons/apple-touch-icon.png`.
+
 ## 1.3.0 – 2026-11-22
 
 - Kern: schlichte Linien-Symbole (SVG, `currentColor`) statt Emojis – Navigation, Einstellungen, ToDo-Liste, Hinweise, Toasts. Benachrichtigungen ohne Emojis.
