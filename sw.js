@@ -2,7 +2,7 @@
  * Bewusst klein und ohne Fachlogik. Kennt keine Module.
  * Liest nur `meta`, schreibt nur `outbox` (Architektur 4.2).
  */
-const SW_VERSION = '1.0.0';
+const SW_VERSION = '1.1.0';
 const CACHE = 'pa-shell-' + SW_VERSION;
 const DB_NAME = 'persoenliche-app';
 const DB_VERSION = 1;
@@ -87,6 +87,16 @@ function openDB() {
   });
 }
 
+async function metaGet(k) {
+  const db = await openDB();
+  try {
+    return await new Promise((res, rej) => {
+      const r = db.transaction('meta', 'readonly').objectStore('meta').get(k);
+      r.onsuccess = () => res(r.result ? r.result.v : null); r.onerror = () => rej(r.error);
+    });
+  } finally { db.close(); }
+}
+
 async function outboxAdd(entry) {
   const db = await openDB();
   await new Promise((res, rej) => {
@@ -95,6 +105,50 @@ async function outboxAdd(entry) {
     t.oncomplete = res; t.onerror = () => rej(t.error);
   });
   db.close();
+}
+
+/* ---------- Entschlüsselung (identisch zu Crypto in index.html) ---------- */
+function unb64u(str) {
+  const s = String(str).replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(s + '='.repeat((4 - (s.length % 4)) % 4));
+  return Uint8Array.from(bin, c => c.charCodeAt(0));
+}
+async function decryptTitle(key, enc, m, id) {
+  if (!key || !enc) return null;
+  try {
+    const b = unb64u(enc);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.subarray(0, 12), additionalData: new TextEncoder().encode(`${m}/__reminders/${id}/title`) }, key, b.subarray(12));
+    return JSON.parse(new TextDecoder().decode(pt));
+  } catch (_) { return null; }
+}
+function duration(min) {
+  min = Math.max(0, Math.round(min));
+  if (min < 60) return `${Math.max(min, 1)} Min`;
+  if (min < 1440) return `${Math.round(min / 60)} Std`;
+  const d = Math.round(min / 1440); return `${d} ${d === 1 ? 'Tag' : 'Tage'}`;
+}
+function describe(it, now) {
+  if (it.dl) {
+    if (it.at || Math.abs(now - it.dl) < 60000) return '⏰ Jetzt fällig!';
+    if (now > it.dl) return `🔴 Überfällig seit ${duration((now - it.dl) / 60000)}`;
+    return `Abgabe in ${duration((it.dl - now) / 60000)}`;
+  }
+  return `${it.n || 1}. Erinnerung`;
+}
+
+/* ---------- Server (Push-Dienst) ---------- */
+async function apiCall(method, path, body) {
+  const sync = await metaGet('sync');
+  if (!sync || !sync.enabled || !sync.token || !sync.api) return null;
+  const res = await fetch(String(sync.api).replace(/\/+$/, '') + path, {
+    method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sync.token }, body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json().catch(() => ({}));
+}
+async function notifyClients(msg) {
+  const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  all.forEach(c => c.postMessage(msg));
 }
 
 /* ---------- Benachrichtigungen ---------- */
@@ -115,10 +169,12 @@ self.addEventListener('notificationclick', event => {
   n.close();
   event.waitUntil((async () => {
     if ((event.action === 'done' || event.action === 'snooze') && data.m && data.id) {
+      // 1. lokal vormerken (die App aktualisiert beim nächsten Öffnen das Modul), 2. direkt an den Server melden
       await outboxAdd({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, kind: 'action', module: data.m, itemId: data.id, action: event.action, tries: 0, createdAt: Date.now() });
-      const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      all.forEach(c => c.postMessage({ type: 'outbox' }));
-      // Ab Version 1.1 zusätzlich: POST /v1/reminders/{m}/{id}/ack an den Worker.
+      try {
+        await apiCall('POST', `/v1/reminders/${encodeURIComponent(data.m)}/${encodeURIComponent(data.id)}/ack`, event.action === 'done' ? { action: 'done' } : { action: 'snooze', snoozeMin: 60 });
+      } catch (_) { /* offline: die App meldet die Änderung später über den normalen Sync */ }
+      await notifyClients({ type: 'outbox' });
       return;
     }
     const hash = data.m ? (data.id ? `#/${data.m}/${data.id}` : `#/${data.m}`) : '#/';
@@ -126,18 +182,50 @@ self.addEventListener('notificationclick', event => {
   })());
 });
 
-/* ---------- Push (Empfang vorbereitet, Versand folgt mit dem Worker in 1.1) ---------- */
+/* ---------- Push vom Push-Dienst (Architektur 8.4) ---------- */
+async function handlePush(p) {
+  const now = Date.now();
+  const opts = { icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' };
+  if (p.type === 'test') {
+    return self.registration.showNotification('🔔 Test-Push', { ...opts, body: 'Push funktioniert' + (p.from ? ` (ausgelöst von ${p.from})` : '') + '.', tag: 'pa-test' });
+  }
+  const items = Array.isArray(p.items) ? p.items : [];
+  const total = items.length + (p.more || 0);
+  let key = null;
+  try { key = await metaGet('cryptoKey'); } catch (_) {}
+  const titled = await Promise.all(items.map(async it => ({ ...it, title: await decryptTitle(key, it.t, it.m, it.id) })));
+  notifyClients({ type: 'sync' }).catch(() => {});
+  if (!total) return self.registration.showNotification('🔔 Erinnerung', { ...opts, body: 'Öffne die App für Details.', tag: 'pa-push' });
+  if (total <= 3) {
+    // Jeder Push MUSS eine Benachrichtigung zeigen (Safari entzieht sonst das Abo).
+    await Promise.all(titled.map(it => self.registration.showNotification('🔔 ' + (it.title || 'ToDo fällig'), {
+      ...opts, body: describe(it, now), tag: `${it.m}-${it.id}`, renotify: true,
+      data: { m: it.m, id: it.id },
+      actions: [{ action: 'done', title: '✓ Erledigt' }, { action: 'snooze', title: '⏰ 1 Std später' }],
+    })));
+    return;
+  }
+  const names = titled.slice(0, 6).map(it => '• ' + (it.title || 'ToDo')).join('\n');
+  return self.registration.showNotification(`🔔 ${total} Erinnerungen fällig`, {
+    ...opts, body: names + (total > 6 ? `\n… und ${total - 6} weitere` : ''), tag: 'pa-summary', renotify: true,
+    data: { m: titled[0] ? titled[0].m : undefined },
+  });
+}
+
 self.addEventListener('push', event => {
   let p = {};
   try { p = event.data ? event.data.json() : {}; } catch (_) {}
-  // Jeder Push MUSS eine Benachrichtigung zeigen (Safari entzieht sonst das Abo).
-  const title = p.type === 'test' ? '🔔 Test-Push' : '✅ ToDo fällig';
-  const body = p.type === 'test' ? 'Push funktioniert.' : (p.items && p.items.length > 1 ? `${p.items.length} Erinnerungen fällig` : 'Öffne die App für Details.');
-  const first = p.items && p.items[0];
-  event.waitUntil(self.registration.showNotification(title, {
-    body, tag: first ? `${first.m}-${first.id}` : 'pa-push', renotify: true,
-    icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
-    data: first ? { m: first.m, id: first.id } : {},
-    actions: first ? [{ action: 'done', title: '✓ Erledigt' }, { action: 'snooze', title: '⏰ 1 Std später' }] : [],
-  }));
+  event.waitUntil(handlePush(p).catch(() => self.registration.showNotification('🔔 Erinnerung', { body: 'Öffne die App für Details.', tag: 'pa-push', icon: 'icons/icon-192.png' })));
+});
+
+/* Browser hat das Abo erneuert → beim Server aktualisieren */
+self.addEventListener('pushsubscriptionchange', event => {
+  event.waitUntil((async () => {
+    try {
+      const push = await metaGet('push');
+      let sub = event.newSubscription;
+      if (!sub && push && push.vapid) sub = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: unb64u(push.vapid) });
+      if (sub) await apiCall('PUT', '/v1/subscription', sub.toJSON());
+    } catch (_) { /* die App frischt das Abo beim nächsten Start auf */ }
+  })());
 });

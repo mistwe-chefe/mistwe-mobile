@@ -1,0 +1,16 @@
+{
+  "name": "pa-push",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Push- und Sync-Dienst der Persönlichen App (Cloudflare Worker)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler d1 migrations apply pa-db --remote && wrangler deploy",
+    "vapid": "node scripts/vapid-keys.mjs",
+    "test": "node test/schedule.test.mjs && node test/webpush.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

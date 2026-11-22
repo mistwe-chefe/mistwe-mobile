@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.0 – 2026-11-22
+
+Push bei geschlossener App und Sync zwischen Geräten.
+
+- Neu: Push- und Sync-Dienst als Cloudflare Worker im Ordner `worker/` (Cron jede Minute, Web Push mit VAPID, D1-Datenbank). Einrichtung: `worker/README.md`.
+- Kern: Crypto (PBKDF2/HKDF, AES-GCM), Api, Sync mit Outbox und Konfliktlösung, Push-Abo je Gerät. Inhalte sind Ende-zu-Ende-verschlüsselt, der Server sieht nur Zeitpunkte und Status.
+- Kern: Mit erreichbarem Push-Dienst löst der Server Erinnerungen aus. Ist er länger als 15 Minuten nicht erreichbar, erinnert die App wieder lokal.
+- Kern: Ruhezeiten gelten auch auf dem Server. Importierte Daten werden nach dem Neustart hochgeladen.
+- `sw.js` (SW_VERSION 1.1.0): entschlüsselt Titel in Push-Benachrichtigungen, „Erledigt“/„1 Std später“ gehen direkt an den Server, Abo-Erneuerung.
+- Modul `einstellungen`: Bereich „Push & Sync“ (Einrichten, Verbinden, Push aktivieren, Test-Push, Geräte, Sync-Passwort ändern, Gerät abmelden).
+- Modul `start`: Hinweise zur Einrichtung von Push.
+- CSP: `connect-src` erlaubt `https://*.workers.dev`. Bei eigener Domain für den Worker die CSP anpassen.
+
+Geänderte Dateien: `index.html`, `sw.js`, neu `worker/**`. Daten aus 1.0 bleiben unverändert (keine Schema-Änderung).
+
 ## 1.0.0 – 2026-11-22
 
 Erste Version. Lokal zuerst: alle Daten liegen im Browser (IndexedDB), kein Server nötig.

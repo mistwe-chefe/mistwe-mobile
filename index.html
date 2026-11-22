@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.0.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
+  <meta name="app-version" content="1.1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -204,11 +204,13 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.0.0',
+    APP_VERSION: '1.1.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
-    PUSH_API: '',                  // ab 1.1: https://pa-push.<konto>.workers.dev (öffentlich, kein Geheimnis)
+    PUSH_API: '',                  // Standard-Adresse des Push-Dienstes, z. B. https://pa-push.<konto>.workers.dev (öffentlich, kein Geheimnis). In den Einstellungen überschreibbar.
+    KDF_ITER: 600000,              // PBKDF2-Iterationen für neue Sync-Passwörter
+    SYNC_INTERVAL_MS: 60000,       // Abgleich bei geöffneter App
     RETIRED_MODULE_IDS: [],        // entfernte Modul-IDs bleiben hier für immer reserviert
     BACKUP_KEEP: 10,
     BACKUP_MAX: 20,
@@ -218,6 +220,14 @@
   };
 
   const CHANGELOG = [
+    { version: '1.1.0', date: '2026-11-22', items: [
+      'Kern: Push-Dienst (Cloudflare Worker) – Erinnerungen kommen jetzt auch bei geschlossener App',
+      'Kern: Ende-zu-Ende-verschlüsselte Synchronisation zwischen Geräten (Crypto, Api, Sync, Outbox)',
+      'Kern: Push-Abo je Gerät, Test-Push, Geräteverwaltung, Sync-Passwort ändern, Ruhezeiten gelten auch auf dem Server',
+      'Kern: Service Worker zeigt Titel verschlüsselt übertragener Erinnerungen, „Erledigt“/„Später“ wirken direkt auf dem Server',
+      'Modul einstellungen: neuer Bereich „Push & Sync“',
+      'Modul start: Hinweise zur Einrichtung von Push',
+    ] },
     { version: '1.0.0', date: '2026-11-22', items: [
       'Kern: Store (IndexedDB), Migrator, Backup (Schnappschüsse, Export/Import), Events, UI, Router, Registry, VersionGuard',
       'Kern: Erinnerungsdienst mit Eskalationsregel (Schedule) und Ruhezeiten, lokale Benachrichtigungen',
@@ -384,9 +394,14 @@
         async set(name, v) { guard(); await Store.kvPut({ k: vKey(name), m: moduleId, c: null, n: name, v: U.clone(v), u: Date.now() }); Store.changed(moduleId, null); },
         collection(c, opts = {}) {
           if (!/^[a-z0-9-]+$/i.test(c)) throw new Error('Ungültiger Collection-Name: ' + c);
-          const put = async rec => { await Store.kvPut({ k: cKey(c, rec.id), m: moduleId, c, n: rec.id, v: rec, u: rec.updatedAt }); Store.changed(moduleId, c); return U.clone(rec); };
+          if (opts.sync) Sync.register(moduleId, c);
+          const put = async rec => {
+            const kv = { k: cKey(c, rec.id), m: moduleId, c, n: rec.id, v: rec, u: rec.updatedAt };
+            if (opts.sync && Sync.enabled()) await Sync.putWithOutbox(kv, 'item'); else await Store.kvPut(kv);
+            Store.changed(moduleId, c); return U.clone(rec);
+          };
           const api = {
-            sync: !!opts.sync,  // ab Push & Sync (1.1) werden solche Collections verschlüsselt synchronisiert
+            sync: !!opts.sync,  // solche Collections werden Ende-zu-Ende-verschlüsselt synchronisiert
             async raw() { return (await Store.kvByCollection(moduleId, c)).map(r => r.v); },
             async all() { return (await api.raw()).filter(x => !x.deletedAt); },
             async get(id) { const r = await Store.kvGet(cKey(c, id)); return r && !r.v.deletedAt ? U.clone(r.v) : null; },
@@ -588,6 +603,7 @@
       if (mode === 'replace' && data.meta && data.meta.settings) {
         await Store.metaSet('settings', { ...Settings.data, ...data.meta.settings });
       }
+      await Store.metaSet('syncFullUpload', true); // importierte Datensätze beim nächsten Start hochladen
       Log.info(`Import (${mode}): ${report.imported.join(', ') || '–'}${report.skipped.length ? ' · übersprungen: ' + report.skipped.join(', ') : ''}`);
       return report;
     },
@@ -917,13 +933,388 @@
   };
 
   /* ---- CORE: Crypto ---- */
-  /* Folgt mit Push & Sync (Version 1.1): PBKDF2/HKDF-Ableitung, AES-GCM, nicht exportierbarer Datenschlüssel. */
+  /* Schlüsselableitung (Architektur 8.3) und Ende-zu-Ende-Verschlüsselung (9.2). Identisch im Service Worker (nur Entschlüsseln). */
+  const Crypto = {
+    enc: new TextEncoder(), dec: new TextDecoder(),
+    b64u(buf) {
+      const b = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+      let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+      return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    },
+    unb64u(str) {
+      const s = String(str).replace(/-/g, '+').replace(/_/g, '/');
+      const bin = atob(s + '='.repeat((4 - (s.length % 4)) % 4));
+      return Uint8Array.from(bin, c => c.charCodeAt(0));
+    },
+    randomB64u(n) { return this.b64u(crypto.getRandomValues(new Uint8Array(n))); },
+    supported: () => !!(window.crypto && crypto.subtle && window.isSecureContext !== false),
+    /** Sync-Passwort → { dataKey (nicht exportierbar), loginKey (base64url), authHash } */
+    async derive(password, saltB64, iter) {
+      const S = crypto.subtle;
+      const base = await S.importKey('raw', this.enc.encode(password.normalize('NFC')), 'PBKDF2', false, ['deriveBits']);
+      const master = await S.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: this.unb64u(saltB64), iterations: iter }, base, 256);
+      const hk = await S.importKey('raw', master, 'HKDF', false, ['deriveBits', 'deriveKey']);
+      const empty = new Uint8Array(0);
+      const dataKey = await S.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: empty, info: this.enc.encode('pa-data-v1') }, hk, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+      const login = new Uint8Array(await S.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: empty, info: this.enc.encode('pa-login-v1') }, hk, 256));
+      return { dataKey, loginKey: this.b64u(login), authHash: this.b64u(await S.digest('SHA-256', login)) };
+    },
+    async encrypt(key, value, aad) {
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: this.enc.encode(aad) }, key, this.enc.encode(JSON.stringify(value))));
+      const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
+      return this.b64u(out);
+    },
+    async decrypt(key, str, aad) {
+      const b = this.unb64u(str);
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.subarray(0, 12), additionalData: this.enc.encode(aad) }, key, b.subarray(12));
+      return JSON.parse(this.dec.decode(pt));
+    },
+    titleAad: (m, id) => `${m}/__reminders/${id}/title`,
+  };
 
   /* ---- CORE: Api ---- */
-  /* Folgt mit Push & Sync (Version 1.1): Client für den Worker (/v1). */
+  /* HTTP-Client für den Worker (/v1). Module greifen nie direkt darauf zu. */
+  class ApiError extends Error { constructor(msg, status, code, network) { super(msg); this.status = status; this.code = code; this.network = network; } }
+  const Api = {
+    base() { return String((Sync.state && Sync.state.api) || CONFIG.PUSH_API || '').replace(/\/+$/, ''); },
+    normalize(input) {
+      let s = String(input || '').trim();
+      if (!s) throw new Error('Bitte die Server-Adresse eintragen.');
+      if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+      let u; try { u = new URL(s); } catch (_) { throw new Error('Server-Adresse ist ungültig.'); }
+      const local = ['localhost', '127.0.0.1'].includes(u.hostname);
+      if (u.protocol !== 'https:' && !local) throw new Error('Server-Adresse muss mit https:// beginnen.');
+      return (u.origin + u.pathname).replace(/\/+$/, '');
+    },
+    async req(method, path, body, opts = {}) {
+      const base = opts.base || this.base();
+      if (!base) throw new ApiError('Keine Server-Adresse eingetragen.', 0, 'no_api');
+      const token = 'token' in opts ? opts.token : Sync.state && Sync.state.token;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), opts.timeout || 20000);
+      let res;
+      try {
+        res = await fetch(base + path, {
+          method, cache: 'no-store', signal: ctrl.signal,
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+          body: body ? JSON.stringify(body) : undefined,
+        });
+      } catch (e) {
+        throw new ApiError(navigator.onLine ? 'Server nicht erreichbar (Adresse, Internet oder Content-Security-Policy prüfen).' : 'Keine Internetverbindung.', 0, 'network', true);
+      } finally { clearTimeout(timer); }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new ApiError(data.message || `Serverfehler (HTTP ${res.status})`, res.status, data.error);
+      return data;
+    },
+  };
 
   /* ---- CORE: Sync ---- */
-  /* Folgt mit Push & Sync (Version 1.1). Collections mit { sync: true } sind bereits markiert. */
+  /* Outbox, Hoch-/Herunterladen, Konfliktlösung (Architektur 9). Letzter Schreiber gewinnt pro Datensatz. */
+  const Sync = {
+    state: null,          // meta.sync { api, deviceId, token, deviceName, cursor, enabled, lastOkAt, revoked }
+    key: null,            // Datenschlüssel (CryptoKey, nicht exportierbar)
+    collections: new Set(),
+    status: 'off', lastError: '',
+    running: null, again: false, backoff: 0, retryTimer: null, loops: false,
+    async load() {
+      this.state = await Store.metaGet('sync', null);
+      this.key = await Store.metaGet('cryptoKey', null);
+      if (this.enabled()) this.setStatus('idle');
+      else if (this.state && this.state.revoked) this.setStatus('auth');
+    },
+    enabled() { return !!(this.state && this.state.enabled && this.state.token && this.key); },
+    /** Server ist zuständig für das Auslösen von Erinnerungen, solange er kürzlich erreichbar war */
+    active() { return this.enabled() && Date.now() - (this.state.lastOkAt || 0) < 15 * 60000; },
+    register(m, c) { this.collections.add(`${m}/${c}`); },
+    isSyncRec(r) { return !!r.c && (r.c === '__reminders' || this.collections.has(`${r.m}/${r.c}`)); },
+    entry(kind, rec) { return { id: `${kind}:${rec.k}`, kind, k: rec.k, u: rec.u, tries: 0, createdAt: Date.now() }; },
+    /** kv-Datensatz schreiben und im selben IndexedDB-Schritt für den Upload vormerken */
+    async putWithOutbox(rec, kind) {
+      await IDB.run(['kv', 'outbox'], 'readwrite', (kv, ob) => { kv.put(rec); ob.put(this.entry(kind, rec)); });
+      this.schedule();
+    },
+    async enqueue(recs) {
+      if (!recs.length) return;
+      await IDB.run('outbox', 'readwrite', ob => { recs.forEach(r => ob.put(this.entry(r.c === '__reminders' ? 'reminder' : 'item', r))); });
+      this.schedule();
+    },
+    async enqueueAll() {
+      for (const def of Registry.modules.values()) { try { await Registry.ensureInit(def.id); } catch (_) {} }
+      const all = await Store.kvAll();
+      await this.enqueue(all.filter(r => this.isSyncRec(r)));
+    },
+    async clearOutbox() {
+      await IDB.run('outbox', 'readwrite', async ob => {
+        const all = await IDB.rq(ob.getAll());
+        all.filter(e => e.kind === 'item' || e.kind === 'reminder').forEach(e => ob.delete(e.id));
+      });
+    },
+    async pendingCount() {
+      try { return (await IDB.run('outbox', 'readonly', s => IDB.rq(s.getAll()))).filter(e => e.kind === 'item' || e.kind === 'reminder').length; } catch (_) { return 0; }
+    },
+    async saveState(patch) { this.state = { ...(this.state || {}), ...patch }; await Store.metaSet('sync', this.state); },
+    setStatus(s, err = '') {
+      this.status = s; this.lastError = err;
+      const txt = { off: '', idle: '☁️', ok: '☁️', syncing: '⟳', offline: '☁️ offline', error: '⚠️ Sync', auth: '⚠️ abgemeldet' }[s] || '';
+      try { Shell.status(txt); document.getElementById('status').title = err || ({ ok: 'Synchronisiert', syncing: 'Synchronisiere …' }[s] || ''); } catch (_) {}
+      Events.emit('sync:status', { state: s, error: err });
+    },
+    schedule: null, // wird unten gesetzt (gedrosselt, 2 s)
+    run() {
+      if (!this.enabled()) return Promise.resolve();
+      if (this.running) { this.again = true; return this.running; }
+      clearTimeout(this.retryTimer);
+      this.running = (async () => {
+        try {
+          this.setStatus('syncing');
+          await this.pushAll();
+          await this.pull();
+          await this.saveState({ lastOkAt: Date.now() });
+          this.backoff = 0;
+          this.setStatus('ok');
+        } catch (e) { await this.fail(e); }
+        finally {
+          this.running = null;
+          if (this.again) { this.again = false; this.schedule(); }
+        }
+      })();
+      return this.running;
+    },
+    async fail(e) {
+      if (e && e.status === 401) {
+        await this.saveState({ enabled: false, revoked: true, token: null });
+        this.setStatus('auth', 'Dieses Gerät ist beim Push-Dienst nicht mehr angemeldet.');
+        UI.banner('sync', [UI.h('span', { class: 'grow' }, '⚠️ Dieses Gerät wurde vom Push-Dienst abgemeldet. Deine Daten bleiben erhalten.'), UI.h('button', { class: 'btn btn-sm', onclick: () => Router.navigate('einstellungen') }, 'Neu verbinden')], 'warn');
+        return;
+      }
+      Log.warn('Sync: ' + (e && e.message || e));
+      this.setStatus(e && e.network ? 'offline' : 'error', e && e.message || String(e));
+      this.backoff = Math.min(this.backoff ? this.backoff * 2 : 30000, 15 * 60000);
+      this.retryTimer = setTimeout(() => this.run(), this.backoff);
+    },
+    async schemaOf(m) { const s = await Store.metaGet('schema', {}); const d = Registry.modules.get(m); return s[m] ?? (d ? d.schemaVersion : 1); },
+    async pushAll() {
+      for (let round = 0; round < 50; round++) {
+        const entries = (await IDB.run('outbox', 'readonly', s => IDB.rq(s.getAll()))).filter(e => e.kind === 'item' || e.kind === 'reminder').slice(0, 100);
+        if (!entries.length) return;
+        const items = [], reminders = [], sent = [];
+        const schemas = await Store.metaGet('schema', {});
+        for (const e of entries) {
+          const r = await Store.kvGet(e.k);
+          sent.push(e);
+          if (!r) continue;
+          const v = r.v;
+          if (e.kind === 'item') {
+            const def = Registry.modules.get(r.m);
+            items.push({ module: r.m, collection: r.c, id: r.n, schema: schemas[r.m] ?? (def ? def.schemaVersion : 1), updatedAt: v.updatedAt || r.u || 0, deleted: !!v.deletedAt, payload: await Crypto.encrypt(this.key, v, `${r.m}/${r.c}/${r.n}`) });
+          } else {
+            reminders.push({
+              module: r.m, itemId: v.id, stage: v.stage, stageMin: v.stageMin, deadline: v.deadline ?? null, overdueMin: v.overdueMin ?? 15,
+              nextAt: v.nextAt ?? null, done: !!v.done, deleted: !!v.deletedAt,
+              titleEnc: v.title ? await Crypto.encrypt(this.key, String(v.title).slice(0, 120), Crypto.titleAad(r.m, v.id)) : null,
+              lastSentAt: v.lastSentAt ?? null, sentCount: v.sentCount || 0, updatedAt: v.updatedAt || r.u || 0,
+            });
+          }
+        }
+        const res = (items.length || reminders.length) ? await Api.req('POST', '/v1/sync', { items, reminders }) : { rejected: {} };
+        // Erledigte Einträge entfernen – nur wenn sich der Datensatz seitdem nicht erneut geändert hat
+        await IDB.run('outbox', 'readwrite', async ob => {
+          for (const e of sent) { const cur = await IDB.rq(ob.get(e.id)); if (cur && cur.u === e.u) ob.delete(e.id); }
+        });
+        const rej = res.rejected || {};
+        if ((rej.items || []).length) await this.applyItems(rej.items);
+        if ((rej.reminders || []).length) await this.applyReminders(rej.reminders);
+        if (entries.length < 100) return;
+      }
+    },
+    async pull() {
+      for (let round = 0; round < 200; round++) {
+        const res = await Api.req('GET', `/v1/sync?since=${encodeURIComponent(this.state.cursor || 0)}`);
+        await this.applyItems(res.items || []);
+        await this.applyReminders(res.reminders || []);
+        await this.saveState({ cursor: res.cursor }); // erst NACH erfolgreichem lokalen Schreiben
+        if (!res.more) return;
+      }
+    },
+    /** Vom Server geladene Datensätze übernehmen (9.4, 9.5) */
+    async applyItems(rows) {
+      const changed = new Map();
+      for (const row of rows) {
+        let v;
+        try { v = await Crypto.decrypt(this.key, row.payload, `${row.module}/${row.collection}/${row.id}`); }
+        catch (_) { Log.warn(`Datensatz ${row.module}/${row.collection}/${row.id} nicht entschlüsselbar (anderes Sync-Passwort?)`); continue; }
+        if (!v || v.id !== row.id) continue;
+        if (await this.applyDecrypted(row.module, row.collection, row.schema, v)) changed.set(`${row.module}/${row.collection}`, [row.module, row.collection]);
+      }
+      for (const [m, c] of changed.values()) { Events.emit('store:changed', { moduleId: m, collection: c, remote: true }); Tabs.post({ type: 'changed', moduleId: m, collection: c }); }
+    },
+    async applyDecrypted(m, c, schema, v) {
+      const def = Registry.modules.get(m);
+      const k = `${m}/c:${c}/${v.id}`;
+      if (def && schema > def.schemaVersion) {
+        const pk = `${m}/c:__pending/${c}.${v.id}`;
+        await Store.kvPut({ k: pk, m, c: '__pending', n: `${c}.${v.id}`, v: { collection: c, schema, record: v }, u: v.updatedAt || 0 });
+        const st = Registry.st(m);
+        st.readOnly = true;
+        st.lockReason = 'Auf einem anderen Gerät läuft eine neuere Version dieses Moduls. Bitte die App aktualisieren (neu laden).';
+        return false;
+      }
+      let migrated = false;
+      if (def && schema < def.schemaVersion) {
+        try {
+          const buf = await Migrator.migrateRecords(def, schema, [{ k, m, c, n: v.id, v, u: v.updatedAt || 0 }]);
+          const nr = buf.map.get(k); if (!nr) return false;
+          v = nr.v; migrated = true;
+        } catch (e) { Log.error(`Migration eines Sync-Datensatzes fehlgeschlagen: ${e.message}`, m); return false; }
+      }
+      const local = await Store.kvGet(k);
+      const rec = { k, m, c, n: v.id, v, u: v.updatedAt || 0 };
+      const ru = v.updatedAt || 0, lu = local ? (local.v.updatedAt || 0) : -1;
+      if (!local || ru > lu) { if (migrated) await this.putWithOutbox(rec, 'item'); else await Store.kvPut(rec); return true; }
+      if (ru < lu || migrated) await this.enqueue([local]);
+      return false;
+    },
+    async processPending() {
+      const all = (await Store.kvAll()).filter(r => r.c === '__pending');
+      for (const r of all) {
+        const def = Registry.modules.get(r.m);
+        if (!def || r.v.schema > def.schemaVersion) continue;
+        await IDB.run('kv', 'readwrite', s => { s.delete(r.k); });
+        await this.applyDecrypted(r.m, r.v.collection, r.v.schema, r.v.record);
+      }
+    },
+    async applyReminders(rows) {
+      const doneRemote = [], fired = [];
+      let any = false;
+      for (const row of rows) {
+        const m = row.module, id = row.itemId, k = Reminders.key(m, id);
+        const lrec = await Store.kvGet(k);
+        const local = lrec ? lrec.v : null;
+        let title = local ? local.title : '';
+        if (row.titleEnc) { try { title = await Crypto.decrypt(this.key, row.titleEnc, Crypto.titleAad(m, id)); } catch (_) {} }
+        const newerFire = (row.lastSentAt || 0) > ((local && local.lastSentAt) || 0);
+        let rec = null, enqueueLocal = false;
+        if (!local || row.updatedAt > (local.updatedAt || 0)) {
+          rec = {
+            id, stage: row.stage, stageMin: row.stageMin, deadline: row.deadline ?? null, overdueMin: row.overdueMin ?? 15, title,
+            nextAt: row.nextAt ?? null, lastSentAt: row.lastSentAt ?? null, sentCount: row.sentCount || 0, done: !!row.done,
+            unseen: local ? ((newerFire || !!local.unseen) && !row.done && !row.deleted) : false,
+            createdAt: (local && local.createdAt) || row.updatedAt, deletedAt: row.deleted ? ((local && local.deletedAt) || Date.now()) : null,
+            updatedAt: row.updatedAt,
+          };
+          if (local && !local.done && row.done && !row.deleted) doneRemote.push([m, id]);
+        } else {
+          if (newerFire) {
+            rec = { ...local, lastSentAt: row.lastSentAt, sentCount: Math.max(local.sentCount || 0, row.sentCount || 0) };
+            if (!rec.done && !rec.deletedAt) { rec.nextAt = row.nextAt ?? rec.nextAt; rec.unseen = true; }
+          }
+          if (row.updatedAt < (local.updatedAt || 0)) enqueueLocal = true;
+        }
+        if (rec) {
+          await Store.kvPut({ k, m, c: '__reminders', n: id, v: rec, u: rec.updatedAt });
+          any = true;
+          if (local && newerFire && rec.unseen) fired.push({ m, r: rec, atDeadline: !!rec.deadline && Math.abs(rec.lastSentAt - rec.deadline) < 90000 });
+        }
+        if (enqueueLocal) await this.enqueue([lrec]);
+      }
+      if (!any) return;
+      Tabs.post({ type: 'changed', collection: '__reminders' });
+      for (const [m, id] of doneRemote) { try { await Registry.call(m, 'onReminderAction', id, 'done'); } catch (_) {} }
+      Events.emit('reminders:changed', { remote: true });
+      if (fired.length) {
+        const list = fired.map(f => ({ def: Registry.modules.get(f.m), r: f.r, atDeadline: f.atDeadline })).filter(f => f.def && Registry.isActive(f.def.id));
+        // Mit Push zeigt der Service Worker die Benachrichtigung; die offene App zeigt dann nur einen Hinweis.
+        if (list.length && !Push.subscribedHere) await Reminders.announce(list, Date.now(), false);
+        else if (list.length && document.visibilityState === 'visible') UI.toast(`🔔 ${list.length === 1 ? (list[0].r.title || list[0].def.name) : list.length + ' Erinnerungen'}`, { action: 'Ansehen', onAction: () => Router.navigate(list[0].def.id) });
+        list.forEach(f => Events.emit('reminder:fired', { moduleId: f.def.id, itemId: f.r.id }));
+      }
+      await Reminders.updateBadge();
+    },
+    async pushSettings() {
+      if (!this.enabled()) return;
+      const q = Settings.data.quiet;
+      let tz = 'Europe/Berlin'; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (_) {}
+      try { await Api.req('PUT', '/v1/settings', { timezone: tz, quietStart: q.enabled ? q.start : null, quietEnd: q.enabled ? q.end : null, breakForDeadline: !!q.breakForDeadline }); }
+      catch (e) { Log.warn('Ruhezeiten an Server: ' + e.message); }
+    },
+    startLoops() {
+      if (this.loops) return; this.loops = true;
+      window.addEventListener('online', () => this.run());
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.run(); });
+      let last = 0;
+      setInterval(() => {
+        const vis = document.visibilityState === 'visible';
+        if (vis || Date.now() - last > 5 * 60000) { last = Date.now(); this.run(); }
+      }, CONFIG.SYNC_INTERVAL_MS);
+      Events.on('settings:changed', ({ key }) => { if (key === 'quiet') this.pushSettings(); });
+    },
+    async start() {
+      if (!this.enabled()) return;
+      if (await Store.metaGet('syncFullUpload', false)) { await this.enqueueAll(); await Store.metaSet('syncFullUpload', false); }
+      await this.processPending();
+      this.startLoops();
+      const first = this.run();
+      await Promise.race([first, new Promise(r => setTimeout(r, 3000))]); // Start max. 3 s blockieren
+    },
+    /** Einrichten ('setup') oder mit bestehendem Konto verbinden ('login') */
+    async connect({ api, mode, setupSecret, password, deviceName, reset }) {
+      if (!Crypto.supported()) throw new Error('Verschlüsselung wird hier nicht unterstützt (nur über https).');
+      api = Api.normalize(api);
+      const cfg = await Api.req('GET', '/v1/config', null, { base: api, token: null });
+      if (cfg.apiVersion !== 1) throw new Error('Unbekannte Server-Version.');
+      deviceName = String(deviceName || '').trim().slice(0, 60) || 'Gerät';
+      let keys, res;
+      if (mode === 'setup') {
+        const salt = Crypto.randomB64u(16);
+        keys = await Crypto.derive(password, salt, CONFIG.KDF_ITER);
+        res = await Api.req('POST', '/v1/setup', { setupSecret, kdfSalt: salt, kdfIter: CONFIG.KDF_ITER, authHash: keys.authHash, deviceName, reset: !!reset }, { base: api, token: null });
+      } else {
+        const kdf = await Api.req('GET', '/v1/kdf', null, { base: api, token: null });
+        keys = await Crypto.derive(password, kdf.kdfSalt, kdf.kdfIter);
+        res = await Api.req('POST', '/v1/login', { loginKey: keys.loginKey, deviceName }, { base: api, token: null });
+      }
+      await Store.metaSet('cryptoKey', keys.dataKey);
+      this.key = keys.dataKey;
+      await this.saveState({ api, deviceId: res.deviceId, token: res.deviceToken, deviceName, cursor: 0, enabled: true, revoked: false, lastOkAt: Date.now(), connectedAt: Date.now() });
+      UI.banner('sync', null);
+      await this.clearOutbox();
+      await this.enqueueAll();   // lokale Daten hochladen; neuere Server-Stände gewinnen beim Zusammenführen
+      this.startLoops();
+      await this.pushSettings();
+      await this.run();
+      if (this.status !== 'ok') throw new Error('Verbunden, aber die erste Synchronisierung schlug fehl: ' + this.lastError);
+      Log.info(`Push & Sync ${mode === 'setup' ? 'eingerichtet' : 'verbunden'} (${deviceName})`);
+    },
+    async changePassword(current, next) {
+      await this.run();
+      if (this.status !== 'ok') throw new Error('Bitte zuerst erfolgreich synchronisieren: ' + this.lastError);
+      const kdf = await Api.req('GET', '/v1/kdf', null, { token: null });
+      const old = await Crypto.derive(current, kdf.kdfSalt, kdf.kdfIter);
+      const salt = Crypto.randomB64u(16);
+      const nk = await Crypto.derive(next, salt, CONFIG.KDF_ITER);
+      const res = await Api.req('POST', '/v1/account/rekey', { loginKey: old.loginKey, kdfSalt: salt, kdfIter: CONFIG.KDF_ITER, authHash: nk.authHash });
+      await Store.metaSet('cryptoKey', nk.dataKey);
+      this.key = nk.dataKey;
+      await this.saveState({ cursor: res.cursor || 0 });
+      await this.clearOutbox();
+      await this.enqueueAll();
+      await this.run();
+      Log.info('Sync-Passwort geändert, Daten neu verschlüsselt hochgeladen');
+    },
+    async disconnect() {
+      try { await Push.disable(); } catch (_) {}
+      if (this.state && this.state.token) { try { await Api.req('DELETE', `/v1/devices/${encodeURIComponent(this.state.deviceId)}`); } catch (_) {} }
+      await this.clearOutbox();
+      this.state = { api: this.state && this.state.api, enabled: false };
+      await Store.metaSet('sync', this.state);
+      await Store.metaSet('cryptoKey', null);
+      this.key = null;
+      this.setStatus('off');
+      Log.info('Gerät vom Push-Dienst abgemeldet (lokale Daten bleiben)');
+    },
+  };
+  Sync.schedule = U.debounce(() => Sync.run(), 2000);
 
   /* ---- CORE: Schedule ---- */
   /* Eskalationsregel – identisch zu worker/src/schedule.js (Architektur 10.2). Änderungen immer an beiden Stellen! */
@@ -1061,7 +1452,8 @@
     async getRec(m, id) { const r = await Store.kvGet(this.key(m, id)); return r ? r.v : null; },
     async putRec(m, rec, { silent = false } = {}) {
       rec.updatedAt = Math.max(Date.now(), (rec.updatedAt || 0) + 1);
-      await Store.kvPut({ k: this.key(m, rec.id), m, c: this.C, n: rec.id, v: rec, u: rec.updatedAt });
+      const kv = { k: this.key(m, rec.id), m, c: this.C, n: rec.id, v: rec, u: rec.updatedAt };
+      if (Sync.enabled()) await Sync.putWithOutbox(kv, 'reminder'); else await Store.kvPut(kv);
       Tabs.post({ type: 'changed', moduleId: m, collection: this.C });
       if (!silent) { Events.emit('reminders:changed', { moduleId: m }); this.updateBadge(); }
     },
@@ -1115,6 +1507,8 @@
       return `${r.sentCount}. Erinnerung · Stufe ${Schedule.stageLabel(r.stage)}`;
     },
     async tick({ catchUp = false } = {}) {
+      // Mit erreichbarem Push-Dienst löst der Server aus; die App zeigt nur an (Architektur 10.4)
+      if (Sync.active()) { await this.updateBadge(); return; }
       const run = async () => {
         const now = Date.now(), fired = [];
         const q = Settings.data.quiet;
@@ -1208,7 +1602,68 @@
   };
 
   /* ---- CORE: Push ---- */
-  /* Service-Worker-Registrierung jetzt; Push-Abo beim Worker folgt mit Version 1.1. */
+  /* Web-Push-Abo dieses Geräts beim Worker (Architektur 8.4). */
+  const Push = {
+    subscribedHere: false,
+    supported: () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol !== 'file:',
+    async reg() {
+      if (SWReg.reg) return SWReg.reg;
+      if (!('serviceWorker' in navigator)) return null;
+      return Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(() => r(null), 5000))]);
+    },
+    async current() {
+      try { const r = await this.reg(); return r && r.pushManager ? await r.pushManager.getSubscription() : null; } catch (_) { return null; }
+    },
+    unsupportedReason() {
+      if (U.isIOS() && !U.isStandalone()) return 'iPhone/iPad: Die App zuerst über „Teilen → Zum Home-Bildschirm“ installieren und dann vom Icon aus öffnen.';
+      return 'Dieser Browser unterstützt kein Web Push.';
+    },
+    /** Muss durch ein Tippen ausgelöst werden (iOS) */
+    async enable() {
+      if (!this.supported()) throw new Error(this.unsupportedReason());
+      if (!Sync.enabled()) throw new Error('Bitte zuerst Push & Sync einrichten.');
+      const p = await Notify.request();
+      if (p !== 'granted') throw new Error(p === 'denied' ? 'Benachrichtigungen sind blockiert – bitte in den Browser-/Systemeinstellungen erlauben.' : 'Benachrichtigungen wurden nicht erlaubt.');
+      const cfg = await Api.req('GET', '/v1/config', null, { token: null });
+      if (!cfg.vapidPublicKey) throw new Error('Auf dem Server fehlt der VAPID-Schlüssel.');
+      const reg = await this.reg();
+      if (!reg) throw new Error('Service Worker nicht bereit. Bitte die App neu laden.');
+      let sub = await reg.pushManager.getSubscription();
+      const st = await Store.metaGet('push', {});
+      if (sub && st.vapid && st.vapid !== cfg.vapidPublicKey) { try { await sub.unsubscribe(); } catch (_) {} sub = null; }
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Crypto.unb64u(cfg.vapidPublicKey) });
+      await Api.req('PUT', '/v1/subscription', sub.toJSON());
+      await Store.metaSet('push', { subscribed: true, endpoint: sub.endpoint, at: Date.now(), vapid: cfg.vapidPublicKey });
+      this.subscribedHere = true;
+      Events.emit('push:changed', {});
+      Log.info('Push auf diesem Gerät aktiviert');
+    },
+    async disable() {
+      const sub = await this.current();
+      if (sub) {
+        if (Sync.enabled()) { try { await Api.req('DELETE', '/v1/subscription', { endpoint: sub.endpoint }); } catch (_) {} }
+        try { await sub.unsubscribe(); } catch (_) {}
+      }
+      await Store.metaSet('push', { subscribed: false });
+      this.subscribedHere = false;
+      Events.emit('push:changed', {});
+    },
+    /** Beim Start: Abo prüfen und einmal täglich beim Server auffrischen */
+    async refresh() {
+      const st = await Store.metaGet('push', {});
+      this.subscribedHere = !!st.subscribed && Notify.permission() === 'granted';
+      if (!st.subscribed || !Sync.enabled() || !this.supported()) return;
+      const sub = await this.current();
+      if (!sub) { this.subscribedHere = false; await Store.metaSet('push', { subscribed: false }); Events.emit('push:changed', {}); return; }
+      if (sub.endpoint !== st.endpoint || Date.now() - (st.at || 0) > 86400000) {
+        try { await Api.req('PUT', '/v1/subscription', sub.toJSON()); await Store.metaSet('push', { ...st, endpoint: sub.endpoint, at: Date.now() }); }
+        catch (e) { Log.warn('Push-Abo auffrischen: ' + e.message); }
+      }
+    },
+    test() { return Api.req('POST', '/v1/test-push', {}); },
+  };
+
+  /* Service-Worker-Registrierung */
   const SWReg = {
     reg: null, wantReload: false,
     async register() {
@@ -1223,6 +1678,7 @@
         navigator.serviceWorker.addEventListener('message', e => {
           const d = e.data || {};
           if (d.type === 'outbox') Outbox.process();
+          if (d.type === 'sync') Sync.run();
           if (d.type === 'navigate' && d.hash) { location.hash = d.hash; }
         });
         navigator.serviceWorker.ready.then(r => { this.reg = r; Notify.reg = r; });
@@ -1250,7 +1706,7 @@
 
   /* ---- CORE: System (nur für System-Module start/einstellungen) ---- */
   const System = {
-    CONFIG, CHANGELOG, Registry, Backup, Settings, Notify, Reminders, Schedule, Log, Theme, VersionGuard, SWReg,
+    CONFIG, CHANGELOG, Registry, Backup, Settings, Notify, Reminders, Schedule, Log, Theme, VersionGuard, SWReg, Sync, Push, Api, Router: Router.api,
     async storage() {
       const out = { persisted: null, usage: null, quota: null };
       try { if (navigator.storage?.persisted) out.persisted = await navigator.storage.persisted(); } catch (_) {}
@@ -1265,14 +1721,22 @@
       const lastExport = await Store.metaGet('lastExportAt', null);
       const app = await Store.metaGet('app', {});
       const since = lastExport || app.installedAt || Date.now();
-      const days = st.persisted === false ? 7 : 14;
+      const days = Sync.enabled() ? 30 : st.persisted === false ? 7 : 14;
       const hasData = (await Store.kvAll()).some(r => r.c && r.c !== '__reminders');
       if (hasData && Date.now() - since > days * 86400000) hints.push({ id: 'export', icon: '💾', text: lastExport ? `Letzte Sicherung vor ${U.formatDuration((Date.now() - lastExport) / 60000)}. Zeit für einen Export.` : 'Noch keine Sicherungsdatei exportiert.', action: 'Exportieren', run: () => Backup.exportFile() });
       const p = Notify.permission();
       if (p === 'default') hints.push({ id: 'notify', icon: '🔔', text: 'Benachrichtigungen sind noch nicht erlaubt – sonst kann dich die App nicht erinnern.', action: 'Erlauben', run: () => Notify.request() });
       else if (p === 'denied') hints.push({ id: 'notify', icon: '🔕', text: 'Benachrichtigungen sind blockiert. Erlaube sie in den Browser-Einstellungen für diese Seite.' });
       else if (p === 'unsupported' && U.isIOS() && !U.isStandalone()) hints.push({ id: 'ios', icon: '📱', text: 'iPhone: Für Benachrichtigungen die App über „Teilen → Zum Home-Bildschirm“ installieren und von dort öffnen.' });
-      hints.push({ id: 'push', icon: 'ℹ️', text: 'Erinnerungen kommen in dieser Version, solange die App (auch im Hintergrund-Tab) geöffnet ist. Verpasste werden beim Öffnen nachgeholt. Push bei geschlossener App folgt mit Version 1.1.', muted: true });
+      if (!Sync.enabled()) {
+        const revoked = !!(Sync.state && Sync.state.revoked);
+        hints.push({ id: 'push', icon: revoked ? '⚠️' : '☁️', muted: !revoked,
+          text: revoked ? 'Dieses Gerät wurde vom Push-Dienst abgemeldet. Bitte neu verbinden – deine Daten sind noch da.' : 'Push ist noch nicht eingerichtet: Erinnerungen kommen nur, solange die App geöffnet ist (verpasste werden beim Öffnen nachgeholt).',
+          action: revoked ? 'Neu verbinden' : 'Einrichten', run: () => Router.navigate('einstellungen') });
+      } else if (Push.supported() && !Push.subscribedHere) {
+        hints.push({ id: 'push', icon: '🔔', text: 'Push ist auf diesem Gerät noch nicht aktiv. Ohne Push erinnert dieses Gerät nur, solange die App geöffnet ist.', action: 'Push aktivieren',
+          run: async () => { try { await Push.enable(); UI.toast('Push aktiviert'); } catch (e) { UI.toast(e.message, { type: 'error', timeout: 8000 }); } } });
+      }
       return hints;
     },
   };
@@ -1291,6 +1755,8 @@
       }
       await Log.load();
       await Settings.load();
+      await Sync.load();
+      Push.subscribedHere = !!(await Store.metaGet('push', {})).subscribed && Notify.permission() === 'granted';
       Tabs.start();
       await VersionGuard.check();
       await Migrator.runAll();
@@ -1298,6 +1764,8 @@
       await Router.start();
       VersionGuard.start();
       SWReg.register();
+      await Sync.start();
+      Push.refresh().catch(e => Log.warn('Push: ' + e.message));
       Outbox.process();
       for (const def of Registry.list()) if (typeof def.background === 'function') Registry.call(def.id, 'background').catch(() => {});
       Reminders.start();
@@ -1353,6 +1821,8 @@
         ctx.events.on('store:changed', re);
         ctx.events.on('reminders:changed', re);
         ctx.events.on('notify:permission', renderHints);
+        ctx.events.on('push:changed', renderHints);
+        ctx.events.on('sync:status', ctx.util.debounce(renderHints, 500));
         ctx.every(60000, renderTiles);
       },
     });
@@ -1373,7 +1843,7 @@
         const sw = (label, checked, onchange) => h('label', { class: 'switch' }, h('input', { type: 'checkbox', checked, onchange: e => onchange(e.target.checked) }), h('span', {}, label));
 
         const parts = {};
-        const sections = ['darstellung', 'benachrichtigungen', 'sicherung', 'speicher', 'module', 'ueber', 'diagnose'];
+        const sections = ['darstellung', 'sync', 'benachrichtigungen', 'sicherung', 'speicher', 'module', 'ueber', 'diagnose'];
         sections.forEach(s => parts[s] = h('div'));
         el.append(h('h2', {}, 'Einstellungen'), ...sections.map(s => parts[s]));
 
@@ -1398,7 +1868,7 @@
             sw('Ton bei Erinnerungen (wenn die App offen ist)', S.Settings.get('sound'), v => S.Settings.set('sound', v)),
             sw('Vibration (wo unterstützt)', S.Settings.get('vibrate'), v => S.Settings.set('vibrate', v)),
             U.isIOS() && !U.isStandalone() ? h('p', { class: 'small muted' }, '📱 iPhone/iPad: Benachrichtigungen gibt es nur, wenn die App über „Teilen → Zum Home-Bildschirm“ installiert und von dort geöffnet wird.') : null,
-            h('p', { class: 'small muted' }, 'In Version 1.0 erinnert die App, solange sie geöffnet ist (auch als Hintergrund-Tab). Verpasste Erinnerungen werden beim Öffnen gesammelt nachgeholt. Push bei geschlossener App folgt mit dem Push-Dienst (Version 1.1).'),
+            h('p', { class: 'small muted' }, S.Sync.enabled() ? 'Der Push-Dienst erinnert auch bei geschlossener App (sofern Push auf dem Gerät aktiv ist). Ist der Server länger nicht erreichbar, erinnert die App lokal, solange sie geöffnet ist.' : 'Ohne Push-Dienst erinnert die App, solange sie geöffnet ist (auch als Hintergrund-Tab). Verpasste Erinnerungen werden beim Öffnen gesammelt nachgeholt. Für Erinnerungen bei geschlossener App „Push & Sync“ einrichten.'),
             h('h3', { style: { marginTop: '16px' } }, '🌙 Ruhezeiten'),
             sw('Ruhezeit aktiv', q.enabled, v => { saveQ({ enabled: v }); }),
             h('div', { class: 'row nowrap' }, h('label', { class: 'field grow' }, h('span', {}, 'Von'), startIn), h('label', { class: 'field grow' }, h('span', {}, 'Bis'), endIn)),
@@ -1406,6 +1876,138 @@
             h('p', { class: 'small muted' }, 'Erinnerungen in der Ruhezeit werden auf deren Ende verschoben und kommen dann gesammelt.')));
         };
         renderNotify();
+
+        /* Push & Sync */
+        const renderSync = async () => {
+          const Y = S.Sync, P = S.Push;
+          const busy = (btn, fn) => async () => {
+            const label = btn.textContent; btn.disabled = true; btn.textContent = 'Bitte warten …';
+            try { await fn(); } catch (err) { toast(err.message || String(err), { type: 'error', timeout: 9000 }); }
+            finally { btn.disabled = false; btn.textContent = label; renderSync(); }
+          };
+          const field = (label, input, hint) => h('label', { class: 'field' }, h('span', {}, label), input, hint ? h('span', { class: 'small muted', style: { display: 'block', marginTop: '4px' } }, hint) : null);
+          const defaultName = () => (U.isIOS() ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : /Mac/.test(navigator.platform) ? 'Mac' : /Win/.test(navigator.platform) ? 'Windows-PC' : 'Gerät') + (U.isStandalone() ? ' (App)' : '');
+
+          const connectDialog = mode => ctx.ui.dialog(close => {
+            const apiIn = h('input', { type: 'text', inputmode: 'url', autocomplete: 'off', placeholder: 'https://pa-push.<konto>.workers.dev', value: (Y.state && Y.state.api) || S.CONFIG.PUSH_API || '' });
+            const secretIn = h('input', { type: 'password', autocomplete: 'off' });
+            const pw1 = h('input', { type: 'password', autocomplete: mode === 'setup' ? 'new-password' : 'current-password' });
+            const pw2 = h('input', { type: 'password', autocomplete: 'new-password' });
+            const nameIn = h('input', { type: 'text', value: defaultName(), maxlength: 60 });
+            const resetBox = h('input', { type: 'checkbox' });
+            const msg = h('div', { class: 'small', style: { color: 'var(--danger)', minHeight: '1.2em' } });
+            const submit = h('button', { type: 'submit', class: 'btn btn-primary' }, mode === 'setup' ? 'Einrichten' : 'Verbinden');
+            const form = h('form', { onsubmit: async e => {
+              e.preventDefault(); msg.textContent = '';
+              const pw = pw1.value;
+              if (mode === 'setup') {
+                if (!secretIn.value) { msg.textContent = 'Bitte den Einrichtungs-Code (SETUP_SECRET) eingeben.'; return; }
+                if (pw.length < 12) { msg.textContent = 'Das Sync-Passwort muss mindestens 12 Zeichen haben.'; return; }
+                if (pw !== pw2.value) { msg.textContent = 'Die Passwörter stimmen nicht überein.'; return; }
+                if (resetBox.checked && !await confirm('Konto zurücksetzen löscht alle Daten auf dem Server und meldet alle anderen Geräte ab. Die Daten auf den Geräten bleiben erhalten. Fortfahren?', { ok: 'Zurücksetzen', danger: true })) return;
+              } else if (!pw) { msg.textContent = 'Bitte das Sync-Passwort eingeben.'; return; }
+              submit.disabled = true; submit.textContent = 'Schlüssel werden berechnet …';
+              try {
+                await Y.connect({ api: apiIn.value, mode, setupSecret: secretIn.value, password: pw, deviceName: nameIn.value, reset: resetBox.checked });
+                close(true);
+              } catch (err) {
+                msg.textContent = err.code === 'account_exists' ? 'Es gibt bereits ein Konto. Nutze „Mit bestehendem Konto verbinden“ oder setze das Konto zurück.' : err.message;
+                submit.disabled = false; submit.textContent = mode === 'setup' ? 'Einrichten' : 'Verbinden';
+              }
+            } },
+              h('h3', {}, mode === 'setup' ? '☁️ Push & Sync einrichten' : '☁️ Mit bestehendem Konto verbinden'),
+              h('div', { class: 'stack' },
+                field('Server-Adresse', apiIn, 'Adresse deines Cloudflare Workers (siehe worker/README.md).'),
+                mode === 'setup' ? field('Einrichtungs-Code (SETUP_SECRET)', secretIn, 'Nur für die erste Einrichtung nötig.') : null,
+                field('Sync-Passwort', pw1, mode === 'setup' ? 'Mindestens 12 Zeichen. Damit werden deine Daten verschlüsselt – der Server kennt es nicht. Gut merken!' : null),
+                mode === 'setup' ? field('Sync-Passwort wiederholen', pw2) : null,
+                field('Name dieses Geräts', nameIn),
+                mode === 'setup' ? h('label', { class: 'switch small' }, resetBox, h('span', {}, 'Bestehendes Konto auf dem Server ersetzen (z. B. Passwort vergessen)')) : null,
+                msg),
+              h('div', { class: 'dlg-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'), submit));
+            return form;
+          }, { modal: true, label: 'Push & Sync' });
+
+          if (!Y.enabled()) {
+            const revoked = !!(Y.state && Y.state.revoked);
+            parts.sync.replaceChildren(card('☁️ Push & Sync',
+              revoked ? h('div', { class: 'ro-banner' }, '⚠️ Dieses Gerät wurde abgemeldet (z. B. weil das Sync-Passwort geändert wurde). Bitte neu verbinden. Deine Daten sind noch da.') : null,
+              h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Mit dem eigenen Push-Dienst (Cloudflare Worker) kommen Erinnerungen auch bei geschlossener App, und deine ToDos werden zwischen deinen Geräten abgeglichen – Ende-zu-Ende-verschlüsselt. Ohne Push-Dienst funktioniert alles weiter lokal.'),
+              h('div', { class: 'row' },
+                h('button', { class: 'btn btn-primary', onclick: async () => { if (await connectDialog('setup')) { toast('Push & Sync eingerichtet'); renderSync(); } } }, 'Neu einrichten'),
+                h('button', { class: 'btn', onclick: async () => { if (await connectDialog('login')) { toast('Verbunden – Daten werden abgeglichen'); renderSync(); } } }, 'Mit bestehendem Konto verbinden')),
+              h('p', { class: 'small muted' }, 'Erstes Gerät: „Neu einrichten“. Jedes weitere Gerät (z. B. das iPhone): „Mit bestehendem Konto verbinden“.')));
+            return;
+          }
+
+          const st = Y.state;
+          const pending = await Y.pendingCount();
+          const statusText = { idle: 'bereit', ok: '✅ synchronisiert', syncing: '⟳ synchronisiere …', offline: '📴 offline – wird nachgeholt', error: '⚠️ Fehler: ' + Y.lastError, auth: '⚠️ abgemeldet' }[Y.status] || Y.status;
+          const pushText = !P.supported() ? '– ' + P.unsupportedReason() : P.subscribedHere ? '✅ aktiv' : S.Notify.permission() === 'denied' ? '🔕 Benachrichtigungen blockiert' : '❔ nicht aktiv';
+          const devBox = h('div');
+          const b = {};
+          b.sync = h('button', { class: 'btn btn-primary' }, '⟳ Jetzt synchronisieren');
+          b.sync.onclick = busy(b.sync, async () => { await Y.run(); if (Y.status !== 'ok') throw new Error(Y.lastError || 'Synchronisierung fehlgeschlagen'); toast('Synchronisiert'); });
+          b.push = h('button', { class: 'btn' + (P.subscribedHere ? '' : ' btn-primary') }, P.subscribedHere ? 'Push hier deaktivieren' : '🔔 Push auf diesem Gerät aktivieren');
+          b.push.onclick = busy(b.push, async () => { if (P.subscribedHere) { await P.disable(); toast('Push auf diesem Gerät deaktiviert'); } else { await P.enable(); toast('Push aktiviert – jetzt Test-Push probieren'); } });
+          b.test = h('button', { class: 'btn' }, 'Test-Push');
+          b.test.onclick = busy(b.test, async () => { const r = await P.test(); toast(r.total ? `Test-Push an ${r.sent} von ${r.total} Geräten gesendet` : 'Kein Gerät hat Push aktiviert'); });
+          b.dev = h('button', { class: 'btn btn-sm' }, 'Geräte anzeigen');
+          b.dev.onclick = async () => {
+            try {
+              const { devices } = await S.Api.req('GET', '/v1/devices');
+              devBox.replaceChildren(h('table', { class: 'simple' }, h('tbody', {}, devices.map(d => h('tr', {},
+                h('td', {}, h('strong', {}, d.name || 'Gerät'), d.current ? h('span', { class: 'pill blue', style: { marginLeft: '6px' } }, 'dieses') : null,
+                  h('div', { class: 'small muted' }, `${d.push ? '🔔 Push' : 'ohne Push'} · zuletzt ${d.lastSeenAt ? U.relTime(d.lastSeenAt) : '–'} · seit ${U.formatDate(d.createdAt, false)}`)),
+                h('td', { style: { textAlign: 'right' } }, d.current ? null : h('button', { class: 'btn btn-sm', onclick: async () => {
+                  if (!await confirm(`Gerät „${d.name}“ abmelden? Es erhält dann keine Pushes mehr und synchronisiert nicht mehr. Seine lokalen Daten bleiben erhalten.`, { ok: 'Abmelden', danger: true })) return;
+                  try { await S.Api.req('DELETE', `/v1/devices/${encodeURIComponent(d.id)}`); toast('Gerät abgemeldet'); b.dev.onclick(); } catch (err) { toast(err.message, { type: 'error' }); }
+                } }, 'Abmelden')))))));
+            } catch (err) { toast(err.message, { type: 'error' }); }
+          };
+          b.pw = h('button', { class: 'btn btn-sm' }, 'Sync-Passwort ändern');
+          b.pw.onclick = async () => {
+            const ok = await ctx.ui.dialog(close => {
+              const cur = h('input', { type: 'password', autocomplete: 'current-password' });
+              const n1 = h('input', { type: 'password', autocomplete: 'new-password' });
+              const n2 = h('input', { type: 'password', autocomplete: 'new-password' });
+              const msg = h('div', { class: 'small', style: { color: 'var(--danger)', minHeight: '1.2em' } });
+              const sub = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Ändern');
+              return h('form', { onsubmit: async e => {
+                e.preventDefault(); msg.textContent = '';
+                if (n1.value.length < 12) { msg.textContent = 'Mindestens 12 Zeichen.'; return; }
+                if (n1.value !== n2.value) { msg.textContent = 'Die neuen Passwörter stimmen nicht überein.'; return; }
+                sub.disabled = true; sub.textContent = 'Bitte warten …';
+                try { await Y.changePassword(cur.value, n1.value); close(true); }
+                catch (err) { msg.textContent = err.message; sub.disabled = false; sub.textContent = 'Ändern'; }
+              } },
+                h('h3', {}, 'Sync-Passwort ändern'),
+                h('p', { class: 'small muted' }, 'Alle Daten werden mit dem neuen Passwort neu verschlüsselt und hochgeladen. Alle anderen Geräte werden abgemeldet und müssen sich mit dem neuen Passwort neu verbinden (ihre lokalen Daten bleiben erhalten).'),
+                h('div', { class: 'stack' }, field('Bisheriges Sync-Passwort', cur), field('Neues Sync-Passwort', n1), field('Neues Sync-Passwort wiederholen', n2), msg),
+                h('div', { class: 'dlg-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'), sub));
+            }, { modal: true, label: 'Sync-Passwort ändern' });
+            if (ok) { toast('Sync-Passwort geändert'); renderSync(); }
+          };
+          b.off = h('button', { class: 'btn btn-sm' }, 'Dieses Gerät abmelden');
+          b.off.onclick = async () => {
+            if (!await confirm('Dieses Gerät vom Push-Dienst abmelden? Es bekommt dann keine Pushes mehr und gleicht nicht mehr ab. Alle Daten auf diesem Gerät bleiben erhalten.', { ok: 'Abmelden', danger: true })) return;
+            await Y.disconnect(); toast('Abgemeldet – lokale Daten bleiben erhalten'); renderSync();
+          };
+          parts.sync.replaceChildren(card('☁️ Push & Sync',
+            h('dl', { class: 'kv' },
+              h('dt', {}, 'Status'), h('dd', {}, statusText),
+              h('dt', {}, 'Zuletzt'), h('dd', {}, st.lastOkAt ? U.relTime(st.lastOkAt) : '–'),
+              h('dt', {}, 'Ausstehend'), h('dd', {}, pending ? `${pending} Änderung(en)` : 'nichts'),
+              h('dt', {}, 'Push hier'), h('dd', {}, pushText),
+              h('dt', {}, 'Gerät'), h('dd', {}, st.deviceName || '–'),
+              h('dt', {}, 'Server'), h('dd', {}, st.api)),
+            h('div', { class: 'row', style: { marginTop: '12px' } }, b.sync, P.supported() ? b.push : null, b.test),
+            !P.supported() && U.isIOS() ? h('p', { class: 'small muted' }, '📱 ' + P.unsupportedReason()) : null,
+            h('p', { class: 'small muted' }, 'Erinnerungen löst jetzt der Server aus – auch wenn alle Geräte die App geschlossen haben. Die Ruhezeiten unten gelten auch dort. Inhalte (Titel, Notizen) sind Ende-zu-Ende-verschlüsselt.'),
+            h('details', { class: 'fold' }, h('summary', {}, 'Geräte & Konto'),
+              h('div', { class: 'row' }, b.dev, b.pw, b.off), devBox)));
+        };
+        await renderSync();
 
         /* Datensicherung */
         const renderBackup = async () => {
@@ -1425,7 +2027,7 @@
           } });
           const lastExport = await S.lastExportAt();
           parts.sicherung.replaceChildren(card('💾 Datensicherung',
-            h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Deine Daten liegen nur in diesem Browser. Exportiere regelmäßig eine Sicherungsdatei und lege sie sicher ab (sie ist unverschlüsselt).'),
+            h('p', { class: 'small muted', style: { marginTop: 0 } }, S.Sync.enabled() ? 'Deine Daten liegen in diesem Browser und verschlüsselt auf deinem Push-Dienst. Exportiere trotzdem gelegentlich eine Sicherungsdatei (sie ist unverschlüsselt) und lege sie sicher ab.' : 'Deine Daten liegen nur in diesem Browser. Exportiere regelmäßig eine Sicherungsdatei und lege sie sicher ab (sie ist unverschlüsselt).'),
             h('p', { class: 'small' }, lastExport ? `Letzter Export: ${U.formatDateTimeFull(lastExport)}` : 'Noch kein Export.'),
             h('div', { class: 'row' },
               h('button', { class: 'btn btn-primary', onclick: async () => { await S.Backup.exportFile(); toast('Sicherung exportiert'); } }, '⬇️ Exportieren'),
@@ -1507,6 +2109,9 @@
         renderDiag();
 
         ctx.events.on('notify:permission', renderNotify);
+        ctx.events.on('push:changed', () => renderSync());
+        let lastSyncState = S.Sync.status;
+        ctx.events.on('sync:status', ({ state }) => { if (state !== 'syncing' && state !== lastSyncState) { lastSyncState = state; renderSync(); } });
         ctx.events.on('settings:changed', ({ key }) => { if (key === 'hiddenModules') renderModules(); });
       },
     });
