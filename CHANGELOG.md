@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0 – 2026-11-22
+
+- Modul Ernährung: Eiweiß, Kohlenhydrate, Ballaststoffe und Fett pro Tag – eintragen, Durchschnitt im Zeitraum, Diagramm (Nährstoff wählbar), Ziele und Spalten in der Eintragstabelle.
+- Claude schätzt jetzt auch die Nährwerte. Neues Antwortformat `KCAL v2`: `Name; Menge; kcal; Eiweiß; Kohlenhydrate; Ballaststoffe; Fett`, am Ende `SUMME; …`. Antworten im alten Format `KCAL v1` werden weiter eingelesen.
+- Protokoll pro Tag: jede Übernahme aus Claude und jedes „Dazu“ mit Uhrzeit, Positionen und Nährwerten. Einzelne Einträge lassen sich löschen, ihre Werte werden dann vom Tag abgezogen.
+- Daten: neue optionale Felder `proteinG`, `carbsG`, `fiberG`, `fatG`, `log` im Tagesdatensatz – keine Migration nötig, bestehende Einträge bleiben unverändert.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert.
+
 ## 1.5.0 – 2026-11-22
 
 - Modul Ernährung: Textfeld für Lebensmittel. Der Text landet direkt im temporären Claude-Chat, dort nur noch abschicken.

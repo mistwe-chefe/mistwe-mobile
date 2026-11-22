@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.5.0">
+  <meta name="app-version" content="1.6.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -246,6 +246,23 @@
   [data-module="ernaehrung"] .hist .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   [data-module="ernaehrung"] .hist tbody tr { cursor: pointer; }
   [data-module="ernaehrung"] .hist tbody tr:hover { background: var(--surface-2); }
+  [data-module="ernaehrung"] .nut-fields { margin-top: 10px; }
+  [data-module="ernaehrung"] .unit-in.small-in input { font-size: 1rem; }
+  [data-module="ernaehrung"] .unit-in.small-in span { min-width: 1em; }
+  [data-module="ernaehrung"] .nut-stats { grid-template-columns: repeat(4, 1fr); margin-top: 0; }
+  [data-module="ernaehrung"] .stat.mini { padding: 6px 8px; }
+  [data-module="ernaehrung"] .stat.mini .v { font-size: 1rem; }
+  [data-module="ernaehrung"] .stat.mini .l { font-size: .72rem; }
+  @media (max-width: 420px) { [data-module="ernaehrung"] .nut-stats { grid-template-columns: repeat(2, 1fr); } }
+  [data-module="ernaehrung"] .log-card h3 { margin-bottom: 4px; }
+  [data-module="ernaehrung"] .log-entry { border-top: 1px solid var(--border); }
+  [data-module="ernaehrung"] .log-entry > summary { list-style: none; display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; cursor: pointer; min-height: 44px; }
+  [data-module="ernaehrung"] .log-entry > summary::-webkit-details-marker { display: none; }
+  [data-module="ernaehrung"] .log-entry .lt { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3em; padding-top: 1px; }
+  [data-module="ernaehrung"] .log-entry[open] { padding-bottom: 8px; }
+  [data-module="ernaehrung"] .table-scroll { overflow-x: auto; }
+  [data-module="ernaehrung"] .table-scroll table { min-width: 420px; }
+  dialog.dlg .nut-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   /* ==== ENDE MODUL-CSS: ernaehrung ==== */
   </style>
 </head>
@@ -269,7 +286,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.5.0',
+    APP_VERSION: '1.6.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -285,6 +302,11 @@
   };
 
   const CHANGELOG = [
+    { version: '1.6.0', date: '2026-11-22', items: [
+      'Modul ernaehrung: Eiweiß, Kohlenhydrate, Ballaststoffe und Fett pro Tag (eintragen, Durchschnitt im Zeitraum, Diagramm, Ziele, Tabelle)',
+      'Modul ernaehrung: Claude schätzt auch die Nährwerte (Antwortformat „KCAL v2“; Antworten im alten Format „KCAL v1“ werden weiter eingelesen)',
+      'Modul ernaehrung: Protokoll pro Tag – jede Übernahme aus Claude und jedes „Dazu“ mit Uhrzeit, Positionen und Nährwerten; einzelne Einträge lassen sich löschen (Werte werden abgezogen)',
+    ] },
     { version: '1.5.0', date: '2026-11-22', items: [
       'Modul ernaehrung: Textfeld für Lebensmittel – der Text landet direkt im temporären Claude-Chat, dort nur noch abschicken',
       'Modul ernaehrung: Claude antwortet im festen Format „KCAL v1“; die Antwort wird in der App eingefügt, eingelesen (Positionen + Summe) und für den gewählten Tag übernommen oder dazugerechnet',
@@ -2693,34 +2715,51 @@
       const n = Number(t);
       return Number.isFinite(n) ? n : NaN;
     };
+    const r1 = n => Math.round(n * 10) / 10;
     const fmtKg = n => n == null ? '–' : n.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const fmtKcal = n => n == null ? '–' : Math.round(n).toLocaleString('de-DE');
+    const fmtG = n => n == null ? '–' : (n < 10 ? r1(n) : Math.round(n)).toLocaleString('de-DE');
+    const fmtGIn = n => n == null ? '' : String(r1(n)).replace('.', ',');
     const fmtShort = k => dateOf(k).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
     const fmtLong = k => {
       const t = todayKey(), d = dateOf(k);
       const pre = k === t ? 'Heute, ' : k === addDays(t, -1) ? 'Gestern, ' : '';
       return pre + d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
     };
+    const fmtTime = ts => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+    /** Nährstoffe (Feldnamen im Datensatz sind unveränderlich) */
+    const NUTS = [
+      { k: 'proteinG', label: 'Eiweiß', short: 'E' },
+      { k: 'carbsG', label: 'Kohlenhydrate', short: 'KH' },
+      { k: 'fiberG', label: 'Ballaststoffe', short: 'B' },
+      { k: 'fatG', label: 'Fett', short: 'F' },
+    ];
+    const VALS = ['kcal', ...NUTS.map(n => n.k)];
+    /** „E 20 · KH 60 · B 4 · F 22 g“ – nur vorhandene Werte */
+    const nutLine = o => { const p = NUTS.filter(n => o[n.k] != null).map(n => `${n.short} ${fmtG(o[n.k])}`); return p.length ? p.join(' · ') + ' g' : ''; };
 
     /* Temporärer Claude-Chat (Inkognito) mit vorausgefülltem Prompt inkl. Lebensmitteln.
-       Claude antwortet in einem festen Format („KCAL v1“), das parseAnswer() wieder einliest. Format nie inkompatibel ändern. */
+       Claude antwortet im festen Format „KCAL v2“, das parseAnswer() einliest (v1 = nur kcal, wird weiter verstanden).
+       Format nie inkompatibel ändern – neue Felder nur über eine neue Versionsnummer. */
     const CLAUDE_PROMPT = [
-      'Schätze die Kalorien der folgenden Lebensmittel und Getränke. Wenn keine Menge angegeben ist, nimm eine übliche Portion an.',
+      'Schätze Kalorien und Nährwerte der folgenden Lebensmittel und Getränke. Wenn keine Menge angegeben ist, nimm eine übliche Portion an.',
       '',
       'Antworte ausschließlich mit einem einzigen Codeblock in genau diesem Format, ohne Text davor oder danach:',
       '',
       '```',
-      'KCAL v1',
-      'Lebensmittel; Menge; kcal',
-      'SUMME; kcal',
+      'KCAL v2',
+      'Lebensmittel; Menge; kcal; Eiweiß g; Kohlenhydrate g; Ballaststoffe g; Fett g',
+      'SUMME; kcal; Eiweiß g; Kohlenhydrate g; Ballaststoffe g; Fett g',
       '```',
       '',
       'Regeln:',
-      '- Erste Zeile ist immer „KCAL v1“.',
-      '- Danach eine Zeile pro Lebensmittel: Name; Menge mit Einheit; kcal.',
-      '- Letzte Zeile: SUMME; Summe aller kcal.',
+      '- Erste Zeile ist immer „KCAL v2“.',
+      '- Danach eine Zeile pro Lebensmittel mit genau 7 Feldern: Name; Menge mit Einheit; kcal; Eiweiß; Kohlenhydrate; Ballaststoffe; Fett.',
+      '- Letzte Zeile: SUMME; kcal; Eiweiß; Kohlenhydrate; Ballaststoffe; Fett (jeweils die Summe aller Zeilen).',
       '- Trennzeichen ist das Semikolon. Keine Semikolons in Namen oder Mengen.',
-      '- kcal immer als ganze Zahl ohne Einheit und ohne Tausenderpunkt.',
+      '- kcal als ganze Zahl ohne Einheit und ohne Tausenderpunkt. Nährwerte in Gramm ohne Einheit, höchstens eine Nachkommastelle mit Punkt (z. B. 12.5).',
+      '- Keine Kopfzeile, keine Tabelle, kein Markdown im Codeblock.',
       '',
       'Lebensmittel:',
       '',
@@ -2728,40 +2767,67 @@
     const MAX_FOODS = 6000;
     const claudeUrl = foods => 'https://claude.ai/new?incognito=true&q=' + encodeURIComponent(CLAUDE_PROMPT + String(foods || '').trim().slice(0, MAX_FOODS));
 
-    /** kcal-Wert aus einem Feld: „394“, „1.234“, „ca. 300 kcal“, „300-350“ (→ Mittelwert) */
+    const cleanField = s => String(s || '').toLowerCase().replace(/kcal|kalorien|gramm|ca\.|~|≈/g, '').replace(/\s/g, '').replace(/g$/, '');
+    /** kcal-Feld: „394“, „1.234“, „ca. 300 kcal“, „300-350“ (→ Mittelwert) */
     function parseKcalField(s) {
-      const t = String(s || '').toLowerCase().replace(/kcal|kalorien|ca\.|~|≈/g, '').replace(/\s/g, '');
+      const t = cleanField(s);
       const num = x => Number(x.replace(/\.(?=\d{3}(?!\d))/g, '').replace(',', '.'));
       const range = t.match(/^(\d[\d.,]*)[-–](\d[\d.,]*)$/);
       if (range) return Math.round((num(range[1]) + num(range[2])) / 2);
-      const m = t.match(/^\d[\d.,]*$/);
-      return m ? Math.round(num(m[0])) : NaN;
+      return /^\d[\d.,]*$/.test(t) ? Math.round(num(t)) : NaN;
     }
-    /** Antwort von Claude einlesen. Toleriert Codeblock-Zeichen, Markdown-Tabellen, „|“ oder Tab als Trenner und fehlende Kopfzeile. */
+    /** Gramm-Feld: „12.5“, „12,5“, „12 g“, „<1“ (→ 0,5), „10-12“ (→ Mittelwert). Punkt ist hier immer Dezimaltrenner. */
+    function parseGramField(s) {
+      let t = cleanField(s);
+      if (/^<\d/.test(t)) t = String(Number(t.slice(1).replace(',', '.')) / 2);
+      const num = x => Number(x.replace(',', '.'));
+      const range = t.match(/^(\d[\d.,]*)[-–](\d[\d.,]*)$/);
+      if (range) return r1((num(range[1]) + num(range[2])) / 2);
+      return /^\d[\d.,]*$/.test(t) ? r1(num(t)) : NaN;
+    }
+    /** Antwort von Claude einlesen (KCAL v2, KCAL v1, Markdown-Tabelle, „|“/Tab als Trenner, Notlösung Fließtext). */
     function parseAnswer(text) {
       const items = [];
       let total = null;
+      const readNums = parts => {
+        // Hinten stehende Zahlenfelder: 5 → kcal + 4 Nährstoffe, sonst nur kcal (letztes Feld)
+        if (parts.length >= 6 && parts.slice(-5).every((p, i) => Number.isFinite(i ? parseGramField(p) : parseKcalField(p)))) {
+          const [k, ...g] = parts.slice(-5);
+          const o = { kcal: parseKcalField(k) };
+          NUTS.forEach((n, i) => { o[n.k] = parseGramField(g[i]); });
+          return { o, rest: parts.slice(0, -5) };
+        }
+        const k = parseKcalField(parts[parts.length - 1]);
+        if (!Number.isFinite(k)) return null;
+        const o = { kcal: k }; NUTS.forEach(n => { o[n.k] = null; });
+        return { o, rest: parts.slice(0, -1) };
+      };
       for (let line of String(text || '').split(/\r?\n/)) {
         line = line.replace(/[*`]/g, '').trim();
         if (!line || /^kcal\s*v\d+$/i.test(line)) continue;
         const parts = line.split(/\s*[;|\t]\s*/).map(x => x.trim()).filter(Boolean);
         if (parts.length < 2) continue;
-        if (/^(summe|gesamt|insgesamt|total)\b/i.test(parts[0])) {
-          const v = parseKcalField(parts[parts.length - 1]);
-          if (Number.isFinite(v)) total = v;
-          continue;
-        }
-        const v = parseKcalField(parts[parts.length - 1]);
-        if (!Number.isFinite(v) || v < 0 || v > 10000) continue;   // Kopfzeilen, Trennlinien, Unsinn
-        items.push({ name: parts[0], amount: parts.length >= 3 ? parts.slice(1, -1).join(' ') : '', kcal: v });
+        const isSum = /^(summe|gesamt|insgesamt|total)\b/i.test(parts[0]);
+        const r = readNums(isSum ? parts : parts);
+        if (!r) continue;   // Kopfzeilen, Trennlinien
+        if (isSum) { total = r.o; continue; }
+        if (!r.rest.length || r.o.kcal < 0 || r.o.kcal > 10000) continue;
+        if (NUTS.some(n => r.o[n.k] != null && (r.o[n.k] < 0 || r.o[n.k] > 2000))) continue;
+        items.push({ name: r.rest[0], amount: r.rest.slice(1).join(' '), ...r.o });
       }
-      if (!items.length && total == null) {   // Notlösung für freien Text: „Summe: 1.234 kcal“
+      if (!items.length && !total) {   // Notlösung für freien Text: „Summe: 1.234 kcal“
         const m = String(text || '').match(/(?:summe|gesamt|insgesamt|total)[^\d\n]{0,40}(\d[\d.,]*)\s*kcal/i);
-        if (m) total = parseKcalField(m[1]);
+        if (m && Number.isFinite(parseKcalField(m[1]))) { total = { kcal: parseKcalField(m[1]) }; NUTS.forEach(n => { total[n.k] = null; }); }
       }
-      const sum = items.reduce((a, i) => a + i.kcal, 0);
-      const kcal = items.length ? sum : total;   // die Summe der Positionen gilt (Rechenfehler in SUMME werden so korrigiert)
-      return { items, total, sum, kcal: Number.isFinite(kcal) ? kcal : null, mismatch: items.length > 0 && total != null && Math.abs(total - sum) > 1 };
+      // Maßgeblich ist die nachgerechnete Summe der Positionen (Rechenfehler in SUMME werden so korrigiert).
+      const sum = {};
+      for (const v of VALS) {
+        const have = items.filter(i => i[v] != null);
+        if (items.length && have.length === items.length) sum[v] = v === 'kcal' ? Math.round(have.reduce((a, i) => a + i[v], 0)) : r1(have.reduce((a, i) => a + i[v], 0));
+        else sum[v] = total && total[v] != null ? total[v] : null;
+      }
+      const mismatch = !!total && items.length > 0 && VALS.some(v => total[v] != null && sum[v] != null && Math.abs(total[v] - sum[v]) > (v === 'kcal' ? 1 : 0.6));
+      return { items, total, sum, ok: sum.kcal != null, mismatch, hasNuts: NUTS.some(n => sum[n.k] != null) };
     }
 
     const RANGES = [
@@ -2864,20 +2930,24 @@
     async function openSettings(ctx) {
       const { h, dialog, toast } = ctx.ui;
       const kg = await ctx.settings.get('weightGoal', null), kc = await ctx.settings.get('kcalGoal', null);
+      const ng = await ctx.settings.get('nutGoals', {});
       const kcIn = h('input', { type: 'text', inputmode: 'numeric', value: kc != null ? String(kc) : '', placeholder: 'z. B. 2000', autocomplete: 'off' });
       const kgIn = h('input', { type: 'text', inputmode: 'decimal', value: kg != null ? fmtKg(kg) : '', placeholder: 'z. B. 75,0', autocomplete: 'off' });
+      const nIn = Object.fromEntries(NUTS.map(n => [n.k, h('input', { type: 'text', inputmode: 'decimal', value: fmtGIn(ng[n.k] ?? null), placeholder: '–', autocomplete: 'off' })]));
       const msg = h('div', { class: 'small', style: { color: 'var(--danger)', minHeight: '1.2em' } });
       const ok = await dialog(close => h('form', { onsubmit: e => {
         e.preventDefault();
         const a = parseNum(kcIn.value, true), b = parseNum(kgIn.value);
         if (Number.isNaN(a) || (a != null && (a < 500 || a > 10000))) { msg.textContent = 'kcal-Ziel bitte zwischen 500 und 10.000.'; return; }
         if (Number.isNaN(b) || (b != null && (b < 20 || b > 400))) { msg.textContent = 'Zielgewicht bitte zwischen 20 und 400 kg.'; return; }
+        for (const n of NUTS) { const v = parseNum(nIn[n.k].value); if (Number.isNaN(v) || (v != null && (v < 0 || v > 2000))) { msg.textContent = `${n.label}: bitte Gramm zwischen 0 und 2.000.`; return; } }
         close(true);
       } },
-        h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'Ziele'),
+        h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'Ziele pro Tag'),
         h('div', { class: 'stack' },
           h('label', { class: 'field' }, h('span', {}, 'kcal pro Tag (leer = kein Ziel)'), kcIn),
           h('label', { class: 'field' }, h('span', {}, 'Zielgewicht in kg (leer = kein Ziel)'), kgIn),
+          h('div', { class: 'nut-grid' }, NUTS.map(n => h('label', { class: 'field' }, h('span', {}, `${n.label} (g)`), nIn[n.k]))),
           h('p', { class: 'small muted', style: { margin: 0 } }, 'Die Ziele erscheinen als gestrichelte Linie in den Diagrammen.'),
           msg),
         h('div', { class: 'dlg-actions' },
@@ -2886,23 +2956,30 @@
       if (!ok) return;
       const a = parseNum(kcIn.value, true), b = parseNum(kgIn.value);
       await ctx.settings.set('kcalGoal', a == null ? null : Math.round(a));
-      await ctx.settings.set('weightGoal', b == null ? null : Math.round(b * 10) / 10);
+      await ctx.settings.set('weightGoal', b == null ? null : r1(b));
+      await ctx.settings.set('nutGoals', Object.fromEntries(NUTS.map(n => { const v = parseNum(nIn[n.k].value); return [n.k, v == null ? null : r1(v)]; })));
       toast('Gespeichert');
     }
 
     App.register({
       id: 'ernaehrung', name: 'Ernährung', icon: 'scale', order: 20,
-      description: 'Gewicht und Kalorien pro Tag mit Verlauf', category: 'Gesundheit',
-      version: '1.1.0', schemaVersion: 1, migrations: {},
+      description: 'Gewicht, Kalorien und Nährstoffe pro Tag mit Verlauf', category: 'Gesundheit',
+      version: '1.2.0', schemaVersion: 1, migrations: {},
 
       /* Datensatz (ernaehrung/tage, synchronisiert): id = Datum „JJJJ-MM-TT“ (ein Eintrag pro Tag)
-         { id, createdAt, updatedAt, deletedAt, date: 'JJJJ-MM-TT', weightKg: Zahl|null, kcal: Zahl|null } */
+         { id, createdAt, updatedAt, deletedAt, date: 'JJJJ-MM-TT',
+           weightKg: Zahl|null, kcal: Zahl|null,
+           proteinG, carbsG, fiberG, fatG: Zahl|null            (ab 1.6.0, optional – ältere Einträge haben sie nicht),
+           log: [ { id, at, source: 'claude'|'manuell', mode: 'add'|'set', kcal, proteinG, carbsG, fiberG, fatG,
+                    items: [ { name, amount, kcal, proteinG, carbsG, fiberG, fatG } ] } ]   (ab 1.6.0, optional) }
+         Die Tageswerte sind maßgeblich; das Protokoll hält fest, woher sie kommen. */
       async init(ctx) { col = ctx.store.collection('tage', { sync: true }); },
 
       async mount(el, ctx) {
         const { h, toast } = ctx.ui;
         let day = todayKey();
         let range = await ctx.settings.get('range', '30');
+        let nutSel = await ctx.settings.get('nutChart', 'proteinG');
         const editBox = h('div'), chartsBox = h('div'), histBox = h('div');
         el.append(
           h('div', { class: 'head' },
@@ -2910,12 +2987,37 @@
             h('button', { class: 'btn btn-ghost', title: 'Ziele', 'aria-label': 'Ziele', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, ctx.ui.icon('settings'))),
           editBox, chartsBox, histBox);
 
+        /** Tageswerte speichern (patch wird mit dem bestehenden Eintrag zusammengeführt). Leerer Tag ohne Protokoll → löschen. */
+        const saveDay = async (patch, msg) => {
+          const cur = await col.get(day);
+          const next = { date: day, weightKg: null, kcal: null, ...Object.fromEntries(NUTS.map(n => [n.k, null])), log: [], ...(cur || {}), ...patch };
+          const empty = next.weightKg == null && VALS.every(v => next[v] == null) && !(next.log || []).length;
+          try {
+            if (empty) { if (cur) { await col.remove(day); toast(`Eintrag für ${fmtLong(day)} gelöscht`); } return; }
+            const { id: _i, createdAt: _c, updatedAt: _u, deletedAt: _d, ...data } = next;
+            if (cur) await col.update(day, data); else await col.add({ id: day, ...data });
+            toast(msg || `Gespeichert: ${fmtLong(day)}`);
+          } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
+        };
+        /** Werte eines Protokolleintrags zum Tag addieren (sign = 1) oder abziehen (sign = -1) */
+        const combine = (cur, entry, sign) => {
+          const out = {};
+          for (const v of VALS) {
+            if (entry[v] == null) { out[v] = cur ? cur[v] ?? null : null; continue; }
+            const base = cur && cur[v] != null ? cur[v] : 0;
+            const val = Math.max(0, base + sign * entry[v]);
+            out[v] = v === 'kcal' ? Math.round(val) : r1(val);
+          }
+          return out;
+        };
+
         /* Eintrag für einen Tag */
         const renderEdit = async () => {
           const rec = await col.get(day);
           const today = todayKey();
           const wIn = h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': 'Gewicht in kg', value: rec && rec.weightKg != null ? fmtKg(rec.weightKg) : '' });
           const kIn = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': 'Kilokalorien', value: rec && rec.kcal != null ? String(Math.round(rec.kcal)) : '' });
+          const nIn = Object.fromEntries(NUTS.map(n => [n.k, h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': `${n.label} in Gramm`, value: fmtGIn(rec ? rec[n.k] ?? null : null) })]));
           const addIn = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: 'kcal dazurechnen, z. B. 450', 'aria-label': 'kcal zum Tageswert dazurechnen' });
           const dateIn = h('input', { type: 'date', value: day, max: today, 'aria-label': 'Tag wählen', onchange: () => { if (isKey(dateIn.value) && dateIn.value <= todayKey()) { day = dateIn.value; renderEdit(); } } });
 
@@ -2923,24 +3025,21 @@
             const w = parseNum(wIn.value), k = parseNum(kIn.value, true);
             if (Number.isNaN(w) || (w != null && (w < 20 || w > 400))) { toast('Gewicht bitte in kg zwischen 20 und 400 eingeben', { type: 'error' }); wIn.focus(); return; }
             if (Number.isNaN(k) || (k != null && (k < 0 || k > 20000))) { toast('kcal bitte zwischen 0 und 20.000 eingeben', { type: 'error' }); kIn.focus(); return; }
-            const patch = { date: day, weightKg: w == null ? null : Math.round(w * 10) / 10, kcal: k == null ? null : Math.round(k) };
-            const cur = await col.get(day);
-            try {
-              if (patch.weightKg == null && patch.kcal == null) {
-                if (cur) { await col.remove(day); toast(`Eintrag für ${fmtLong(day)} gelöscht`); }
-                return;
-              }
-              if (cur) await col.update(day, patch); else await col.add({ id: day, ...patch });
-              toast(`Gespeichert: ${fmtLong(day)}`);
-            } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
+            const patch = { weightKg: w == null ? null : r1(w), kcal: k == null ? null : Math.round(k) };
+            for (const n of NUTS) {
+              const v = parseNum(nIn[n.k].value);
+              if (Number.isNaN(v) || (v != null && (v < 0 || v > 2000))) { toast(`${n.label}: bitte Gramm zwischen 0 und 2.000 eingeben`, { type: 'error' }); nIn[n.k].focus(); return; }
+              patch[n.k] = v == null ? null : r1(v);
+            }
+            await saveDay(patch);
           };
-          const add = () => {
+          const add = async () => {
             const a = parseNum(addIn.value, true);
-            if (a == null || Number.isNaN(a) || a <= 0) { addIn.focus(); return; }
-            const cur = parseNum(kIn.value, true);
-            kIn.value = String(Math.round((cur && !Number.isNaN(cur) ? cur : 0) + a));
-            addIn.value = '';
-            save();
+            if (a == null || Number.isNaN(a) || a <= 0 || a > 10000) { addIn.focus(); return; }
+            const cur = await col.get(day);
+            const entry = { id: ctx.util.uuid(), at: Date.now(), source: 'manuell', mode: 'add', kcal: Math.round(a), ...Object.fromEntries(NUTS.map(n => [n.k, null])), items: [] };
+            await saveDay({ ...combine(cur, entry, 1), log: [...((cur && cur.log) || []), entry] }, `${fmtKcal(a)} kcal dazugerechnet`);
+            renderEdit();
           };
           addIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); add(); } });
 
@@ -2952,13 +3051,41 @@
             h('div', { class: 'fields' },
               h('label', { class: 'field' }, h('span', {}, 'Gewicht'), h('div', { class: 'unit-in' }, wIn, h('span', {}, 'kg'))),
               h('label', { class: 'field' }, h('span', {}, 'Kalorien'), h('div', { class: 'unit-in' }, kIn, h('span', {}, 'kcal')))),
+            h('div', { class: 'fields nut-fields' }, NUTS.map(n => h('label', { class: 'field' }, h('span', {}, n.label), h('div', { class: 'unit-in small-in' }, nIn[n.k], h('span', {}, 'g'))))),
             h('div', { class: 'add-row' }, addIn, h('button', { type: 'button', class: 'btn', onclick: add, disabled: ctx.readOnly }, ctx.ui.icon('plus'), 'Dazu')),
             h('button', { type: 'submit', class: 'btn btn-primary btn-block', style: { marginTop: '10px' }, disabled: ctx.readOnly }, ctx.ui.icon('save'), 'Speichern'),
-            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Beide Felder leeren und speichern löscht den Eintrag des Tages.')),
-            await claudeCard(rec));
+            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Alle Felder leeren und speichern löscht die Werte des Tages.')),
+            ...[logCard(rec), await claudeCard(rec)].filter(Boolean));
         };
 
-        /* kcal mit Claude schätzen: Lebensmittel → Claude → Antwort einfügen → übernehmen */
+        /* Protokoll des Tages: jede Übernahme aus Claude und jedes „Dazu“ mit Uhrzeit und Positionen */
+        const logCard = rec => {
+          const log = (rec && rec.log) || [];
+          if (!log.length) return null;
+          const sumLog = log.reduce((a, e) => a + (e.kcal || 0), 0);
+          const removeEntry = async entry => {
+            if (!await ctx.ui.confirm(`Eintrag von ${fmtTime(entry.at)} Uhr (${fmtKcal(entry.kcal)} kcal) löschen? Seine Werte werden vom Tag abgezogen.`, { ok: 'Löschen', danger: true })) return;
+            const cur = await col.get(day);
+            if (!cur) return;
+            await saveDay({ ...combine(cur, entry, -1), log: (cur.log || []).filter(e => e.id !== entry.id) }, 'Protokolleintrag gelöscht');
+            renderEdit();
+          };
+          return h('div', { class: 'card log-card' },
+            h('h3', {}, `Protokoll (${log.length})`),
+            log.slice().sort((a, b) => a.at - b.at).map(e => h('details', { class: 'log-entry' },
+              h('summary', {},
+                h('span', { class: 'lt' }, fmtTime(e.at)),
+                h('span', { class: 'grow' }, h('strong', {}, `${e.mode === 'set' ? '= ' : '+ '}${fmtKcal(e.kcal)} kcal`), h('span', { class: 'small muted' }, ` · ${e.source === 'claude' ? `Claude, ${(e.items || []).length} Pos.` : 'manuell'}`),
+                  nutLine(e) ? h('div', { class: 'small muted' }, nutLine(e)) : null)),
+              (e.items || []).length ? h('table', { class: 'simple hist' }, h('tbody', {}, e.items.map(i => h('tr', {},
+                h('td', {}, i.name, i.amount ? h('span', { class: 'muted' }, ` · ${i.amount}`) : null, nutLine(i) ? h('div', { class: 'small muted' }, nutLine(i)) : null),
+                h('td', { class: 'num' }, `${fmtKcal(i.kcal)} kcal`))))) : null,
+              h('div', { class: 'row', style: { marginTop: '6px' } }, h('button', { type: 'button', class: 'btn btn-sm btn-ghost', style: { color: 'var(--danger)' }, disabled: ctx.readOnly, onclick: () => removeEntry(e) }, ctx.ui.icon('trash'), 'Eintrag löschen')))),
+            rec.kcal != null && Math.abs(sumLog - rec.kcal) > 1 && !log.some(e => e.mode === 'set')
+              ? h('p', { class: 'small muted', style: { margin: '8px 0 0' } }, `Der Tageswert (${fmtKcal(rec.kcal)} kcal) wurde zusätzlich von Hand geändert.`) : null);
+        };
+
+        /* kcal + Nährwerte mit Claude schätzen: Lebensmittel → Claude → Antwort einfügen → übernehmen */
         const claudeCard = async rec => {
           const draft = await ctx.store.get('entwurf', {});
           const foodsIn = h('textarea', { rows: 3, 'aria-label': 'Lebensmittel', placeholder: 'Was hast du gegessen und getrunken? z. B.\n2 Brötchen mit Butter und Gouda\n1 Apfel\nCappuccino mit Hafermilch' });
@@ -2971,37 +3098,37 @@
 
           const ansIn = h('textarea', { rows: 3, 'aria-label': 'Antwort von Claude', placeholder: 'Antwort von Claude hier einfügen (Codeblock kopieren)' });
           const preview = h('div', { class: 'parse-box', hidden: true });
-          const reset = async () => { ansIn.value = ''; foodsIn.value = ''; updLink(); preview.hidden = true; await ctx.store.set('entwurf', {}); };
-          const apply = async (mode, kcal) => {
+          const apply = async (mode, r) => {
             const cur = await col.get(day);
-            const base = cur && cur.kcal != null ? cur.kcal : 0;
-            const next = Math.round(mode === 'add' ? base + kcal : kcal);
-            if (next > 20000) { toast('Das wären über 20.000 kcal – bitte prüfen', { type: 'error' }); return; }
-            try {
-              if (cur) await col.update(day, { kcal: next }); else await col.add({ id: day, date: day, weightKg: null, kcal: next });
-              await reset();
-              toast(`${fmtLong(day)}: ${fmtKcal(next)} kcal gespeichert`);
-              renderEdit();
-            } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
+            const entry = { id: ctx.util.uuid(), at: Date.now(), source: 'claude', mode, ...r.sum, items: r.items };
+            const vals = mode === 'add' ? combine(cur, entry, 1) : Object.fromEntries(VALS.map(v => [v, r.sum[v]]));
+            if (vals.kcal > 20000) { toast('Das wären über 20.000 kcal – bitte prüfen', { type: 'error' }); return; }
+            const log = mode === 'add' ? [...((cur && cur.log) || []), entry] : [entry];
+            await saveDay({ ...vals, log }, `${fmtLong(day)}: ${fmtKcal(vals.kcal)} kcal gespeichert`);
+            await ctx.store.set('entwurf', {});
+            renderEdit();
           };
           const showParse = () => {
             const txt = ansIn.value;
             if (!txt.trim()) { preview.hidden = true; return; }
             const r = parseAnswer(txt);
             preview.hidden = false;
-            if (r.kcal == null) {
-              preview.replaceChildren(h('div', { class: 'parse-err' }, ctx.ui.icon('alert'), ' Keine kcal gefunden. Bitte den ganzen Codeblock aus der Antwort kopieren (beginnt mit „KCAL v1“).'));
+            if (!r.ok) {
+              preview.replaceChildren(h('div', { class: 'parse-err' }, ctx.ui.icon('alert'), ' Keine kcal gefunden. Bitte den ganzen Codeblock aus der Antwort kopieren (beginnt mit „KCAL v2“).'));
               return;
             }
             const hasDay = rec && rec.kcal != null;
+            const after = hasDay ? combine(rec, r.sum, 1) : null;
             preview.replaceChildren(...[
               r.items.length ? h('table', { class: 'simple hist' }, h('tbody', {},
-                r.items.map(i => h('tr', {}, h('td', {}, i.name, i.amount ? h('div', { class: 'small muted' }, i.amount) : null), h('td', { class: 'num' }, fmtKcal(i.kcal)))),
-                h('tr', { class: 'sum' }, h('td', {}, 'Summe'), h('td', { class: 'num' }, `${fmtKcal(r.kcal)} kcal`)))) : h('div', { class: 'sum' }, `Summe: ${fmtKcal(r.kcal)} kcal`),
-              r.mismatch ? h('p', { class: 'small muted' }, `Claude hat als Summe ${fmtKcal(r.total)} angegeben – übernommen wird die nachgerechnete Summe der Positionen.`) : null,
+                r.items.map(i => h('tr', {}, h('td', {}, i.name, i.amount ? h('span', { class: 'muted' }, ` · ${i.amount}`) : null, nutLine(i) ? h('div', { class: 'small muted' }, nutLine(i)) : null), h('td', { class: 'num' }, fmtKcal(i.kcal)))),
+                h('tr', { class: 'sum' }, h('td', {}, 'Summe', nutLine(r.sum) ? h('div', { class: 'small' }, nutLine(r.sum)) : null), h('td', { class: 'num' }, `${fmtKcal(r.sum.kcal)} kcal`)))) : h('div', { class: 'sum' }, `Summe: ${fmtKcal(r.sum.kcal)} kcal`, nutLine(r.sum) ? h('div', { class: 'small' }, nutLine(r.sum)) : null),
+              !r.hasNuts ? h('p', { class: 'small muted' }, 'Keine Nährwerte in der Antwort – es wird nur kcal übernommen.') : null,
+              r.mismatch ? h('p', { class: 'small muted' }, 'Claudes SUMME-Zeile weicht ab – übernommen wird die nachgerechnete Summe der Positionen.') : null,
               h('div', { class: 'row', style: { marginTop: '10px' } },
-                hasDay ? h('button', { type: 'button', class: 'btn btn-primary grow', disabled: ctx.readOnly, onclick: () => apply('add', r.kcal) }, ctx.ui.icon('plus'), `Dazurechnen (${fmtKcal(rec.kcal + r.kcal)} kcal)`) : null,
-                h('button', { type: 'button', class: 'btn grow' + (hasDay ? '' : ' btn-primary'), disabled: ctx.readOnly, onclick: () => apply('set', r.kcal) }, ctx.ui.icon('check'), hasDay ? 'Tageswert ersetzen' : `Übernehmen (${fmtKcal(r.kcal)} kcal)`))].filter(Boolean));
+                hasDay ? h('button', { type: 'button', class: 'btn btn-primary grow', disabled: ctx.readOnly, onclick: () => apply('add', r) }, ctx.ui.icon('plus'), `Dazurechnen (${fmtKcal(after.kcal)} kcal)`) : null,
+                h('button', { type: 'button', class: 'btn grow' + (hasDay ? '' : ' btn-primary'), disabled: ctx.readOnly, onclick: () => apply('set', r) }, ctx.ui.icon('check'), hasDay ? 'Tageswerte ersetzen' : `Übernehmen (${fmtKcal(r.sum.kcal)} kcal)`)),
+            ].filter(Boolean));
           };
           ansIn.addEventListener('input', showParse);
           const pasteBtn = navigator.clipboard && navigator.clipboard.readText ? h('button', { type: 'button', class: 'btn btn-sm', onclick: async () => {
@@ -3010,10 +3137,10 @@
           } }, 'Aus Zwischenablage einfügen') : null;
 
           return h('div', { class: 'card claude-card' },
-            h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('external'), 'kcal mit Claude schätzen'),
+            h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('external'), 'Mit Claude schätzen'),
             h('div', { class: 'step' }, h('span', { class: 'n' }, '1'), 'Lebensmittel eingeben'),
             foodsIn, link,
-            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Öffnet einen neuen temporären Chat mit deinem Text – dort nur noch abschicken.'),
+            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Öffnet einen neuen temporären Chat mit deinem Text – dort nur noch abschicken. Claude schätzt kcal, Eiweiß, Kohlenhydrate, Ballaststoffe und Fett.'),
             h('div', { class: 'step' }, h('span', { class: 'n' }, '2'), 'Antwort von Claude hier einfügen'),
             ansIn, pasteBtn ? h('div', { class: 'row', style: { marginTop: '8px' } }, pasteBtn) : null, preview);
         };
@@ -3022,43 +3149,50 @@
         const renderCharts = async () => {
           const all = (await col.all()).filter(r => isKey(r.id)).sort((a, b) => (a.id < b.id ? -1 : 1));
           const kcalGoal = await ctx.settings.get('kcalGoal', null), weightGoal = await ctx.settings.get('weightGoal', null);
+          const nutGoals = await ctx.settings.get('nutGoals', {});
           const end = todayKey();
           const R = RANGES.find(r => r.id === range) || RANGES[1];
           const start = R.days ? addDays(end, -(R.days - 1)) : (all.length && all[0].id < end ? all[0].id : end);
           const keys = [];
           for (let k = start; k <= end; k = addDays(k, 1)) keys.push(k);
           const inRange = all.filter(r => r.id >= start && r.id <= end);
-          const wMap = new Map(), kMap = new Map();
-          inRange.forEach(r => { if (r.weightKg != null) wMap.set(r.id, r.weightKg); if (r.kcal != null) kMap.set(r.id, r.kcal); });
+          const mapOf = f => new Map(inRange.filter(r => r[f] != null).map(r => [r.id, r[f]]));
+          const avgOf = f => { const v = inRange.filter(r => r[f] != null); return v.length ? { avg: v.reduce((a, r) => a + r[f], 0) / v.length, n: v.length } : null; };
 
           const lastW = [...all].reverse().find(r => r.weightKg != null);
           const wIn = inRange.filter(r => r.weightKg != null);
           const delta = wIn.length >= 2 ? wIn[wIn.length - 1].weightKg - wIn[0].weightKg : null;
-          const kIn = inRange.filter(r => r.kcal != null);
-          const avgK = kIn.length ? kIn.reduce((a, r) => a + r.kcal, 0) / kIn.length : null;
+          const avgK = avgOf('kcal');
           const cw = Math.max(280, (chartsBox.clientWidth || el.clientWidth || 360) - 34);
-          const stat = (v, l) => h('div', { class: 'stat' }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, l));
+          const stat = (v, l, cls = '') => h('div', { class: 'stat ' + cls }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, l));
+          const nut = NUTS.find(n => n.k === nutSel) || NUTS[0];
 
           chartsBox.replaceChildren(h('div', { class: 'card' },
             h('div', { class: 'chips scroll', role: 'radiogroup', 'aria-label': 'Zeitraum' }, RANGES.map(r => h('button', { type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(r.id === range), onclick: async () => { range = r.id; renderCharts(); await ctx.settings.set('range', range); } }, r.label))),
             h('div', { class: 'stats' },
               stat(lastW ? `${fmtKg(lastW.weightKg)} kg` : '–', lastW ? `Aktuell (${fmtLong(lastW.id)})` : 'Aktuelles Gewicht'),
               stat(delta == null ? '–' : `${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${fmtKg(Math.abs(delta))} kg`, 'Veränderung im Zeitraum'),
-              stat(avgK == null ? '–' : `${fmtKcal(avgK)} kcal`, `Ø pro Tag (${kIn.length} ${kIn.length === 1 ? 'Tag' : 'Tage'})${kcalGoal ? ` · Ziel ${fmtKcal(kcalGoal)}` : ''}`)),
+              stat(avgK ? `${fmtKcal(avgK.avg)} kcal` : '–', `Ø pro Tag (${avgK ? avgK.n : 0} ${avgK && avgK.n === 1 ? 'Tag' : 'Tage'})${kcalGoal ? ` · Ziel ${fmtKcal(kcalGoal)}` : ''}`)),
+            h('div', { class: 'stats nut-stats' }, NUTS.map(n => { const a = avgOf(n.k); return stat(a ? `${fmtG(a.avg)} g` : '–', `Ø ${n.label}${nutGoals[n.k] != null ? ` · Ziel ${fmtG(nutGoals[n.k])}` : ''}`, 'mini'); })),
             h('div', { class: 'chart-title' }, h('span', {}, 'Gewicht'), h('span', { class: 'small muted' }, 'kg')),
-            chart(ctx, { title: 'Gewicht', keys, values: wMap, type: 'line', goal: weightGoal, fmt: v => fmtKg(v), unit: 'kg', zero: false, width: cw }),
+            chart(ctx, { title: 'Gewicht', keys, values: mapOf('weightKg'), type: 'line', goal: weightGoal, fmt: v => fmtKg(v), unit: 'kg', zero: false, width: cw }),
             h('div', { class: 'chart-title' }, h('span', {}, 'Kalorien'), h('span', { class: 'small muted' }, 'kcal pro Tag')),
-            chart(ctx, { title: 'Kalorien', keys, values: kMap, type: 'bar', goal: kcalGoal, fmt: v => fmtKcal(v), unit: 'kcal', zero: true, width: cw })));
+            chart(ctx, { title: 'Kalorien', keys, values: mapOf('kcal'), type: 'bar', goal: kcalGoal, fmt: v => fmtKcal(v), unit: 'kcal', zero: true, width: cw }),
+            h('div', { class: 'chart-title' }, h('span', {}, 'Nährstoffe'), h('span', { class: 'small muted' }, 'g pro Tag')),
+            h('div', { class: 'chips scroll', role: 'radiogroup', 'aria-label': 'Nährstoff', style: { marginTop: '6px' } }, NUTS.map(n => h('button', { type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(n.k === nut.k), onclick: async () => { nutSel = n.k; renderCharts(); await ctx.settings.set('nutChart', nutSel); } }, n.label))),
+            chart(ctx, { title: nut.label, keys, values: mapOf(nut.k), type: 'bar', goal: nutGoals[nut.k] ?? null, fmt: v => fmtG(v), unit: 'g', zero: true, width: cw })));
 
           const rows = [...inRange].reverse().slice(0, 120);
           histBox.replaceChildren(...(rows.length ? [h('details', { class: 'fold' },
             h('summary', {}, `Einträge (${inRange.length})`),
-            h('div', { class: 'card' }, h('table', { class: 'simple hist' },
-              h('thead', {}, h('tr', {}, h('th', {}, 'Tag'), h('th', { class: 'num' }, 'Gewicht'), h('th', { class: 'num' }, 'kcal'))),
+            h('div', { class: 'card' }, h('div', { class: 'table-scroll' }, h('table', { class: 'simple hist' },
+              h('thead', {}, h('tr', {}, h('th', {}, 'Tag'), h('th', { class: 'num' }, 'kg'), h('th', { class: 'num' }, 'kcal'), NUTS.map(n => h('th', { class: 'num', title: n.label }, n.short)))),
               h('tbody', {}, rows.map(r => h('tr', { title: 'Bearbeiten', onclick: () => { day = r.id; renderEdit(); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
                 h('td', {}, fmtLong(r.id)),
-                h('td', { class: 'num' }, r.weightKg != null ? `${fmtKg(r.weightKg)} kg` : '–'),
-                h('td', { class: 'num' }, r.kcal != null ? fmtKcal(r.kcal) : '–'))))),
+                h('td', { class: 'num' }, r.weightKg != null ? fmtKg(r.weightKg) : '–'),
+                h('td', { class: 'num' }, r.kcal != null ? fmtKcal(r.kcal) : '–'),
+                NUTS.map(n => h('td', { class: 'num' }, fmtG(r[n.k] ?? null)))))))),
+              h('p', { class: 'small muted' }, `Nährstoffe in Gramm: ${NUTS.map(n => `${n.short} = ${n.label}`).join(', ')}.`),
               inRange.length > rows.length ? h('p', { class: 'small muted' }, `Die ${rows.length} neuesten von ${inRange.length} Einträgen.`) : null))] : []));
         };
 
@@ -3066,7 +3200,8 @@
         ctx.events.on('store:changed', e => {
           if (e.moduleId !== 'ernaehrung') return;
           re();
-          if (e.remote) renderEdit(); // Änderung von einem anderen Gerät/Tab
+          // Änderung von einem anderen Gerät/Tab – nicht neu zeichnen, während hier getippt wird
+          if (e.remote && !editBox.contains(document.activeElement)) renderEdit();
         });
         ctx.events.on('app:visible', () => { if (day > todayKey()) day = todayKey(); re(); });
         await renderEdit();
