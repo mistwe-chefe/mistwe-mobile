@@ -7,7 +7,7 @@ import { pull, push, ack, putSettings, putSubscription, deleteSubscription } fro
 import { nextAt, quietDefer } from './schedule.js';
 import { sendPush } from './webpush.js';
 
-const WORKER_VERSION = '1.1.0';
+const WORKER_VERSION = '1.1.1';
 
 /* ---------- HTTP ---------- */
 function allowedOrigin(request, env) {
@@ -56,6 +56,10 @@ async function route(request, env) {
   if (M === 'POST' && p === '/v1/test-push') return testPush(env, dev);
   if (M === 'POST' && p === '/v1/account/rekey') return rekey(request, env, dev);
   if (M === 'GET' && p === '/v1/status') return status(env, dev);
+  if (M === 'POST' && p === '/v1/push-received') {
+    await env.DB.prepare('INSERT OR REPLACE INTO counters (name, value) VALUES (?, ?)').bind('rx:' + dev.id, Date.now()).run();
+    return { ok: true };
+  }
   throw new HttpError(404, 'Unbekannte Route', 'not_found');
 }
 
@@ -90,12 +94,13 @@ async function sendToAll(env, payload, { where = '', bind = [] } = {}) {
 /** GET /v1/status – Diagnose: Cron-Takt und letzter Versand an dieses Gerät */
 async function status(env, dev) {
   const c = await env.DB.prepare("SELECT value FROM counters WHERE name = 'cron_at'").first();
+  const rx = await env.DB.prepare('SELECT value FROM counters WHERE name = ?').bind('rx:' + dev.id).first();
   let results, migrationMissing = false;
   try { ({ results } = await env.DB.prepare('SELECT endpoint, created_at, fail_count, last_status, last_reason, last_at FROM subscriptions WHERE device_id = ?').bind(dev.id).all()); }
   catch (_) { migrationMissing = true; ({ results } = await env.DB.prepare('SELECT endpoint, created_at, fail_count FROM subscriptions WHERE device_id = ?').bind(dev.id).all()); }
   const subject = String(env.VAPID_CONTACT || env.VAPID_SUBJECT || '');
   return {
-    workerVersion: WORKER_VERSION, now: Date.now(), cronAt: c && c.value ? c.value : null, migrationMissing,
+    workerVersion: WORKER_VERSION, now: Date.now(), cronAt: c && c.value ? c.value : null, lastReceivedAt: rx ? rx.value : null, migrationMissing,
     vapidSubject: subject.startsWith('mailto:') ? 'mailto' : subject.startsWith('https:') ? 'https' : 'ungültig',
     subscriptions: results.map(s => ({ host: new URL(s.endpoint).host, endpointTail: s.endpoint.slice(-8), createdAt: s.created_at, failCount: s.fail_count, lastStatus: s.last_status, lastReason: s.last_reason, lastAt: s.last_at })),
   };

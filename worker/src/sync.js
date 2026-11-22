@@ -150,10 +150,14 @@ export async function putSubscription(request, env, dev) {
   if (ep.protocol !== 'https:' && !env.ALLOW_HTTP_PUSH) throw new HttpError(400, 'endpoint muss https sein');
   const k = b.keys || {};
   if (typeof k.p256dh !== 'string' || typeof k.auth !== 'string' || k.p256dh.length > 200 || k.auth.length > 64) throw new HttpError(400, 'keys ungültig');
-  await env.DB.prepare(
-    `INSERT INTO subscriptions (endpoint, device_id, p256dh, auth, created_at, fail_count) VALUES (?, ?, ?, ?, ?, 0)
-     ON CONFLICT(endpoint) DO UPDATE SET device_id = excluded.device_id, p256dh = excluded.p256dh, auth = excluded.auth, fail_count = 0`)
-    .bind(b.endpoint, dev.id, k.p256dh, k.auth, Date.now()).run();
+  // Ein Gerät (Browser) hat genau ein gültiges Abo: ältere desselben Geräts sind verworfen und werden entfernt
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO subscriptions (endpoint, device_id, p256dh, auth, created_at, fail_count) VALUES (?, ?, ?, ?, ?, 0)
+       ON CONFLICT(endpoint) DO UPDATE SET device_id = excluded.device_id, p256dh = excluded.p256dh, auth = excluded.auth, fail_count = 0`)
+      .bind(b.endpoint, dev.id, k.p256dh, k.auth, Date.now()),
+    env.DB.prepare('DELETE FROM subscriptions WHERE device_id = ? AND endpoint <> ?').bind(dev.id, b.endpoint),
+  ]);
   return { ok: true };
 }
 

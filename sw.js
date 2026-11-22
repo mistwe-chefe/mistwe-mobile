@@ -2,7 +2,7 @@
  * Bewusst klein und ohne Fachlogik. Kennt keine Module.
  * Liest nur `meta`, schreibt nur `outbox` (Architektur 4.2).
  */
-const SW_VERSION = '1.1.0';
+const SW_VERSION = '1.1.3';
 const CACHE = 'pa-shell-' + SW_VERSION;
 const DB_NAME = 'persoenliche-app';
 const DB_VERSION = 1;
@@ -192,7 +192,8 @@ async function handlePush(p) {
   const items = Array.isArray(p.items) ? p.items : [];
   const total = items.length + (p.more || 0);
   let key = null;
-  try { key = await metaGet('cryptoKey'); } catch (_) {}
+  // Schlüssel höchstens 1,5 s suchen – iOS verlangt, dass die Mitteilung sofort erscheint
+  try { key = await Promise.race([metaGet('cryptoKey'), new Promise(r => setTimeout(() => r(null), 1500))]); } catch (_) {}
   const titled = await Promise.all(items.map(async it => ({ ...it, title: await decryptTitle(key, it.t, it.m, it.id) })));
   notifyClients({ type: 'sync' }).catch(() => {});
   if (!total) return self.registration.showNotification('🔔 Erinnerung', { ...opts, body: 'Öffne die App für Details.', tag: 'pa-push' });
@@ -215,8 +216,18 @@ async function handlePush(p) {
 self.addEventListener('push', event => {
   let p = {};
   try { p = event.data ? event.data.json() : {}; } catch (_) {}
-  event.waitUntil(handlePush(p).catch(() => self.registration.showNotification('🔔 Erinnerung', { body: 'Öffne die App für Details.', tag: 'pa-push', icon: 'icons/icon-192.png' })));
+  event.waitUntil(Promise.all([
+    handlePush(p).catch(() => self.registration.showNotification('🔔 Erinnerung', { body: 'Öffne die App für Details.', tag: 'pa-push', icon: 'icons/icon-192.png' })),
+    logReceipt(p),
+  ]));
 });
+
+/* Diagnose: Empfang protokollieren (lokal in der Outbox und beim Server) */
+async function logReceipt(p) {
+  const at = Date.now();
+  try { await outboxAdd({ id: `pushlog-${at}-${Math.random().toString(36).slice(2, 6)}`, kind: 'pushlog', type: p.type || '?', n: Array.isArray(p.items) ? p.items.length : 0, at, createdAt: at }); } catch (_) {}
+  try { await apiCall('POST', '/v1/push-received', { at, type: p.type || '?' }); } catch (_) {}
+}
 
 /* Browser hat das Abo erneuert → beim Server aktualisieren */
 self.addEventListener('pushsubscriptionchange', event => {

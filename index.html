@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.1.2">
+  <meta name="app-version" content="1.1.3">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
@@ -204,7 +204,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.1.2',
+    APP_VERSION: '1.1.3',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -220,6 +220,11 @@
   };
 
   const CHANGELOG = [
+    { version: '1.1.3', date: '2026-11-22', items: [
+      'Kern: Service Worker 1.1.3 protokolliert jeden empfangenen Push (Diagnose: kommt der Push bei geschlossener App an?) und zeigt die Mitteilung spätestens nach 1,5 s',
+      'Kern: Push-Abo wird beim Start einmal neu gemeldet, damit der Server verworfene alte Abos dieses Geräts entfernt',
+      'Modul einstellungen: Push-Diagnose zeigt die zuletzt auf diesem Gerät empfangenen Pushes',
+    ] },
     { version: '1.1.2', date: '2026-11-22', items: [
       'Kern: Berechtigung für Mitteilungen wird zuverlässig erkannt (Umgehung eines iOS-Fehlers, der nach dem Antippen einer Benachrichtigung „nicht gefragt“ meldet) – keine wiederholten Nachfragen mehr',
       'Kern: Ein vorhandenes Push-Abo wird beim Start erkannt und beim Server erneuert, statt erneut aktiviert werden zu müssen',
@@ -1663,7 +1668,7 @@
       if (sub && st.vapid && st.vapid !== cfg.vapidPublicKey) { try { await sub.unsubscribe(); } catch (_) {} sub = null; }
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Crypto.unb64u(cfg.vapidPublicKey) });
       await Api.req('PUT', '/v1/subscription', sub.toJSON());
-      await Store.metaSet('push', { subscribed: true, endpoint: sub.endpoint, at: Date.now(), vapid: cfg.vapidPublicKey });
+      await Store.metaSet('push', { v: 3, subscribed: true, endpoint: sub.endpoint, at: Date.now(), vapid: cfg.vapidPublicKey });
       this.subscribedHere = true;
       Events.emit('push:changed', {});
       Log.info('Push auf diesem Gerät aktiviert');
@@ -1695,8 +1700,8 @@
       // Vorhandenes Abo gilt immer als aktiv (unabhängig von Notification.permission, siehe iOS-Fehler)
       this.subscribedHere = true; Notify.pushGranted = true;
       if (!was) Events.emit('push:changed', {});
-      if (!st.subscribed || sub.endpoint !== st.endpoint || Date.now() - (st.at || 0) > 6 * 3600000) {
-        try { await Api.req('PUT', '/v1/subscription', sub.toJSON()); await Store.metaSet('push', { ...st, subscribed: true, endpoint: sub.endpoint, at: Date.now() }); }
+      if (!st.subscribed || st.v !== 3 || sub.endpoint !== st.endpoint || Date.now() - (st.at || 0) > 6 * 3600000) {
+        try { await Api.req('PUT', '/v1/subscription', sub.toJSON()); await Store.metaSet('push', { ...st, v: 3, subscribed: true, endpoint: sub.endpoint, at: Date.now() }); }
         catch (e) { Log.warn('Push-Abo auffrischen: ' + e.message); }
       }
     },
@@ -1754,6 +1759,13 @@
       return out;
     },
     lastExportAt: () => Store.metaGet('lastExportAt', null),
+    /** Vom Service Worker protokollierte Push-Empfänge (neueste zuerst), alte werden aufgeräumt */
+    async pushLog() {
+      const all = (await IDB.run('outbox', 'readonly', s => IDB.rq(s.getAll()))).filter(e => e.kind === 'pushlog').sort((a, b) => b.at - a.at);
+      const old = all.slice(30);
+      if (old.length) await IDB.run('outbox', 'readwrite', s => { old.forEach(e => s.delete(e.id)); });
+      return all.slice(0, 30);
+    },
     async requestPersist() { try { return navigator.storage?.persist ? await navigator.storage.persist() : false; } catch (_) { return false; } },
     async hints() {
       const hints = [];
@@ -2012,6 +2024,10 @@
               d.subscriptions.forEach(s => rows.push(h('dt', {}, 'Letzter Push'), h('dd', {}, s.lastAt
                 ? `${U.relTime(s.lastAt)} an ${s.host}: ${s.lastStatus >= 200 && s.lastStatus < 300 ? '✅ angenommen (' + s.lastStatus + ')' : '❌ ' + s.lastStatus + ' ' + (s.lastReason || '')}${s.failCount ? ` · ${s.failCount} Fehler in Folge` : ''}`
                 : `noch keiner an ${s.host}`)));
+              // Empfang laut Service Worker dieses Geräts (auch bei geschlossener App)
+              const logs = (await S.pushLog()).slice(0, 5);
+              rows.push(h('dt', {}, 'Empfangen hier'), h('dd', {}, logs.length ? logs.map(l => `${new Date(l.at).toLocaleTimeString('de-DE')}${l.type === 'test' ? ' (Test)' : ''}`).join(' · ') : 'noch kein Push empfangen'));
+              if (d.lastReceivedAt) rows.push(h('dt', {}, 'Server weiß'), h('dd', {}, `letzter Empfang ${U.relTime(d.lastReceivedAt)}`));
               if (d.migrationMissing) rows.push(h('dt', {}, 'Hinweis'), h('dd', {}, '⚠️ D1-Migration 0002 fehlt: npx wrangler d1 migrations apply pa-db --remote'));
               diagBox.replaceChildren(h('dl', { class: 'kv', style: { marginTop: '8px' } }, rows));
             } catch (err) { diagBox.replaceChildren(h('span', { class: 'muted' }, err.status === 404 ? 'Diagnose braucht Worker-Version 1.1 (Worker neu deployen).' : 'Diagnose nicht verfügbar: ' + err.message)); }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3 – 2026-11-22
+
+- `sw.js` (SW_VERSION 1.1.3): protokolliert jeden empfangenen Push lokal und beim Server (`POST /v1/push-received`); Mitteilung erscheint spätestens nach 1,5 s, auch wenn der Schlüssel nicht schnell lesbar ist.
+- Worker 1.1.1: Beim Melden eines Abos werden ältere Abos desselben Geräts entfernt (iOS verwirft Abos; vorher wurde an bis zu drei Abos gesendet). `GET /v1/status` liefert `lastReceivedAt`.
+- App: meldet das Abo einmal neu; Push-Diagnose zeigt „Empfangen hier“.
+- Keine Datenbank-Migration nötig (Migration 0002 ist bereits in `pa-db` angewendet).
+
 ## 1.1.2 – 2026-11-22
 
 Fehlerbehebung Push auf dem iPhone.
