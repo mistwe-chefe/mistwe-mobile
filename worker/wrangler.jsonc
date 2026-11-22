@@ -2,23 +2,35 @@
 // Secrets NICHT hier eintragen, sondern mit `npx wrangler secret put …`:
 //   VAPID_PRIVATE_KEY, SETUP_SECRET
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pa-push",
-  "main": "src/index.js",
-  "compatibility_date": "2026-11-01",
-  "triggers": { "crons": ["* * * * *"] },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "pa-db",
-      "database_id": "HIER-DATABASE-ID-EINTRAGEN",
-      "migrations_dir": "migrations"
-    }
-  ],
-  "vars": {
-    "ALLOWED_ORIGIN": "https://mistwe-chefe.github.io",
-    "VAPID_SUBJECT": "https://mistwe-chefe.github.io/mistwe-mobile/",
-    "VAPID_PUBLIC_KEY": "HIER-OEFFENTLICHEN-VAPID-SCHLUESSEL-EINTRAGEN"
-  },
-  "observability": { "enabled": true }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "pa-push",
+	"main": "src/index.js",
+	"compatibility_date": "2026-11-01",
+	"triggers": {
+		"crons": [
+			"* * * * *"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "pa-db",
+			"database_id": "33c41bda-d36d-45dc-9c17-078cb4089d0a",
+			"migrations_dir": "migrations"
+		},
+		{
+			"binding": "pa_db",
+			"database_name": "pa-db",
+			"database_id": "33c41bda-d36d-45dc-9c17-078cb4089d0a",
+			"remote": true
+		}
+	],
+	"vars": {
+		"ALLOWED_ORIGIN": "https://mistwe-chefe.github.io",
+		"VAPID_SUBJECT": "https://mistwe-chefe.github.io/mistwe-mobile/",
+		"VAPID_PUBLIC_KEY": "BPRQymviJfNQiKmBbEskm9YJsBgGucCjkpGyeKSQE3oWNeYegFbIOQGS6DXugmoOMgD7p1xyYFg3RaabBYkYC7s"
+	},
+	"observability": {
+		"enabled": true
+	}
 }
