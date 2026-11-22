@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.4.0">
+  <meta name="app-version" content="1.5.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -217,6 +217,14 @@
   [data-module="ernaehrung"] .add-row { display: flex; gap: 8px; margin-top: 10px; }
   [data-module="ernaehrung"] .add-row input { flex: 1; min-width: 0; }
   [data-module="ernaehrung"] .claude-btn { margin-top: 8px; }
+  [data-module="ernaehrung"] .claude-card h3 { margin-bottom: 4px; }
+  [data-module="ernaehrung"] .claude-card .step { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: .92rem; margin: 14px 0 6px; min-height: 36px; }
+  [data-module="ernaehrung"] .claude-card .step .n { flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%; background: var(--primary-bg); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; }
+  [data-module="ernaehrung"] .claude-card textarea { min-height: 76px; }
+  [data-module="ernaehrung"] .parse-box { margin-top: 10px; background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px; }
+  [data-module="ernaehrung"] .parse-box .sum td, [data-module="ernaehrung"] .parse-box div.sum { font-weight: 700; border-bottom: 0; }
+  [data-module="ernaehrung"] .parse-err { color: var(--danger); font-size: .9rem; }
+  [data-module="ernaehrung"] .parse-box .row .btn { white-space: normal; }
   [data-module="ernaehrung"] .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 12px 0 4px; }
   [data-module="ernaehrung"] .stat { background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px; }
   [data-module="ernaehrung"] .stat .v { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -261,7 +269,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.4.0',
+    APP_VERSION: '1.5.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -277,6 +285,11 @@
   };
 
   const CHANGELOG = [
+    { version: '1.5.0', date: '2026-11-22', items: [
+      'Modul ernaehrung: Textfeld für Lebensmittel – der Text landet direkt im temporären Claude-Chat, dort nur noch abschicken',
+      'Modul ernaehrung: Claude antwortet im festen Format „KCAL v1“; die Antwort wird in der App eingefügt, eingelesen (Positionen + Summe) und für den gewählten Tag übernommen oder dazugerechnet',
+      'Modul ernaehrung: eingegebene Lebensmittel bleiben als Entwurf erhalten, auch wenn die App beim Wechsel zu Claude neu startet',
+    ] },
     { version: '1.4.0', date: '2026-11-22', items: [
       'Neues Modul ernaehrung: Gewicht und Kalorien pro Tag eintragen (auch für vergangene Tage), kcal lassen sich dazurechnen',
       'Modul ernaehrung: Verlauf als Diagramme (7 Tage bis alles) mit Kennzahlen, Zielen (kcal/Tag, Zielgewicht) und Eintragstabelle; Daten werden zwischen Geräten synchronisiert',
@@ -2689,9 +2702,67 @@
       return pre + d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
     };
 
-    /* Temporärer Claude-Chat (Inkognito) mit vorausgefülltem Prompt. Die Lebensmittel fügt der Nutzer dort selbst ein. */
-    const CLAUDE_PROMPT = 'Schätze bitte die Kalorien (kcal) der Lebensmittel und Getränke, die ich unten aufliste. Wenn keine Menge dabeisteht, nimm eine übliche Portion an. Nenne pro Position die angenommene Menge und die kcal und am Ende die Gesamtsumme als eine einzige Zahl.\n\nLebensmittel:\n';
-    const claudeUrl = () => 'https://claude.ai/new?incognito=true&q=' + encodeURIComponent(CLAUDE_PROMPT);
+    /* Temporärer Claude-Chat (Inkognito) mit vorausgefülltem Prompt inkl. Lebensmitteln.
+       Claude antwortet in einem festen Format („KCAL v1“), das parseAnswer() wieder einliest. Format nie inkompatibel ändern. */
+    const CLAUDE_PROMPT = [
+      'Schätze die Kalorien der folgenden Lebensmittel und Getränke. Wenn keine Menge angegeben ist, nimm eine übliche Portion an.',
+      '',
+      'Antworte ausschließlich mit einem einzigen Codeblock in genau diesem Format, ohne Text davor oder danach:',
+      '',
+      '```',
+      'KCAL v1',
+      'Lebensmittel; Menge; kcal',
+      'SUMME; kcal',
+      '```',
+      '',
+      'Regeln:',
+      '- Erste Zeile ist immer „KCAL v1“.',
+      '- Danach eine Zeile pro Lebensmittel: Name; Menge mit Einheit; kcal.',
+      '- Letzte Zeile: SUMME; Summe aller kcal.',
+      '- Trennzeichen ist das Semikolon. Keine Semikolons in Namen oder Mengen.',
+      '- kcal immer als ganze Zahl ohne Einheit und ohne Tausenderpunkt.',
+      '',
+      'Lebensmittel:',
+      '',
+    ].join('\n');
+    const MAX_FOODS = 6000;
+    const claudeUrl = foods => 'https://claude.ai/new?incognito=true&q=' + encodeURIComponent(CLAUDE_PROMPT + String(foods || '').trim().slice(0, MAX_FOODS));
+
+    /** kcal-Wert aus einem Feld: „394“, „1.234“, „ca. 300 kcal“, „300-350“ (→ Mittelwert) */
+    function parseKcalField(s) {
+      const t = String(s || '').toLowerCase().replace(/kcal|kalorien|ca\.|~|≈/g, '').replace(/\s/g, '');
+      const num = x => Number(x.replace(/\.(?=\d{3}(?!\d))/g, '').replace(',', '.'));
+      const range = t.match(/^(\d[\d.,]*)[-–](\d[\d.,]*)$/);
+      if (range) return Math.round((num(range[1]) + num(range[2])) / 2);
+      const m = t.match(/^\d[\d.,]*$/);
+      return m ? Math.round(num(m[0])) : NaN;
+    }
+    /** Antwort von Claude einlesen. Toleriert Codeblock-Zeichen, Markdown-Tabellen, „|“ oder Tab als Trenner und fehlende Kopfzeile. */
+    function parseAnswer(text) {
+      const items = [];
+      let total = null;
+      for (let line of String(text || '').split(/\r?\n/)) {
+        line = line.replace(/[*`]/g, '').trim();
+        if (!line || /^kcal\s*v\d+$/i.test(line)) continue;
+        const parts = line.split(/\s*[;|\t]\s*/).map(x => x.trim()).filter(Boolean);
+        if (parts.length < 2) continue;
+        if (/^(summe|gesamt|insgesamt|total)\b/i.test(parts[0])) {
+          const v = parseKcalField(parts[parts.length - 1]);
+          if (Number.isFinite(v)) total = v;
+          continue;
+        }
+        const v = parseKcalField(parts[parts.length - 1]);
+        if (!Number.isFinite(v) || v < 0 || v > 10000) continue;   // Kopfzeilen, Trennlinien, Unsinn
+        items.push({ name: parts[0], amount: parts.length >= 3 ? parts.slice(1, -1).join(' ') : '', kcal: v });
+      }
+      if (!items.length && total == null) {   // Notlösung für freien Text: „Summe: 1.234 kcal“
+        const m = String(text || '').match(/(?:summe|gesamt|insgesamt|total)[^\d\n]{0,40}(\d[\d.,]*)\s*kcal/i);
+        if (m) total = parseKcalField(m[1]);
+      }
+      const sum = items.reduce((a, i) => a + i.kcal, 0);
+      const kcal = items.length ? sum : total;   // die Summe der Positionen gilt (Rechenfehler in SUMME werden so korrigiert)
+      return { items, total, sum, kcal: Number.isFinite(kcal) ? kcal : null, mismatch: items.length > 0 && total != null && Math.abs(total - sum) > 1 };
+    }
 
     const RANGES = [
       { id: '7', label: '7 Tage', days: 7 },
@@ -2822,7 +2893,7 @@
     App.register({
       id: 'ernaehrung', name: 'Ernährung', icon: 'scale', order: 20,
       description: 'Gewicht und Kalorien pro Tag mit Verlauf', category: 'Gesundheit',
-      version: '1.0.0', schemaVersion: 1, migrations: {},
+      version: '1.1.0', schemaVersion: 1, migrations: {},
 
       /* Datensatz (ernaehrung/tage, synchronisiert): id = Datum „JJJJ-MM-TT“ (ein Eintrag pro Tag)
          { id, createdAt, updatedAt, deletedAt, date: 'JJJJ-MM-TT', weightKg: Zahl|null, kcal: Zahl|null } */
@@ -2883,8 +2954,68 @@
               h('label', { class: 'field' }, h('span', {}, 'Kalorien'), h('div', { class: 'unit-in' }, kIn, h('span', {}, 'kcal')))),
             h('div', { class: 'add-row' }, addIn, h('button', { type: 'button', class: 'btn', onclick: add, disabled: ctx.readOnly }, ctx.ui.icon('plus'), 'Dazu')),
             h('button', { type: 'submit', class: 'btn btn-primary btn-block', style: { marginTop: '10px' }, disabled: ctx.readOnly }, ctx.ui.icon('save'), 'Speichern'),
-            h('a', { class: 'btn btn-block claude-btn', href: claudeUrl(), target: '_blank', rel: 'noopener noreferrer' }, ctx.ui.icon('external'), 'kcal mit Claude schätzen'),
-            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Öffnet einen neuen temporären Chat. Füge dort deine Lebensmittel ein und trage die Summe hier ein. Beide Felder leeren und speichern löscht den Eintrag des Tages.')));
+            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Beide Felder leeren und speichern löscht den Eintrag des Tages.')),
+            await claudeCard(rec));
+        };
+
+        /* kcal mit Claude schätzen: Lebensmittel → Claude → Antwort einfügen → übernehmen */
+        const claudeCard = async rec => {
+          const draft = await ctx.store.get('entwurf', {});
+          const foodsIn = h('textarea', { rows: 3, 'aria-label': 'Lebensmittel', placeholder: 'Was hast du gegessen und getrunken? z. B.\n2 Brötchen mit Butter und Gouda\n1 Apfel\nCappuccino mit Hafermilch' });
+          foodsIn.value = draft.foods || '';
+          const link = h('a', { class: 'btn btn-primary btn-block claude-btn', target: '_blank', rel: 'noopener noreferrer' }, ctx.ui.icon('external'), 'Mit Claude schätzen');
+          const saveDraft = ctx.util.debounce(() => { if (!ctx.readOnly) ctx.store.set('entwurf', { foods: foodsIn.value }).catch(() => {}); }, 600);
+          const updLink = () => { link.href = claudeUrl(foodsIn.value); };
+          foodsIn.addEventListener('input', () => { updLink(); saveDraft(); });
+          updLink();
+
+          const ansIn = h('textarea', { rows: 3, 'aria-label': 'Antwort von Claude', placeholder: 'Antwort von Claude hier einfügen (Codeblock kopieren)' });
+          const preview = h('div', { class: 'parse-box', hidden: true });
+          const reset = async () => { ansIn.value = ''; foodsIn.value = ''; updLink(); preview.hidden = true; await ctx.store.set('entwurf', {}); };
+          const apply = async (mode, kcal) => {
+            const cur = await col.get(day);
+            const base = cur && cur.kcal != null ? cur.kcal : 0;
+            const next = Math.round(mode === 'add' ? base + kcal : kcal);
+            if (next > 20000) { toast('Das wären über 20.000 kcal – bitte prüfen', { type: 'error' }); return; }
+            try {
+              if (cur) await col.update(day, { kcal: next }); else await col.add({ id: day, date: day, weightKg: null, kcal: next });
+              await reset();
+              toast(`${fmtLong(day)}: ${fmtKcal(next)} kcal gespeichert`);
+              renderEdit();
+            } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
+          };
+          const showParse = () => {
+            const txt = ansIn.value;
+            if (!txt.trim()) { preview.hidden = true; return; }
+            const r = parseAnswer(txt);
+            preview.hidden = false;
+            if (r.kcal == null) {
+              preview.replaceChildren(h('div', { class: 'parse-err' }, ctx.ui.icon('alert'), ' Keine kcal gefunden. Bitte den ganzen Codeblock aus der Antwort kopieren (beginnt mit „KCAL v1“).'));
+              return;
+            }
+            const hasDay = rec && rec.kcal != null;
+            preview.replaceChildren(...[
+              r.items.length ? h('table', { class: 'simple hist' }, h('tbody', {},
+                r.items.map(i => h('tr', {}, h('td', {}, i.name, i.amount ? h('div', { class: 'small muted' }, i.amount) : null), h('td', { class: 'num' }, fmtKcal(i.kcal)))),
+                h('tr', { class: 'sum' }, h('td', {}, 'Summe'), h('td', { class: 'num' }, `${fmtKcal(r.kcal)} kcal`)))) : h('div', { class: 'sum' }, `Summe: ${fmtKcal(r.kcal)} kcal`),
+              r.mismatch ? h('p', { class: 'small muted' }, `Claude hat als Summe ${fmtKcal(r.total)} angegeben – übernommen wird die nachgerechnete Summe der Positionen.`) : null,
+              h('div', { class: 'row', style: { marginTop: '10px' } },
+                hasDay ? h('button', { type: 'button', class: 'btn btn-primary grow', disabled: ctx.readOnly, onclick: () => apply('add', r.kcal) }, ctx.ui.icon('plus'), `Dazurechnen (${fmtKcal(rec.kcal + r.kcal)} kcal)`) : null,
+                h('button', { type: 'button', class: 'btn grow' + (hasDay ? '' : ' btn-primary'), disabled: ctx.readOnly, onclick: () => apply('set', r.kcal) }, ctx.ui.icon('check'), hasDay ? 'Tageswert ersetzen' : `Übernehmen (${fmtKcal(r.kcal)} kcal)`))].filter(Boolean));
+          };
+          ansIn.addEventListener('input', showParse);
+          const pasteBtn = navigator.clipboard && navigator.clipboard.readText ? h('button', { type: 'button', class: 'btn btn-sm', onclick: async () => {
+            try { const t = await navigator.clipboard.readText(); if (t) { ansIn.value = t; showParse(); } else toast('Zwischenablage ist leer'); }
+            catch (_) { toast('Kein Zugriff auf die Zwischenablage – bitte ins Feld einfügen'); ansIn.focus(); }
+          } }, 'Aus Zwischenablage einfügen') : null;
+
+          return h('div', { class: 'card claude-card' },
+            h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('external'), 'kcal mit Claude schätzen'),
+            h('div', { class: 'step' }, h('span', { class: 'n' }, '1'), 'Lebensmittel eingeben'),
+            foodsIn, link,
+            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Öffnet einen neuen temporären Chat mit deinem Text – dort nur noch abschicken.'),
+            h('div', { class: 'step' }, h('span', { class: 'n' }, '2'), 'Antwort von Claude hier einfügen'),
+            ansIn, pasteBtn ? h('div', { class: 'row', style: { marginTop: '8px' } }, pasteBtn) : null, preview);
         };
 
         /* Verlauf: Kennzahlen, Diagramme, Tabelle */
@@ -2920,7 +3051,7 @@
             chart(ctx, { title: 'Kalorien', keys, values: kMap, type: 'bar', goal: kcalGoal, fmt: v => fmtKcal(v), unit: 'kcal', zero: true, width: cw })));
 
           const rows = [...inRange].reverse().slice(0, 120);
-          histBox.replaceChildren(rows.length ? h('details', { class: 'fold' },
+          histBox.replaceChildren(...(rows.length ? [h('details', { class: 'fold' },
             h('summary', {}, `Einträge (${inRange.length})`),
             h('div', { class: 'card' }, h('table', { class: 'simple hist' },
               h('thead', {}, h('tr', {}, h('th', {}, 'Tag'), h('th', { class: 'num' }, 'Gewicht'), h('th', { class: 'num' }, 'kcal'))),
@@ -2928,7 +3059,7 @@
                 h('td', {}, fmtLong(r.id)),
                 h('td', { class: 'num' }, r.weightKg != null ? `${fmtKg(r.weightKg)} kg` : '–'),
                 h('td', { class: 'num' }, r.kcal != null ? fmtKcal(r.kcal) : '–'))))),
-              inRange.length > rows.length ? h('p', { class: 'small muted' }, `Die ${rows.length} neuesten von ${inRange.length} Einträgen.`) : null)) : null);
+              inRange.length > rows.length ? h('p', { class: 'small muted' }, `Die ${rows.length} neuesten von ${inRange.length} Einträgen.`) : null))] : []));
         };
 
         const re = ctx.util.debounce(renderCharts, 150);

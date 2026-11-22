@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.0 – 2026-11-22
+
+- Modul Ernährung: Textfeld für Lebensmittel. Der Text landet direkt im temporären Claude-Chat, dort nur noch abschicken.
+- Claude antwortet im festen Format `KCAL v1` (eine Zeile pro Lebensmittel `Name; Menge; kcal`, am Ende `SUMME; kcal`). Die Antwort wird in der App eingefügt, eingelesen und für den gewählten Tag übernommen oder dazugerechnet. Maßgeblich ist die nachgerechnete Summe der Positionen.
+- Eingegebene Lebensmittel bleiben als Entwurf erhalten, auch wenn die App beim Wechsel zu Claude neu startet.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert.
+
 ## 1.4.0 – 2026-11-22
 
 - Neues Modul **Ernährung** (`ernaehrung`): Gewicht und Kalorien pro Tag eintragen (auch für vergangene Tage), kcal lassen sich dazurechnen.
