@@ -17,12 +17,6 @@
 			"database_name": "pa-db",
 			"database_id": "33c41bda-d36d-45dc-9c17-078cb4089d0a",
 			"migrations_dir": "migrations"
-		},
-		{
-			"binding": "pa_db",
-			"database_name": "pa-db",
-			"database_id": "33c41bda-d36d-45dc-9c17-078cb4089d0a",
-			"remote": true
 		}
 	],
 	"vars": {
