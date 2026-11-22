@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.0 – 2026-11-22
+
+- Neues Modul **Wecker** (`wecker`): mit einem Knopfdruck mehrere Wecker stellen – erster Wecker, Anzahl und Abstand frei wählbar (Standard: 10 Wecker im Abstand von 3 Minuten, ab 06:00). Vorschau aller Uhrzeiten, Warnung, wenn die Wecker schon heute klingeln würden.
+- Mit einem Knopfdruck (und Rückfrage) alle Wecker der Uhr-App löschen.
+- Läuft über zwei iOS-Kurzbefehle („PA Wecker stellen“, „PA Wecker löschen“), die einmalig angelegt werden. Einrichtungsanleitung und Testwecker im Modul. Benötigt iOS 17 oder neuer.
+- Kern: neues Symbol (Wecker).
+- Daten: nur lokale Einstellungen des Moduls, keine Migration, nichts wird synchronisiert.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert.
+
 ## 1.6.0 – 2026-11-22
 
 - Modul Ernährung: Eiweiß, Kohlenhydrate, Ballaststoffe und Fett pro Tag – eintragen, Durchschnitt im Zeitraum, Diagramm (Nährstoff wählbar), Ziele und Spalten in der Eintragstabelle.
