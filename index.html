@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.7.0">
+  <meta name="app-version" content="1.7.1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -310,7 +310,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.7.0',
+    APP_VERSION: '1.7.1',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -326,6 +326,9 @@
   };
 
   const CHANGELOG = [
+    { version: '1.7.1', date: '2026-11-22', items: [
+      'Modul wecker: Uhrzeiten gehen über die Zwischenablage an den Kurzbefehl („Zwischenablage abrufen“) – keine Share-Sheet-Einstellung mehr nötig; Einrichtungsanleitung angepasst',
+    ] },
     { version: '1.7.0', date: '2026-11-22', items: [
       'Neues Modul wecker: mit einem Knopfdruck mehrere Wecker stellen (Standard: 10 Wecker im Abstand von 3 Minuten, erster Wecker frei wählbar)',
       'Modul wecker: mit einem Knopfdruck alle Wecker der Uhr-App löschen (mit Rückfrage)',
@@ -3268,7 +3271,7 @@
     App.register({
       id: 'wecker', name: 'Wecker', icon: 'alarm', order: 30,
       description: 'Viele Wecker auf einmal stellen und alle Wecker löschen (über iOS-Kurzbefehle)', category: 'Alltag',
-      version: '1.0.0', schemaVersion: 1, migrations: {},
+      version: '1.0.1', schemaVersion: 1, migrations: {},
       /* Daten (lokal, nicht synchronisiert): Einstellung „cfg“ { start: 'HH:MM', count, gapMin },
          Wert „letzte“ { at, kind: 'set'|'test'|'delete', times: ['HH:MM', …] } */
 
@@ -3285,7 +3288,16 @@
         const lastBox = h('p', { class: 'small muted last' });
         const save = U.debounce(() => { if (!ctx.readOnly) ctx.settings.set('cfg', cfg).catch(() => {}); }, 500);
         const remember = (kind, list) => { if (!ctx.readOnly) ctx.store.set('letzte', { at: Date.now(), kind, times: list }).then(renderLast).catch(() => {}); };
-        const open = url => { location.href = url; };   // synchron im Tipp-Ereignis, sonst blockiert iOS den Wechsel zu Kurzbefehle
+        const open = url => { location.href = url; };   // direkt aus dem Tipp-Ereignis, sonst blockiert iOS den Wechsel zu Kurzbefehle
+        /** Uhrzeiten in die Zwischenablage legen (der Kurzbefehl liest sie dort mit „Zwischenablage abrufen“), dann Kurzbefehl starten.
+            Zusätzlich gehen sie als URL-Eingabe mit. Schlägt das Kopieren fehl, wird nichts gestartet – sonst würde der Kurzbefehl alte Inhalte lesen. */
+        const sendTimes = async (kind, list) => {
+          const text = list.join('\n');
+          try { await navigator.clipboard.writeText(text); }
+          catch (_) { toast('Zwischenablage nicht verfügbar – bitte erneut tippen', { type: 'error' }); return; }
+          remember(kind, list);
+          open(runUrl(SC_SET, text));
+        };
 
         const update = () => {
           cfg = {
@@ -3313,8 +3325,7 @@
         setBtn.onclick = () => {
           const list = times(cfg.start, cfg.count, cfg.gapMin);
           if (!list.length) { toast('Bitte eine Uhrzeit wählen', { type: 'error' }); return; }
-          remember('set', list);
-          open(runUrl(SC_SET, list.join('\n')));
+          sendTimes('set', list);
         };
 
         const renderDel = (confirming = false) => {
@@ -3342,24 +3353,24 @@
         const b = t => h('strong', {}, t);
         const setup = h('details', { class: 'fold' },
           h('summary', {}, 'Einrichtung (einmalig, ca. 3 Minuten)'),
-          h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Eine Web-App darf keine Wecker in der Uhr-App stellen. Das übernehmen zwei Kurzbefehle, die du einmal in der App „Kurzbefehle“ anlegst. Die Namen müssen genau stimmen. Benötigt iOS 17 oder neuer.'),
+          h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Eine Web-App darf keine Wecker in der Uhr-App stellen. Das übernehmen zwei Kurzbefehle, die du einmal in der App „Kurzbefehle“ anlegst. Die Namen müssen genau stimmen. Die App legt die Uhrzeiten in die Zwischenablage, der Kurzbefehl liest sie dort. Aktionen findest du über das Suchfeld „Aktion suchen“. Benötigt iOS 17 oder neuer.'),
           h('div', { class: 'sc-name' }, h('code', {}, SC_SET), copyBtn(SC_SET)),
           h('ol', { class: 'steps' },
             h('li', {}, 'In „Kurzbefehle“ oben rechts auf ', b('+'), ' tippen und den Kurzbefehl oben genau so benennen.'),
-            h('li', {}, 'Auf ', b('ⓘ'), ' (bzw. den Namen oben) tippen → ', b('Im Share-Sheet anzeigen'), ' einschalten. Im Block „Empfange … von Share-Sheet“ als Eingabe nur ', b('Text'), ' wählen.'),
-            h('li', {}, 'Aktion ', b('Text teilen'), ' hinzufügen: ', b('Kurzbefehleingabe'), ' teilen nach ', b('Neue Zeilen'), '.'),
+            h('li', {}, 'Aktion ', b('Zwischenablage abrufen'), ' hinzufügen.'),
+            h('li', {}, 'Aktion ', b('Text teilen'), ' hinzufügen: ', b('Zwischenablage'), ' teilen nach ', b('Neue Zeilen'), '.'),
             h('li', {}, 'Aktion ', b('Wiederholen mit jedem'), ' hinzufügen, Eingabe: ', b('Geteilter Text'), '.'),
-            h('li', {}, 'In die Wiederholung die Aktion ', b('Wecker erstellen'), ' ziehen. Als Uhrzeit die Variable ', b('Wiederholungsobjekt'), ' wählen, Name z. B. „Aufstehen“, Wiederholen: ', b('Niemals'), '.'),
+            h('li', {}, 'In die Wiederholung die Aktion ', b('Wecker erstellen'), ' ziehen. Auf das Uhrzeit-Feld tippen und die Variable ', b('Wiederholungsobjekt'), ' wählen (steht in der Leiste über der Tastatur). Name z. B. „Aufstehen“.'),
             h('li', {}, 'Optional ganz unten: ', b('Mitteilung anzeigen'), ' („Wecker gestellt“).')),
           h('div', { class: 'sc-name' }, h('code', {}, SC_DEL), copyBtn(SC_DEL)),
           h('ol', { class: 'steps' },
             h('li', {}, 'Neuen Kurzbefehl anlegen und genau so benennen.'),
             h('li', {}, 'Aktion ', b('Alle Wecker abrufen'), ' hinzufügen.'),
             h('li', {}, 'Aktion ', b('Wecker löschen'), ' hinzufügen, Wecker: ', b('Wecker'), ' (Ergebnis der vorigen Aktion).')),
-          h('p', { class: 'small muted' }, 'Beim ersten Ausführen fragt iOS, ob die App Kurzbefehle öffnen bzw. Wecker löschen darf – mit „Öffnen“ bzw. „Immer erlauben“ bestätigen. Danach kehrst du über „◀“ oben links zurück.'),
+          h('p', { class: 'small muted' }, 'Beim ersten Ausführen fragt iOS, ob Kurzbefehle geöffnet, die Zwischenablage gelesen und Wecker gelöscht werden dürfen – jeweils mit „Öffnen“ bzw. „Immer erlauben“ bestätigen. Danach kehrst du über „◀“ oben links zurück.'),
           h('button', { type: 'button', class: 'btn btn-sm', disabled: ctx.readOnly, onclick: () => {
             const n = new Date(Date.now() + 2 * 60000); const t = fmt(n.getHours() * 60 + n.getMinutes());
-            remember('test', [t]); open(runUrl(SC_SET, t));
+            sendTimes('test', [t]);
           } }, ctx.ui.icon('clock'), 'Test: 1 Wecker in 2 Minuten'));
 
         el.append(h('div', {},

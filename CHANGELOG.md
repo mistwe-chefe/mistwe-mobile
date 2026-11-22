@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.1 – 2026-11-22
+
+- Modul Wecker: Die Uhrzeiten gehen jetzt über die Zwischenablage an den Kurzbefehl „PA Wecker stellen“ (Aktion „Zwischenablage abrufen“). Die Share-Sheet-Einstellung, die es in aktuellen iOS-Versionen nicht mehr gibt, ist nicht mehr nötig. Einrichtungsanleitung im Modul angepasst.
+- Bestehender Kurzbefehl „PA Wecker stellen“ muss angepasst werden: als erste Aktion „Zwischenablage abrufen“, „Text teilen“ teilt dann die Zwischenablage.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert.
+
 ## 1.7.0 – 2026-11-22
 
 - Neues Modul **Wecker** (`wecker`): mit einem Knopfdruck mehrere Wecker stellen – erster Wecker, Anzahl und Abstand frei wählbar (Standard: 10 Wecker im Abstand von 3 Minuten, ab 06:00). Vorschau aller Uhrzeiten, Warnung, wenn die Wecker schon heute klingeln würden.
