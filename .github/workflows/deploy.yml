@@ -1,0 +1,66 @@
+# Automatische Veröffentlichung
+# 1. Push auf einen Branch "claude/**": wird automatisch in main übernommen
+#    (nur wenn diese Datei bereits auf main liegt, also einmal freigegeben wurde).
+# 2. Danach – oder bei jedem Push auf main – wird main auf GitHub Pages veröffentlicht.
+# Voraussetzung: Settings → Pages → Source: "GitHub Actions".
+name: Veröffentlichen
+
+on:
+  push:
+    branches: ['main', 'claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: veroeffentlichen
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: startsWith(github.ref_name, 'claude/')
+    runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: merge
+        name: In main übernehmen
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          if ! git cat-file -e origin/main:.github/workflows/deploy.yml 2>/dev/null; then
+            echo "Automatik ist auf main noch nicht freigegeben – nichts zu tun."
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git checkout -B main origin/main
+          git merge --ff-only "origin/${GITHUB_REF_NAME}" || git merge --no-edit "origin/${GITHUB_REF_NAME}"
+          git push origin main
+          git push origin --delete "${GITHUB_REF_NAME}" || true
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: [merge]
+    if: always() && (github.ref_name == 'main' || needs.merge.outputs.merged == 'true')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
