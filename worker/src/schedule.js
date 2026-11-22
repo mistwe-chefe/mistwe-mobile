@@ -5,7 +5,7 @@
 export const DEADLINE_STEPS = [5, 10, 15, 30, 60, 90, 180, 360, 720, 1440, 4320, 10080]; // Minuten
 
 export const STAGES = {
-  '30m': 30, '90m': 90, '3h': 180, '6h': 360, '1d': 1440, '3d': 4320, '1w': 10080, '2w': 20160, '1mo': 43200,
+  '1m': 1, '30m': 30, '90m': 90, '3h': 180, '6h': 360, '1d': 1440, '3d': 4320, '1w': 10080, '2w': 20160, '1mo': 43200,
 };
 
 export function nextInterval(stageMin, deadline, overdueMin, now) {

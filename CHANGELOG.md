@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 – 2026-11-22
+
+- Neue Stufe „1 Minute (Test)“ (ID `1m`) zum Ausprobieren von Erinnerungen und Push. Ruhezeiten gelten auch hier.
+- Geändert: `index.html`, `worker/src/schedule.js` (nur Ergänzung der Stufentabelle; der Worker funktioniert auch ohne Neu-Deploy, weil die App die Minutenzahl mitschickt).
+
 ## 1.1.0 – 2026-11-22
 
 Push bei geschlossener App und Sync zwischen Geräten.

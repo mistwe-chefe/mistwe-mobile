@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.1.0">
+  <meta name="app-version" content="1.1.1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
@@ -204,7 +204,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.1.0',
+    APP_VERSION: '1.1.1',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -220,6 +220,9 @@
   };
 
   const CHANGELOG = [
+    { version: '1.1.1', date: '2026-11-22', items: [
+      'Kern: neue Stufe „1 Minute (Test)“ zum Ausprobieren von Erinnerungen und Push',
+    ] },
     { version: '1.1.0', date: '2026-11-22', items: [
       'Kern: Push-Dienst (Cloudflare Worker) – Erinnerungen kommen jetzt auch bei geschlossener App',
       'Kern: Ende-zu-Ende-verschlüsselte Synchronisation zwischen Geräten (Crypto, Api, Sync, Outbox)',
@@ -1320,6 +1323,7 @@
   /* Eskalationsregel – identisch zu worker/src/schedule.js (Architektur 10.2). Änderungen immer an beiden Stellen! */
   const Schedule = {
     STAGES: [
+      { id: '1m', label: '1 Minute (Test)', short: '1 Min', min: 1 },   // zum Testen von Erinnerungen/Push
       { id: '30m', label: '30 Minuten', short: '30 Min', min: 30 },
       { id: '90m', label: '90 Minuten', short: '90 Min', min: 90 },
       { id: '3h', label: '3 Stunden', short: '3 Std', min: 180 },

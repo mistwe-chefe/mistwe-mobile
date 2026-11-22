@@ -14,6 +14,7 @@ for (const [label, rem, exp] of cases) {
   console.log(`✓ ${label}: ${exp} Min`);
 }
 assert.equal(nextInterval(90, null, 15, now), 90); console.log('✓ ohne Abgabe, Stufe 90 Min');
+assert.equal(nextInterval(1, null, 15, now), 1); assert.equal(nextInterval(1, now + 5 * D, 15, now), 1); console.log('✓ Teststufe 1 Minute');
 assert.equal(nextAt({ stageMin: 1440, deadline: now + 3 * M, overdueMin: 15 }, now), now + 3 * M); console.log('✓ pünktlich zur Abgabe');
 
 // Ruhezeiten 22:00–07:00 in Europe/Berlin (Winter: UTC+1)
