@@ -44,6 +44,10 @@ npx wrangler login
 
 7. **Weitere Geräte (z. B. iPhone):** App über *Teilen → Zum Home-Bildschirm* installieren, vom Icon öffnen → *Einstellungen → Push & Sync* → *Mit bestehendem Konto verbinden* → Sync-Passwort → *Push aktivieren*.
 
+## Automatisches Deployment
+
+Der Worker ist über *Settings → Builds* mit diesem Repo verbunden (Root directory `worker`). Jeder Commit auf `main` baut und deployt ihn. Neue D1-Migrationen entweder im Deploy-Befehl mit `npx wrangler d1 migrations apply pa-db --remote && npx wrangler deploy` oder einmalig von Hand anwenden.
+
 ## Regeln
 
 - Erst den Worker deployen, dann das Frontend. API-Änderungen nur abwärtskompatibel (`/v1` bleibt).
