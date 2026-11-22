@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="app-version" content="1.0.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Meine App">
+  <meta name="theme-color" content="#1f2937">
+  <title>Persönliche App</title>
+  <script>
+    /* Theme früh setzen, damit nichts flackert */
+    (function () {
+      try {
+        var t = localStorage.getItem('pa:theme') || 'system';
+        if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    })();
+  </script>
+
+  <style>
+  /* ==== CORE: TOKENS ==== */
+  :root {
+    --bg: #f4f5f7; --surface: #ffffff; --surface-2: #eef0f3; --border: #dde1e7;
+    --text: #111827; --muted: #6b7280; --primary: #2563eb; --primary-text: #ffffff;
+    --danger: #dc2626; --warn: #d97706; --caution: #ca8a04; --ok: #16a34a;
+    --danger-bg: #fee2e2; --warn-bg: #ffedd5; --caution-bg: #fef9c3; --ok-bg: #dcfce7; --primary-bg: #dbeafe;
+    --radius: 12px; --radius-sm: 8px; --gap: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.05);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --nav-h: 64px;
+    color-scheme: light;
+  }
+  [data-theme="dark"] {
+    --bg: #0f141b; --surface: #18202b; --surface-2: #222c39; --border: #2e3a4a;
+    --text: #e5e7eb; --muted: #9aa4b2; --primary: #3b82f6; --primary-text: #ffffff;
+    --danger: #f87171; --warn: #fb923c; --caution: #facc15; --ok: #4ade80;
+    --danger-bg: #3b1518; --warn-bg: #3a2210; --caution-bg: #352f0b; --ok-bg: #10301c; --primary-bg: #172a4d;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    color-scheme: dark;
+  }
+  /* ==== ENDE CORE: TOKENS ==== */
+
+  /* ==== CORE: BASIS ==== */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.45; -webkit-tap-highlight-color: transparent; min-height: 100dvh; }
+  h1, h2, h3 { line-height: 1.2; margin: 0 0 .6em; }
+  h2 { font-size: 1.4rem; }
+  h3 { font-size: 1.05rem; }
+  a { color: var(--primary); }
+  .shell { min-height: 100dvh; display: flex; flex-direction: column; }
+  .topbar { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--border); padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; display: flex; align-items: center; gap: 10px; }
+  .topbar .brand { font-weight: 700; font-size: 1.05rem; flex: 1; }
+  .topbar .sync-dot { font-size: .8rem; color: var(--muted); }
+  .banners:empty { display: none; }
+  .banner { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--primary-bg); border-bottom: 1px solid var(--border); font-size: .95rem; }
+  .banner.warn { background: var(--warn-bg); }
+  .banner .grow { flex: 1; }
+  .layout { flex: 1; display: flex; }
+  main#view { flex: 1; padding: 16px 16px calc(var(--nav-h) + env(safe-area-inset-bottom) + 24px); max-width: 780px; width: 100%; margin: 0 auto; }
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; background: var(--surface); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; }
+  .nav a { flex: 1 0 72px; min-height: var(--nav-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--muted); font-size: .72rem; position: relative; }
+  .nav a .ic { font-size: 1.35rem; line-height: 1; }
+  .nav a.active { color: var(--primary); font-weight: 600; }
+  .nav a .count { position: absolute; top: 6px; left: calc(50% + 6px); background: var(--danger); color: #fff; border-radius: 999px; font-size: .68rem; min-width: 18px; height: 18px; padding: 0 5px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  @media (min-width: 900px) {
+    .nav { position: sticky; top: 57px; bottom: auto; flex-direction: column; width: 220px; height: calc(100dvh - 57px); border-top: 0; border-right: 1px solid var(--border); padding: 12px 8px; overflow-y: auto; }
+    .nav a { flex: 0 0 auto; flex-direction: row; justify-content: flex-start; gap: 12px; padding: 0 14px; min-height: 46px; border-radius: var(--radius-sm); font-size: .95rem; }
+    .nav a.active { background: var(--primary-bg); }
+    .nav a .count { position: static; margin-left: auto; }
+    main#view { padding-bottom: 40px; }
+  }
+  .lock-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .lock-overlay .card { max-width: 420px; }
+  /* ==== ENDE CORE: BASIS ==== */
+
+  /* ==== CORE: KOMPONENTEN ==== */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: var(--gap); }
+  .card > h3:first-child { margin-top: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: .85rem; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .row.nowrap { flex-wrap: nowrap; }
+  .stack > * + * { margin-top: 10px; }
+  .grow { flex: 1; min-width: 0; }
+  .btn { appearance: none; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: var(--radius-sm); min-height: 44px; padding: 0 16px; font: inherit; font-size: .95rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; white-space: nowrap; }
+  .btn:hover { filter: brightness(.97); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+  .btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .btn-ghost { background: transparent; border-color: transparent; }
+  .btn-sm { min-height: 36px; padding: 0 12px; font-size: .88rem; }
+  .btn-block { width: 100%; }
+  input[type=text], input[type=search], input[type=password], input[type=datetime-local], input[type=time], input[type=number], select, textarea {
+    font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); min-height: 44px; padding: 8px 12px; width: 100%; }
+  textarea { min-height: 90px; resize: vertical; }
+  input:focus, select:focus, textarea:focus, .btn:focus-visible, .chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+  label.field { display: block; }
+  label.field > span { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+  .switch { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+  .switch input { width: 20px; height: 20px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chips.scroll { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .chip { appearance: none; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px; min-height: 36px; padding: 0 14px; font: inherit; font-size: .88rem; cursor: pointer; white-space: nowrap; }
+  .chip[aria-checked="true"], .chip.on { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+  .pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 1px 9px; font-size: .78rem; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.red { background: var(--danger-bg); color: var(--danger); font-weight: 600; }
+  .pill.orange { background: var(--warn-bg); color: var(--warn); font-weight: 600; }
+  .pill.yellow { background: var(--caution-bg); color: var(--caution); }
+  .pill.blue { background: var(--primary-bg); color: var(--primary); }
+  .pill.green { background: var(--ok-bg); color: var(--ok); }
+  .empty { text-align: center; color: var(--muted); padding: 24px 8px; }
+  .toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px); z-index: 200; display: flex; flex-direction: column; gap: 8px; width: min(92vw, 440px); pointer-events: none; }
+  @media (min-width: 900px) { .toasts { bottom: 24px; } }
+  .toast { pointer-events: auto; background: #1f2937; color: #f9fafb; border-radius: var(--radius-sm); padding: 10px 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); animation: toast-in .18s ease-out; }
+  .toast.error { background: #7f1d1d; }
+  .toast .grow { font-size: .93rem; }
+  .toast button { background: transparent; border: 0; color: #93c5fd; font: inherit; font-weight: 700; cursor: pointer; min-height: 36px; padding: 0 4px; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  dialog.dlg { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0; width: min(94vw, 520px); max-height: 90dvh; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  dialog.dlg::backdrop { background: rgba(0,0,0,.45); }
+  dialog.dlg .dlg-body { padding: 18px; overflow-y: auto; max-height: calc(90dvh - 2px); }
+  dialog.dlg .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
+  .error-card { border-color: var(--danger); background: var(--danger-bg); }
+  .error-card pre { white-space: pre-wrap; font-size: .8rem; max-height: 200px; overflow: auto; }
+  .ro-banner { background: var(--warn-bg); border: 1px solid var(--warn); color: var(--text); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 12px; font-size: .92rem; }
+  details.fold > summary { cursor: pointer; list-style: none; padding: 10px 0; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 6px; min-height: 44px; }
+  details.fold > summary::-webkit-details-marker { display: none; }
+  details.fold > summary::before { content: '▸'; transition: transform .15s; }
+  details.fold[open] > summary::before { transform: rotate(90deg); }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: .92rem; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; word-break: break-word; }
+  table.simple { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  table.simple td, table.simple th { border-bottom: 1px solid var(--border); padding: 6px 4px; text-align: left; vertical-align: top; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* ==== ENDE CORE: KOMPONENTEN ==== */
+
+  /* ==== MODUL-CSS: start ==== */
+  [data-module="start"] .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--gap); }
+  [data-module="start"] .tile { margin: 0; }
+  [data-module="start"] .tile-head { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); font-weight: 700; margin-bottom: 8px; }
+  [data-module="start"] .hint { display: flex; gap: 10px; align-items: center; }
+  /* ==== ENDE MODUL-CSS: start ==== */
+
+  /* ==== MODUL-CSS: einstellungen ==== */
+  [data-module="einstellungen"] .card h3 { display: flex; align-items: center; gap: 8px; }
+  [data-module="einstellungen"] .log { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .78rem; max-height: 260px; overflow: auto; background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px; white-space: pre-wrap; }
+  [data-module="einstellungen"] .test-ok { color: var(--ok); }
+  [data-module="einstellungen"] .test-fail { color: var(--danger); font-weight: 700; }
+  /* ==== ENDE MODUL-CSS: einstellungen ==== */
+
+  /* ==== MODUL-CSS: todos ==== */
+  [data-module="todos"] .composer .title-input { font-size: 1.05rem; }
+  [data-module="todos"] .composer .lbl { font-size: .8rem; color: var(--muted); margin: 10px 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  [data-module="todos"] .composer .dl-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  [data-module="todos"] .composer .dl-row input { width: auto; flex: 1 1 200px; }
+  [data-module="todos"] .composer .preview { font-size: .85rem; color: var(--muted); margin-top: 8px; }
+  [data-module="todos"] .section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 18px 4px 8px; display: flex; align-items: center; gap: 8px; }
+  [data-module="todos"] ul.todo-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  [data-module="todos"] li.todo { display: flex; align-items: flex-start; gap: 6px; padding: 6px 10px 6px 4px; border-bottom: 1px solid var(--border); }
+  [data-module="todos"] li.todo:last-child { border-bottom: 0; }
+  [data-module="todos"] li.todo.overdue { box-shadow: inset 4px 0 0 var(--danger); }
+  [data-module="todos"] li.todo.soon { box-shadow: inset 4px 0 0 var(--warn); }
+  [data-module="todos"] .check { flex: 0 0 44px; height: 44px; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  [data-module="todos"] .check span { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--muted); display: block; transition: background .15s; }
+  [data-module="todos"] .check:hover span { border-color: var(--ok); background: var(--ok-bg); }
+  [data-module="todos"] li.todo.done .check span { background: var(--ok); border-color: var(--ok); }
+  [data-module="todos"] li.todo.done .t-title { text-decoration: line-through; color: var(--muted); }
+  [data-module="todos"] .t-body { flex: 1; min-width: 0; padding: 9px 0 6px; cursor: pointer; }
+  [data-module="todos"] .t-title { font-weight: 500; word-break: break-word; }
+  [data-module="todos"] .t-meta { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 5px; }
+  [data-module="todos"] .t-note { font-size: .85rem; color: var(--muted); margin-top: 3px; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  [data-module="todos"] .fired { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; }
+  [data-module="todos"] .fired .t-title { font-weight: 600; }
+  [data-module="todos"] .fired .row { margin-top: 8px; gap: 6px; }
+  [data-module="todos"] .done-actions { display: flex; gap: 4px; align-items: center; padding-top: 4px; }
+  /* ==== ENDE MODUL-CSS: todos ==== */
+  </style>
+</head>
+<body>
+  <!-- ==== SHELL ==== -->
+  <div class="shell" id="shell">
+    <header class="topbar"><div class="brand" id="brand">Persönliche App</div><div class="sync-dot" id="status"></div></header>
+    <div class="banners" id="banners"></div>
+    <div class="layout">
+      <nav class="nav" id="nav" aria-label="Module"></nav>
+      <main id="view" tabindex="-1"><div class="empty">Lade …</div></main>
+    </div>
+  </div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <noscript><div class="card">Diese App benötigt JavaScript.</div></noscript>
+  <!-- ==== ENDE SHELL ==== -->
+
+  <script>
+  /* ==== CORE ==== */
+  'use strict';
+
+  /* ---- CORE: Config ---- */
+  const CONFIG = {
+    APP_VERSION: '1.0.0',
+    DB_NAME: 'persoenliche-app',
+    DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
+    LS_PREFIX: 'pa:',
+    PUSH_API: '',                  // ab 1.1: https://pa-push.<konto>.workers.dev (öffentlich, kein Geheimnis)
+    RETIRED_MODULE_IDS: [],        // entfernte Modul-IDs bleiben hier für immer reserviert
+    BACKUP_KEEP: 10,
+    BACKUP_MAX: 20,
+    TICK_MS: 30000,                // lokaler Erinnerungstakt
+    UPDATE_CHECK_MS: 30 * 60000,
+    APP_TITLE: 'Persönliche App',
+  };
+
+  const CHANGELOG = [
+    { version: '1.0.0', date: '2026-11-22', items: [
+      'Kern: Store (IndexedDB), Migrator, Backup (Schnappschüsse, Export/Import), Events, UI, Router, Registry, VersionGuard',
+      'Kern: Erinnerungsdienst mit Eskalationsregel (Schedule) und Ruhezeiten, lokale Benachrichtigungen',
+      'Kern: Service Worker (Offline, Aktionen „Erledigt“/„Später“ in Benachrichtigungen), Web-App-Manifest',
+      'Modul start: Startseite mit Kacheln und Hinweisen',
+      'Modul einstellungen: Darstellung, Benachrichtigungen, Ruhezeiten, Datensicherung, Speicher, Module, Diagnose',
+      'Modul todos: ToDos mit Stufe, Abgabezeitpunkt und hartnäckigen, eskalierenden Erinnerungen',
+    ] },
+  ];
+
+  /* ---- CORE: Utils ---- */
+  const U = {
+    uuid() {
+      if (crypto.randomUUID) return crypto.randomUUID();
+      const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+      const x = [...b].map(v => v.toString(16).padStart(2, '0')).join('');
+      return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+    },
+    now: () => Date.now(),
+    pad: n => String(n).padStart(2, '0'),
+    sameDay: (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(),
+    formatDate(ts, withTime = true) {
+      if (ts == null) return '';
+      const d = new Date(ts), today = new Date();
+      const off = n => { const x = new Date(); x.setDate(x.getDate() + n); return x; };
+      let day;
+      if (U.sameDay(d, today)) day = 'Heute';
+      else if (U.sameDay(d, off(1))) day = 'Morgen';
+      else if (U.sameDay(d, off(-1))) day = 'Gestern';
+      else day = d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', ...(d.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) });
+      return withTime ? `${day}, ${U.pad(d.getHours())}:${U.pad(d.getMinutes())}` : day;
+    },
+    formatDateTimeFull: ts => ts == null ? '' : new Date(ts).toLocaleString('de-DE'),
+    formatDuration(min) {
+      min = Math.max(0, Math.round(min));
+      if (min < 1) return 'weniger als 1 Min';
+      if (min < 60) return `${min} Min`;
+      if (min < 1440) {
+        const h = Math.floor(min / 60), m = min % 60;
+        if (h < 6 && m) return `${h} Std ${m} Min`;
+        return `${Math.round(min / 60)} Std`;
+      }
+      const d = Math.round(min / 1440);
+      if (d < 14) return `${d} ${d === 1 ? 'Tag' : 'Tage'}`;
+      if (d < 60) return `${Math.round(d / 7)} Wochen`;
+      const mo = Math.round(d / 30);
+      return `${mo} ${mo === 1 ? 'Monat' : 'Monate'}`;
+    },
+    relTime(ts, now = Date.now()) {
+      const diff = (ts - now) / 60000;
+      if (Math.abs(diff) < 1) return 'jetzt';
+      return diff > 0 ? `in ${U.formatDuration(diff)}` : `vor ${U.formatDuration(-diff)}`;
+    },
+    toLocalInput(ts) {
+      if (ts == null) return '';
+      const d = new Date(ts);
+      return `${d.getFullYear()}-${U.pad(d.getMonth() + 1)}-${U.pad(d.getDate())}T${U.pad(d.getHours())}:${U.pad(d.getMinutes())}`;
+    },
+    fromLocalInput(s) { if (!s) return null; const t = new Date(s).getTime(); return Number.isFinite(t) ? t : null; },
+    minToTime: m => `${U.pad(Math.floor(m / 60))}:${U.pad(m % 60)}`,
+    timeToMin(s) { const [h, m] = String(s || '').split(':').map(Number); return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null; },
+    debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; },
+    semverCompare(a, b) {
+      const pa = String(a || '0').split('.').map(Number), pb = String(b || '0').split('.').map(Number);
+      for (let i = 0; i < 3; i++) { const d = (pa[i] || 0) - (pb[i] || 0); if (d) return d > 0 ? 1 : -1; }
+      return 0;
+    },
+    clone: v => (typeof structuredClone === 'function' ? structuredClone(v) : JSON.parse(JSON.stringify(v))),
+    download(name, text, type = 'application/json') {
+      const url = URL.createObjectURL(new Blob([text], { type }));
+      const a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    },
+    formatBytes(n) { if (n == null) return '–'; const u = ['B', 'KB', 'MB', 'GB']; let i = 0; while (n >= 1024 && i < 3) { n /= 1024; i++; } return `${n.toFixed(i ? 1 : 0)} ${u[i]}`; },
+    isIOS: () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+    isStandalone: () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
+  };
+
+  /* ---- CORE: Log (Diagnoseprotokoll) ---- */
+  const Log = {
+    entries: [],
+    persist: null,
+    async load() { this.entries = await Store.metaGet('diagnostics', []); this.persist = U.debounce(() => Store.metaSet('diagnostics', this.entries).catch(() => {}), 1500); },
+    add(level, msg, moduleId = 'core') {
+      const e = { ts: Date.now(), level, moduleId, msg: String(msg).slice(0, 1000) };
+      this.entries.push(e); if (this.entries.length > 200) this.entries.splice(0, this.entries.length - 200);
+      (level === 'error' ? console.error : level === 'warn' ? console.warn : console.log)(`[${moduleId}] ${msg}`);
+      this.persist && this.persist();
+    },
+    info(m, id) { this.add('info', m, id); }, warn(m, id) { this.add('warn', m, id); }, error(m, id) { this.add('error', m, id); },
+    forModule(id) { return { info: m => Log.info(m, id), warn: m => Log.warn(m, id), error: m => Log.error(m, id) }; },
+  };
+
+  /* ---- CORE: Store ---- */
+  const IDB = {
+    db: null,
+    upgrade(db) {
+      // Schema identisch in sw.js – nie ändern, nur ergänzen.
+      if (!db.objectStoreNames.contains('kv')) {
+        const s = db.createObjectStore('kv', { keyPath: 'k' });
+        s.createIndex('by_module', 'm');
+        s.createIndex('by_collection', ['m', 'c']);
+      }
+      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'k' });
+      if (!db.objectStoreNames.contains('backups')) db.createObjectStore('backups', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'id' });
+    },
+    open() {
+      return new Promise((res, rej) => {
+        if (!('indexedDB' in window)) return rej(new Error('IndexedDB wird von diesem Browser nicht unterstützt.'));
+        const r = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
+        r.onupgradeneeded = () => this.upgrade(r.result);
+        r.onsuccess = () => {
+          this.db = r.result;
+          this.db.onversionchange = () => { this.db.close(); VersionGuard.lock('Die Datenbank wird von einer neueren Version verwendet. Bitte neu laden.'); };
+          res(this.db);
+        };
+        r.onerror = () => rej(r.error || new Error('Datenbank konnte nicht geöffnet werden'));
+        r.onblocked = () => Log.warn('Datenbank blockiert – andere Tabs schließen');
+      });
+    },
+    rq(r) { return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+    async run(stores, mode, fn) {
+      const names = Array.isArray(stores) ? stores : [stores];
+      const t = this.db.transaction(names, mode);
+      const done = new Promise((res, rej) => {
+        t.oncomplete = () => res();
+        t.onerror = () => rej(t.error);
+        t.onabort = () => rej(t.error || new Error('Transaktion abgebrochen'));
+      });
+      let result;
+      try { result = await fn(...names.map(n => t.objectStore(n)), t); }
+      catch (e) { try { t.abort(); } catch (_) {} await done.catch(() => {}); throw e; }
+      await done;
+      return result;
+    },
+  };
+
+  const Store = {
+    async metaGet(k, def) { const r = await IDB.run('meta', 'readonly', s => IDB.rq(s.get(k))); return r ? r.v : def; },
+    async metaSet(k, v) { await IDB.run('meta', 'readwrite', s => { s.put({ k, v }); }); },
+    kvGet(k) { return IDB.run('kv', 'readonly', s => IDB.rq(s.get(k))); },
+    kvPut(rec) { return IDB.run('kv', 'readwrite', s => { s.put(rec); }); },
+    kvAll() { return IDB.run('kv', 'readonly', s => IDB.rq(s.getAll())); },
+    kvByModule(m) { return IDB.run('kv', 'readonly', s => IDB.rq(s.index('by_module').getAll(m))); },
+    kvByCollection(m, c) { return IDB.run('kv', 'readonly', s => IDB.rq(s.index('by_collection').getAll([m, c]))); },
+    async kvDeleteModule(m) {
+      await IDB.run('kv', 'readwrite', async s => {
+        const keys = await IDB.rq(s.index('by_module').getAllKeys(m));
+        keys.forEach(k => s.delete(k));
+      });
+    },
+    changed(moduleId, collection) {
+      Events.emit('store:changed', { moduleId, collection, remote: false });
+      Tabs.post({ type: 'changed', moduleId, collection });
+    },
+    /** Modulbezogener Speicher – einzige Datenschnittstelle der Module */
+    forModule(moduleId) {
+      const guard = () => { if (Registry.isReadOnly(moduleId)) throw new Error('Modul ist schreibgeschützt.'); };
+      const vKey = n => `${moduleId}/v:${n}`;
+      const cKey = (c, id) => `${moduleId}/c:${c}/${id}`;
+      return {
+        async get(name, def) { const r = await Store.kvGet(vKey(name)); return r ? U.clone(r.v) : def; },
+        async set(name, v) { guard(); await Store.kvPut({ k: vKey(name), m: moduleId, c: null, n: name, v: U.clone(v), u: Date.now() }); Store.changed(moduleId, null); },
+        collection(c, opts = {}) {
+          if (!/^[a-z0-9-]+$/i.test(c)) throw new Error('Ungültiger Collection-Name: ' + c);
+          const put = async rec => { await Store.kvPut({ k: cKey(c, rec.id), m: moduleId, c, n: rec.id, v: rec, u: rec.updatedAt }); Store.changed(moduleId, c); return U.clone(rec); };
+          const api = {
+            sync: !!opts.sync,  // ab Push & Sync (1.1) werden solche Collections verschlüsselt synchronisiert
+            async raw() { return (await Store.kvByCollection(moduleId, c)).map(r => r.v); },
+            async all() { return (await api.raw()).filter(x => !x.deletedAt); },
+            async get(id) { const r = await Store.kvGet(cKey(c, id)); return r && !r.v.deletedAt ? U.clone(r.v) : null; },
+            async query(fn) { return (await api.all()).filter(fn); },
+            async add(obj) {
+              guard(); const t = Date.now();
+              return put({ ...U.clone(obj), id: obj.id || U.uuid(), createdAt: t, updatedAt: t, deletedAt: null });
+            },
+            async update(id, patch) {
+              guard(); const r = await Store.kvGet(cKey(c, id));
+              if (!r) throw new Error('Datensatz nicht gefunden: ' + id);
+              const { id: _i, createdAt: _c, ...rest } = U.clone(patch);
+              return put({ ...r.v, ...rest, updatedAt: Math.max(Date.now(), (r.v.updatedAt || 0) + 1) });
+            },
+            async remove(id) { return api.update(id, { deletedAt: Date.now() }); },
+          };
+          return api;
+        },
+      };
+    },
+  };
+
+  /* ---- CORE: Settings (global, lokal, nicht synchronisiert) ---- */
+  const DEFAULT_SETTINGS = {
+    quiet: { enabled: true, start: 22 * 60, end: 7 * 60, breakForDeadline: false },
+    sound: true,
+    vibrate: true,
+    hiddenModules: [],
+  };
+  const Settings = {
+    data: U.clone(DEFAULT_SETTINGS),
+    async load() { const s = await Store.metaGet('settings', {}); this.data = { ...U.clone(DEFAULT_SETTINGS), ...s, quiet: { ...DEFAULT_SETTINGS.quiet, ...(s.quiet || {}) } }; },
+    get(k) { return U.clone(this.data[k]); },
+    async set(k, v) { this.data[k] = U.clone(v); await Store.metaSet('settings', this.data); Events.emit('settings:changed', { key: k }); },
+  };
+
+  /* ---- CORE: Migrator ---- */
+  const Migrator = {
+    /** Puffer für Migrationen: alle Änderungen erst im Speicher, dann in EINER Transaktion */
+    buffer(moduleId, records) {
+      const map = new Map(records.map(r => [r.k, U.clone(r)]));
+      const deleted = new Set();
+      const api = {
+        get: (name, def) => { const r = map.get(`${moduleId}/v:${name}`); return r ? r.v : def; },
+        set: (name, v) => { const k = `${moduleId}/v:${name}`; deleted.delete(k); map.set(k, { k, m: moduleId, c: null, n: name, v, u: Date.now() }); },
+        delete: name => { const k = `${moduleId}/v:${name}`; map.delete(k); deleted.add(k); },
+        /** Datensatzweise Migration einer Collection (Pflicht bei synchronisierten Collections) */
+        eachRecord: (c, fn) => {
+          for (const r of map.values()) if (r.c === c) { const nv = fn(r.v); if (nv) { r.v = nv; r.u = nv.updatedAt || r.u; } }
+        },
+        records: c => [...map.values()].filter(r => r.c === c).map(r => r.v),
+      };
+      return { api, map, deleted };
+    },
+    async migrateRecords(def, from, records) {
+      const buf = this.buffer(def.id, records);
+      for (let n = from + 1; n <= def.schemaVersion; n++) {
+        const fn = def.migrations && def.migrations[n];
+        if (typeof fn !== 'function') throw new Error(`Migration auf Schema ${n} fehlt`);
+        await fn(buf.api);
+      }
+      return buf;
+    },
+    async runAll() {
+      const schema = await Store.metaGet('schema', {});
+      let dirty = false;
+      for (const def of Registry.modules.values()) {
+        const st = Registry.st(def.id);
+        const stored = schema[def.id];
+        if (stored == null) { schema[def.id] = def.schemaVersion; dirty = true; continue; }
+        if (stored === def.schemaVersion) continue;
+        if (stored > def.schemaVersion) {
+          st.readOnly = true;
+          st.lockReason = `Die gespeicherten Daten stammen von einer neueren Version (Schema ${stored}, diese Version kennt ${def.schemaVersion}). Bitte die App neu laden bzw. aktualisieren.`;
+          Log.warn(st.lockReason, def.id); continue;
+        }
+        try {
+          await Backup.snapshot(`vor Migration ${def.id} ${stored}→${def.schemaVersion}`);
+          const buf = await this.migrateRecords(def, stored, await Store.kvByModule(def.id));
+          await IDB.run(['kv', 'meta'], 'readwrite', async (kv, meta) => {
+            const cur = (await IDB.rq(meta.get('schema')))?.v || {};
+            buf.deleted.forEach(k => kv.delete(k));
+            for (const r of buf.map.values()) kv.put(r);
+            meta.put({ k: 'schema', v: { ...cur, [def.id]: def.schemaVersion } });
+          });
+          schema[def.id] = def.schemaVersion;
+          Log.info(`Migration ${stored}→${def.schemaVersion} erfolgreich`, def.id);
+        } catch (e) {
+          st.readOnly = true;
+          st.lockReason = `Datenmigration fehlgeschlagen (${e.message}). Die Originaldaten sind unverändert, das Modul ist schreibgeschützt.`;
+          Log.error(st.lockReason, def.id);
+        }
+      }
+      if (dirty) {
+        const cur = await Store.metaGet('schema', {});
+        await Store.metaSet('schema', { ...schema, ...Object.fromEntries(Object.entries(cur).filter(([k]) => schema[k] == null || cur[k] > schema[k])) });
+      }
+    },
+  };
+
+  /* ---- CORE: Backup ---- */
+  const Backup = {
+    async buildExport() {
+      const [all, schema] = await Promise.all([Store.kvAll(), Store.metaGet('schema', {})]);
+      const modules = {};
+      for (const r of all) {
+        const m = modules[r.m] || (modules[r.m] = { schemaVersion: schema[r.m] ?? null, values: {}, collections: {} });
+        if (r.c == null) m.values[r.n] = r.v;
+        else (m.collections[r.c] || (m.collections[r.c] = [])).push(r.v);
+      }
+      return {
+        format: 'persoenliche-app-backup', formatVersion: 1, appVersion: CONFIG.APP_VERSION,
+        exportedAt: new Date().toISOString(), modules,
+        meta: { modules: {}, settings: Settings.data },
+      };
+    },
+    async snapshot(reason) {
+      try {
+        const data = await this.buildExport();
+        const json = JSON.stringify(data);
+        const t = Date.now();
+        await IDB.run('backups', 'readwrite', s => { s.put({ id: `${t}-${Math.random().toString(36).slice(2, 7)}`, createdAt: t, reason, appVersion: CONFIG.APP_VERSION, size: json.length, data }); });
+        await this.rotate();
+        Log.info('Schnappschuss: ' + reason);
+      } catch (e) { Log.error('Schnappschuss fehlgeschlagen: ' + e.message); }
+    },
+    async list() {
+      const all = await IDB.run('backups', 'readonly', s => IDB.rq(s.getAll()));
+      return all.sort((a, b) => b.createdAt - a.createdAt);
+    },
+    async rotate() {
+      const all = await this.list();
+      const keep = new Set(all.slice(0, CONFIG.BACKUP_KEEP).map(b => b.id));
+      const perVersion = new Map();
+      for (const b of all) if (!perVersion.has(b.appVersion)) perVersion.set(b.appVersion, b.id);
+      perVersion.forEach(id => keep.add(id));
+      const ordered = all.filter(b => keep.has(b.id)).slice(0, CONFIG.BACKUP_MAX).map(b => b.id);
+      const final = new Set(ordered);
+      const del = all.filter(b => !final.has(b.id));
+      if (del.length) await IDB.run('backups', 'readwrite', s => { del.forEach(b => s.delete(b.id)); });
+    },
+    async exportFile() {
+      const data = await this.buildExport();
+      const d = new Date();
+      U.download(`persoenliche-app-backup-${d.getFullYear()}-${U.pad(d.getMonth() + 1)}-${U.pad(d.getDate())}.json`, JSON.stringify(data, null, 2));
+      await Store.metaSet('lastExportAt', Date.now());
+    },
+    validate(data) {
+      if (!data || data.format !== 'persoenliche-app-backup') throw new Error('Keine Sicherungsdatei dieser App.');
+      if (data.formatVersion > 1) throw new Error('Die Sicherung stammt von einer neueren App-Version. Bitte zuerst die App aktualisieren.');
+      if (typeof data.modules !== 'object' || !data.modules) throw new Error('Sicherung enthält keine Module.');
+      return true;
+    },
+    /** mode: 'replace' | 'merge'. Gibt Bericht zurück. */
+    async importData(data, mode, reason = 'vor Import') {
+      this.validate(data);
+      await this.snapshot(reason);
+      const schema = await Store.metaGet('schema', {});
+      const report = { imported: [], skipped: [] };
+      const now = Date.now();
+      for (const [mid, mod] of Object.entries(data.modules)) {
+        if (!/^[a-z0-9_-]+$/.test(mid)) { report.skipped.push(`${mid} (ungültige ID)`); continue; }
+        const def = Registry.modules.get(mid);
+        const fileSchema = Number.isInteger(mod.schemaVersion) ? mod.schemaVersion : (def ? def.schemaVersion : 1);
+        let recs = [];
+        for (const [n, v] of Object.entries(mod.values || {})) recs.push({ k: `${mid}/v:${n}`, m: mid, c: null, n, v, u: now });
+        for (const [c, list] of Object.entries(mod.collections || {})) {
+          if (!Array.isArray(list)) continue;
+          for (const v of list) if (v && typeof v.id === 'string') recs.push({ k: `${mid}/c:${c}/${v.id}`, m: mid, c, n: v.id, v, u: v.updatedAt || now });
+        }
+        let targetSchema = fileSchema;
+        if (def) {
+          if (fileSchema > def.schemaVersion) { report.skipped.push(`${def.name} (Daten von neuerer Version)`); continue; }
+          if (fileSchema < def.schemaVersion) {
+            const buf = await Migrator.migrateRecords(def, fileSchema, recs);
+            recs = [...buf.map.values()];
+          }
+          targetSchema = def.schemaVersion;
+        }
+        const local = schema[mid];
+        if (local != null && local > targetSchema) { report.skipped.push(`${mid} (lokal neueres Schema)`); continue; }
+        await IDB.run(['kv', 'meta'], 'readwrite', async (kv, meta) => {
+          const existing = await IDB.rq(kv.index('by_module').getAll(mid));
+          const byKey = new Map(existing.map(r => [r.k, r]));
+          if (mode === 'replace') existing.forEach(r => kv.delete(r.k));
+          for (const r of recs) {
+            const ex = byKey.get(r.k);
+            if (mode === 'merge' && ex) {
+              if (r.c == null) continue; // Werte: lokal behalten
+              if ((ex.v.updatedAt || 0) >= (r.v.updatedAt || 0)) continue;
+            }
+            kv.put(r);
+          }
+          const cur = (await IDB.rq(meta.get('schema')))?.v || {};
+          meta.put({ k: 'schema', v: { ...cur, [mid]: targetSchema } });
+        });
+        report.imported.push(def ? def.name : mid);
+      }
+      if (mode === 'replace' && data.meta && data.meta.settings) {
+        await Store.metaSet('settings', { ...Settings.data, ...data.meta.settings });
+      }
+      Log.info(`Import (${mode}): ${report.imported.join(', ') || '–'}${report.skipped.length ? ' · übersprungen: ' + report.skipped.join(', ') : ''}`);
+      return report;
+    },
+    async daily() {
+      const last = await Store.metaGet('lastDailySnapshot', 0);
+      if (Date.now() - last > 24 * 3600000) { await this.snapshot('täglich'); await Store.metaSet('lastDailySnapshot', Date.now()); }
+    },
+    async deleteModuleData(moduleId) {
+      await this.snapshot(`vor Löschen der Daten von ${moduleId}`);
+      await Store.kvDeleteModule(moduleId);
+      Store.changed(moduleId, null);
+      Events.emit('reminders:changed', { moduleId });
+    },
+  };
+
+  /* ---- CORE: Events ---- */
+  const Events = {
+    map: new Map(),
+    on(name, fn) { if (!this.map.has(name)) this.map.set(name, new Set()); this.map.get(name).add(fn); return () => this.off(name, fn); },
+    off(name, fn) { this.map.get(name)?.delete(fn); },
+    emit(name, payload) {
+      for (const fn of [...(this.map.get(name) || [])]) {
+        try { const r = fn(payload); if (r && r.catch) r.catch(e => Log.error(`Ereignis ${name}: ${e.message}`)); }
+        catch (e) { Log.error(`Ereignis ${name}: ${e.message}`); }
+      }
+    },
+  };
+
+  /* ---- CORE: Tabs (Koordination zwischen offenen Tabs) ---- */
+  const Tabs = {
+    ch: null,
+    start() {
+      if (!('BroadcastChannel' in window)) return;
+      this.ch = new BroadcastChannel('pa');
+      this.ch.onmessage = ({ data }) => {
+        if (!data) return;
+        if (data.type === 'hello' || data.type === 'hello-reply') {
+          if (U.semverCompare(data.version, CONFIG.APP_VERSION) > 0) VersionGuard.lock(`In einem anderen Tab läuft bereits Version ${data.version}. Bitte diesen Tab neu laden.`);
+          if (data.type === 'hello') this.post({ type: 'hello-reply', version: CONFIG.APP_VERSION });
+        } else if (data.type === 'changed') {
+          Events.emit('store:changed', { moduleId: data.moduleId, collection: data.collection, remote: true });
+          if (data.collection === '__reminders') Events.emit('reminders:changed', { moduleId: data.moduleId, remote: true });
+        }
+      };
+      this.post({ type: 'hello', version: CONFIG.APP_VERSION });
+    },
+    post(msg) { try { this.ch && this.ch.postMessage(msg); } catch (_) {} },
+  };
+
+  /* ---- CORE: UI ---- */
+  const UI = {
+    h(tag, attrs, ...children) {
+      const el = document.createElement(tag);
+      if (attrs && (typeof attrs !== 'object' || attrs instanceof Node || Array.isArray(attrs))) { children.unshift(attrs); attrs = null; }
+      for (const [k, v] of Object.entries(attrs || {})) {
+        if (v == null || v === false) continue;
+        if (k === 'class') el.className = v;
+        else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+        else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+        else if (['value', 'checked', 'disabled', 'selected', 'hidden', 'open', 'indeterminate'].includes(k)) el[k] = v;
+        else el.setAttribute(k, v === true ? '' : String(v));
+      }
+      const add = c => {
+        if (c == null || c === false) return;
+        if (Array.isArray(c)) return c.forEach(add);
+        el.append(c instanceof Node ? c : document.createTextNode(String(c))); // nie innerHTML
+      };
+      children.forEach(add);
+      return el;
+    },
+    toast(msg, opts = {}) {
+      const { h } = UI;
+      const box = document.getElementById('toasts');
+      const t = h('div', { class: 'toast' + (opts.type === 'error' ? ' error' : ''), role: 'status' }, h('div', { class: 'grow' }, msg));
+      let timer;
+      const close = () => { clearTimeout(timer); t.remove(); };
+      if (opts.action) t.append(h('button', { onclick: () => { close(); opts.onAction && opts.onAction(); } }, opts.action));
+      t.append(h('button', { 'aria-label': 'Schließen', onclick: close }, '✕'));
+      box.append(t);
+      while (box.children.length > 4) box.firstChild.remove();
+      timer = setTimeout(close, opts.timeout || (opts.action ? 6000 : 3500));
+      return close;
+    },
+    dialog(build, opts = {}) {
+      return new Promise(resolve => {
+        const dlg = UI.h('dialog', { class: 'dlg', 'aria-label': opts.label || 'Dialog' });
+        let result;
+        const close = v => { result = v; dlg.close(); };
+        const body = UI.h('div', { class: 'dlg-body' });
+        dlg.append(body);
+        const content = build(close, dlg);
+        if (content) body.append(content);
+        dlg.addEventListener('close', () => { dlg.remove(); resolve(result); });
+        dlg.addEventListener('click', e => { if (e.target === dlg && !opts.modal) close(undefined); });
+        document.body.append(dlg);
+        dlg.showModal();
+        const f = body.querySelector('[autofocus]'); if (f) setTimeout(() => f.focus(), 30);
+      });
+    },
+    confirm(text, opts = {}) {
+      const { h } = UI;
+      return UI.dialog(close => h('div', {},
+        opts.title ? h('h3', {}, opts.title) : null,
+        h('p', { style: { margin: 0, whiteSpace: 'pre-wrap' } }, text),
+        h('div', { class: 'dlg-actions' },
+          h('button', { class: 'btn', onclick: () => close(false) }, opts.cancel || 'Abbrechen'),
+          h('button', { class: 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary'), autofocus: true, onclick: () => close(true) }, opts.ok || 'OK'))
+      )).then(v => v === true);
+    },
+    choose(title, options, text) {
+      const { h } = UI;
+      return UI.dialog(close => h('div', {},
+        h('h3', {}, title), text ? h('p', { class: 'muted' }, text) : null,
+        h('div', { class: 'stack' }, options.map(o => h('button', { class: 'btn btn-block ' + (o.danger ? 'btn-danger' : o.primary ? 'btn-primary' : ''), onclick: () => close(o.value) }, o.label))),
+        h('div', { class: 'dlg-actions' }, h('button', { class: 'btn btn-ghost', onclick: () => close(undefined) }, 'Abbrechen'))
+      ));
+    },
+    prompt(label, def = '') {
+      const { h } = UI;
+      return UI.dialog(close => {
+        const inp = h('input', { type: 'text', value: def, autofocus: true });
+        return h('form', { onsubmit: e => { e.preventDefault(); close(inp.value.trim() || null); } },
+          h('label', { class: 'field' }, h('span', {}, label), inp),
+          h('div', { class: 'dlg-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Abbrechen'), h('button', { class: 'btn btn-primary', type: 'submit' }, 'OK')));
+      });
+    },
+    errorCard(err, title = 'In diesem Modul ist ein Fehler aufgetreten', retry) {
+      const { h } = UI;
+      return h('div', { class: 'card error-card' },
+        h('h3', {}, '⚠️ ' + title),
+        h('p', { class: 'small' }, 'Der Rest der App funktioniert weiter. Deine Daten sind nicht betroffen.'),
+        h('pre', {}, String(err && (err.stack || err.message) || err)),
+        retry ? h('button', { class: 'btn btn-sm', onclick: retry }, 'Erneut versuchen') : null);
+    },
+    list(items, render, emptyText = 'Keine Einträge.') {
+      if (!items.length) return UI.h('div', { class: 'empty' }, emptyText);
+      return UI.h('div', {}, items.map(render));
+    },
+    banner(id, content, cls = '') {
+      const box = document.getElementById('banners');
+      let b = document.getElementById('banner-' + id);
+      if (!content) { b && b.remove(); return; }
+      if (!b) { b = UI.h('div', { class: 'banner ' + cls, id: 'banner-' + id }); box.append(b); }
+      b.replaceChildren(...content);
+    },
+  };
+
+  /* ---- CORE: Theme ---- */
+  const Theme = {
+    get: () => { try { return localStorage.getItem(CONFIG.LS_PREFIX + 'theme') || 'system'; } catch (_) { return 'system'; } },
+    set(t) { try { localStorage.setItem(CONFIG.LS_PREFIX + 'theme', t); } catch (_) {} this.apply(); },
+    apply() {
+      let t = this.get();
+      if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.dataset.theme = t;
+      document.querySelector('meta[name=theme-color]')?.setAttribute('content', t === 'dark' ? '#18202b' : '#ffffff');
+    },
+    start() { this.apply(); matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => this.apply()); },
+  };
+
+  /* ---- CORE: Router ---- */
+  const Router = {
+    current: null,   // { moduleId, parts, params }
+    parse() {
+      const raw = location.hash.replace(/^#\/?/, '');
+      const [path, qs] = raw.split('?');
+      const parts = path.split('/').filter(Boolean).map(p => { try { return decodeURIComponent(p); } catch (_) { return p; } });
+      return { moduleId: parts[0] || 'start', parts: parts.slice(1), params: new URLSearchParams(qs || ''), raw };
+    },
+    link: path => '#/' + String(path || '').replace(/^\/+/, ''),
+    navigate(path, { replace = false } = {}) {
+      const url = Router.link(path);
+      if (replace) { history.replaceState(null, '', url); Router.render(); }
+      else if (location.hash === url) Router.render();
+      else location.hash = url;
+    },
+    async render() {
+      const route = this.parse();
+      let def = Registry.modules.get(route.moduleId);
+      if (!def || !Registry.isActive(def.id)) { if (route.moduleId !== 'start') return this.navigate('', { replace: true }); def = Registry.modules.get('start'); }
+      const prev = this.current;
+      this.current = { ...route, moduleId: def.id };
+      Shell.highlight(def.id);
+      // Gleiches Modul, nur Unterroute geändert → onRoute statt neu mounten
+      if (prev && prev.moduleId === def.id && typeof def.onRoute === 'function' && Registry.st(def.id).mounted) {
+        await Registry.call(def.id, 'onRoute', this.current);
+        return;
+      }
+      if (prev) Registry.unmount(prev.moduleId);
+      const view = document.getElementById('view');
+      const el = UI.h('section', { 'data-module': def.id, class: 'module' });
+      view.replaceChildren(el);
+      window.scrollTo(0, 0);
+      await Registry.mount(def.id, el, this.current);
+    },
+    start() { window.addEventListener('hashchange', () => this.render()); return this.render(); },
+    api: { navigate: (p, o) => Router.navigate(p, o), current: () => Router.current && { ...Router.current }, link: p => Router.link(p) },
+  };
+
+  /* ---- CORE: Registry ---- */
+  const Registry = {
+    modules: new Map(),
+    states: new Map(),
+    register(def) {
+      try {
+        if (!def || typeof def !== 'object') throw new Error('Moduldefinition fehlt');
+        if (!/^[a-z0-9-]+$/.test(def.id || '')) throw new Error(`Ungültige Modul-ID „${def.id}“`);
+        if (CONFIG.RETIRED_MODULE_IDS.includes(def.id)) throw new Error(`Modul-ID „${def.id}“ ist stillgelegt und darf nicht wiederverwendet werden`);
+        if (this.modules.has(def.id)) throw new Error(`Modul-ID „${def.id}“ doppelt`);
+        for (const k of ['name', 'icon']) if (!def[k]) throw new Error(`Pflichtfeld ${k} fehlt (${def.id})`);
+        if (!Number.isInteger(def.schemaVersion) || def.schemaVersion < 1) throw new Error(`schemaVersion fehlt (${def.id})`);
+        if (typeof def.mount !== 'function') throw new Error(`mount() fehlt (${def.id})`);
+        this.modules.set(def.id, def);
+      } catch (e) { Log.error('Registrierung: ' + e.message); }
+    },
+    st(id) {
+      if (!this.states.has(id)) this.states.set(id, { readOnly: false, lockReason: '', inited: false, initPromise: null, mounted: false, subs: [], ctx: null, cleanups: [] });
+      return this.states.get(id);
+    },
+    isReadOnly(id) { return this.st(id).readOnly; },
+    isActive(id) { const d = this.modules.get(id); return !!d && (d.system || !Settings.data.hiddenModules.includes(id)); },
+    list({ includeHidden = false } = {}) {
+      return [...this.modules.values()].filter(d => includeHidden || this.isActive(d.id)).sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+    },
+    ctx(id) {
+      const st = this.st(id);
+      if (st.ctx) return st.ctx;
+      const def = this.modules.get(id);
+      const store = Store.forModule(id);
+      const settingsKey = '__settings';
+      st.ctx = {
+        moduleId: id,
+        store,
+        reminders: Reminders.forModule(id),
+        notify: Notify.forModule(id),
+        ui: { h: UI.h, toast: UI.toast, confirm: UI.confirm, prompt: UI.prompt, dialog: UI.dialog, choose: UI.choose, list: UI.list, errorCard: UI.errorCard },
+        router: Router.api,
+        events: {
+          on: (name, fn) => { const off = Events.on(name, fn); if (st.mounted) st.subs.push(off); return off; },
+          off: (name, fn) => Events.off(name, fn),
+          emit: (name, payload) => { if (!String(name).startsWith(id + ':')) throw new Error(`Ereignisse müssen mit „${id}:“ beginnen`); Events.emit(name, payload); },
+        },
+        settings: {
+          get: async (k, def) => { const s = await store.get(settingsKey, {}); return s[k] === undefined ? def : s[k]; },
+          set: async (k, v) => { const s = await store.get(settingsKey, {}); s[k] = v; await store.set(settingsKey, s); },
+        },
+        util: U,
+        log: Log.forModule(id),
+        get readOnly() { return st.readOnly; },
+        /** Intervall/Timeout, die beim Verlassen des Moduls automatisch beendet werden */
+        every: (ms, fn) => { const t = setInterval(fn, ms); if (st.mounted) st.cleanups.push(() => clearInterval(t)); return () => clearInterval(t); },
+      };
+      if (def.system) st.ctx.system = System;
+      return st.ctx;
+    },
+    async ensureInit(id) {
+      const st = this.st(id), def = this.modules.get(id);
+      if (st.inited) return;
+      if (!st.initPromise) st.initPromise = (async () => { if (def.init) await def.init(this.ctx(id)); st.inited = true; })();
+      try { await st.initPromise; } catch (e) { st.initPromise = null; throw e; }
+    },
+    async call(id, hook, ...args) {
+      const def = this.modules.get(id);
+      if (!def || typeof def[hook] !== 'function') return undefined;
+      try { await this.ensureInit(id); return await def[hook](...args, this.ctx(id)); }
+      catch (e) { Log.error(`${hook}: ${e.message}`, id); throw e; }
+    },
+    async mount(id, el, route) {
+      const def = this.modules.get(id), st = this.st(id);
+      const ctx = this.ctx(id);
+      const doMount = async () => {
+        el.replaceChildren();
+        if (st.readOnly) el.append(UI.h('div', { class: 'ro-banner' }, '🔒 Schreibgeschützt: ' + st.lockReason));
+        const inner = UI.h('div');
+        el.append(inner);
+        st.mounted = true;
+        try { await this.ensureInit(id); await def.mount(inner, ctx, route); }
+        catch (e) { Log.error('mount: ' + e.message, id); inner.replaceChildren(UI.errorCard(e, undefined, () => { this.unmount(id); doMount(); })); }
+      };
+      await doMount();
+    },
+    unmount(id) {
+      const def = this.modules.get(id), st = this.st(id);
+      if (!st.mounted) return;
+      try { def.unmount && def.unmount(this.ctx(id)); } catch (e) { Log.error('unmount: ' + e.message, id); }
+      st.subs.forEach(off => off()); st.subs = [];
+      st.cleanups.forEach(f => { try { f(); } catch (_) {} }); st.cleanups = [];
+      st.mounted = false;
+    },
+  };
+
+  /* ---- CORE: VersionGuard ---- */
+  const VersionGuard = {
+    newerSeen: null,
+    async check() {
+      const v = CONFIG.APP_VERSION;
+      const app = await Store.metaGet('app', null);
+      if (!app) { await Store.metaSet('app', { appVersion: v, maxAppVersionSeen: v, installedAt: Date.now() }); return; }
+      const max = U.semverCompare(app.maxAppVersionSeen || app.appVersion, v) > 0 ? (app.maxAppVersionSeen || app.appVersion) : v;
+      if (U.semverCompare(max, v) > 0) this.newerSeen = max;
+      if (app.appVersion !== v) await Backup.snapshot(`Versionswechsel ${app.appVersion} → ${v}`);
+      await Store.metaSet('app', { ...app, appVersion: v, maxAppVersionSeen: max, previousVersion: app.appVersion !== v ? app.appVersion : app.previousVersion });
+    },
+    lock(text) {
+      if (document.getElementById('lock')) return;
+      const { h } = UI;
+      document.body.append(h('div', { class: 'lock-overlay', id: 'lock' }, h('div', { class: 'card' }, h('h3', {}, 'Bitte neu laden'), h('p', {}, text), h('button', { class: 'btn btn-primary', onclick: () => location.reload() }, 'Neu laden'))));
+    },
+    showUpdate(text) {
+      const { h } = UI;
+      UI.banner('update', [h('span', { class: 'grow' }, '✨ ' + text), h('button', { class: 'btn btn-primary btn-sm', onclick: () => SWReg.applyUpdate() }, 'Jetzt neu laden')]);
+    },
+    async checkRemote() {
+      if (location.protocol === 'file:' || !navigator.onLine) return;
+      try {
+        const res = await fetch(new URL('index.html', location.href).href, { cache: 'no-cache' });
+        if (!res.ok) return;
+        const m = (await res.text()).match(/<meta\s+name=["']app-version["']\s+content=["']([^"']+)["']/i);
+        if (m && U.semverCompare(m[1], CONFIG.APP_VERSION) > 0) this.showUpdate(`Neue Version ${m[1]} verfügbar.`);
+      } catch (_) { /* offline */ }
+    },
+    start() {
+      if (this.newerSeen) UI.banner('older', [UI.h('span', { class: 'grow' }, `⚠️ Auf diesem Gerät lief schon Version ${this.newerSeen}. Du nutzt gerade ${CONFIG.APP_VERSION} (z. B. aus dem Cache).`), UI.h('button', { class: 'btn btn-sm', onclick: () => SWReg.applyUpdate() }, 'Neu laden')], 'warn');
+      this.checkRemote();
+      setInterval(() => { if (document.visibilityState === 'visible') this.checkRemote(); }, CONFIG.UPDATE_CHECK_MS);
+    },
+  };
+
+  /* ---- CORE: Crypto ---- */
+  /* Folgt mit Push & Sync (Version 1.1): PBKDF2/HKDF-Ableitung, AES-GCM, nicht exportierbarer Datenschlüssel. */
+
+  /* ---- CORE: Api ---- */
+  /* Folgt mit Push & Sync (Version 1.1): Client für den Worker (/v1). */
+
+  /* ---- CORE: Sync ---- */
+  /* Folgt mit Push & Sync (Version 1.1). Collections mit { sync: true } sind bereits markiert. */
+
+  /* ---- CORE: Schedule ---- */
+  /* Eskalationsregel – identisch zu worker/src/schedule.js (Architektur 10.2). Änderungen immer an beiden Stellen! */
+  const Schedule = {
+    STAGES: [
+      { id: '30m', label: '30 Minuten', short: '30 Min', min: 30 },
+      { id: '90m', label: '90 Minuten', short: '90 Min', min: 90 },
+      { id: '3h', label: '3 Stunden', short: '3 Std', min: 180 },
+      { id: '6h', label: '6 Stunden', short: '6 Std', min: 360 },
+      { id: '1d', label: '1 Tag', short: '1 Tag', min: 1440 },
+      { id: '3d', label: '3 Tage', short: '3 Tage', min: 4320 },
+      { id: '1w', label: '1 Woche', short: '1 Woche', min: 10080 },
+      { id: '2w', label: '2 Wochen', short: '2 Wochen', min: 20160 },
+      { id: '1mo', label: '1 Monat', short: '1 Monat', min: 43200 },
+    ],
+    DEADLINE_STEPS: [5, 10, 15, 30, 60, 90, 180, 360, 720, 1440, 4320, 10080],
+    stageMin(id) { const s = this.STAGES.find(x => x.id === id); return s ? s.min : 1440; },
+    stageLabel(id) { const s = this.STAGES.find(x => x.id === id); return s ? s.label : id; },
+    stageShort(id) { const s = this.STAGES.find(x => x.id === id); return s ? s.short : id; },
+    nextInterval(stageMin, deadline, overdueMin, now) {
+      if (!deadline) return stageMin;
+      const remainingMin = (deadline - now) / 60000;
+      if (remainingMin <= 0) return overdueMin || 15;
+      const target = remainingMin / 4;
+      let step = 5;
+      for (const s of this.DEADLINE_STEPS) if (s <= target) step = s;
+      return Math.min(stageMin, step);
+    },
+    nextAt(r, now) {
+      let t = now + this.nextInterval(r.stageMin, r.deadline, r.overdueMin, now) * 60000;
+      if (r.deadline && now < r.deadline && t > r.deadline) t = r.deadline;
+      return t;
+    },
+    /** Ende der Ruhezeit, falls `now` darin liegt, sonst null */
+    quietEnd(now, start, end) {
+      if (start == null || end == null || start === end) return null;
+      const d = new Date(now), m = d.getHours() * 60 + d.getMinutes();
+      const active = start < end ? (m >= start && m < end) : (m >= start || m < end);
+      if (!active) return null;
+      const e = new Date(now); e.setHours(Math.floor(end / 60), end % 60, 0, 0);
+      if (e.getTime() <= now) e.setDate(e.getDate() + 1);
+      return e.getTime();
+    },
+    /** Verschiebung wegen Ruhezeit (oder null = jetzt senden) */
+    quietDefer(now, r, q) {
+      if (!q || !q.enabled) return null;
+      const end = this.quietEnd(now, q.start, q.end);
+      if (end == null) return null;
+      if (q.breakForDeadline && r.deadline && r.deadline >= now - 60000 && r.deadline <= Math.max(end, now + 2 * 3600000)) return null;
+      return end;
+    },
+    snoozeOptions(now = Date.now()) {
+      const tm = new Date(now); tm.setDate(tm.getDate() + 1); tm.setHours(8, 0, 0, 0);
+      return [
+        { label: '15 Minuten', until: now + 15 * 60000 },
+        { label: '1 Stunde', until: now + 60 * 60000 },
+        { label: '3 Stunden', until: now + 180 * 60000 },
+        { label: 'Morgen 08:00', until: tm.getTime() },
+      ];
+    },
+    /** Testtabelle aus Architektur 10.2 (Stufe „1 Tag“) */
+    selfTest() {
+      const now = Date.UTC(2026, 0, 1, 12, 0, 0);
+      const M = 60000, H = 60 * M, D = 24 * H;
+      const cases = [
+        ['5 Tage', 5 * D, 1440], ['2 Tage', 2 * D, 720], ['1 Tag', D, 360], ['12 Stunden', 12 * H, 180],
+        ['6 Stunden', 6 * H, 90], ['2 Stunden', 2 * H, 30], ['1 Stunde', H, 15], ['30 Minuten', 30 * M, 5],
+        ['überfällig', -10 * M, 15],
+      ];
+      const res = cases.map(([label, rem, exp]) => { const got = this.nextInterval(1440, now + rem, 15, now); return { label, expected: exp, got, ok: got === exp }; });
+      const noDl = this.nextInterval(90, null, 15, now); res.push({ label: 'ohne Abgabe, Stufe 90 Min', expected: 90, got: noDl, ok: noDl === 90 });
+      const cl = this.nextAt({ stageMin: 1440, deadline: now + 3 * M, overdueMin: 15 }, now); res.push({ label: 'Abgabe in 3 Min → pünktlich zur Abgabe', expected: '+3 Min', got: `+${(cl - now) / M} Min`, ok: cl === now + 3 * M });
+      return res;
+    },
+  };
+
+  /* ---- CORE: Notify ---- */
+  const Notify = {
+    reg: null,
+    audio: null,
+    supported: () => 'Notification' in window,
+    permission() { return this.supported() ? Notification.permission : 'unsupported'; },
+    async request() {
+      if (!this.supported()) return 'unsupported';
+      try { const p = await Notification.requestPermission(); Events.emit('notify:permission', p); return p; } catch (_) { return Notification.permission; }
+    },
+    unlockAudio() {
+      if (this.audio) return;
+      try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) this.audio = new AC(); } catch (_) {}
+    },
+    beep() {
+      if (!Settings.data.sound || !this.audio) return;
+      try {
+        const a = this.audio; if (a.state === 'suspended') a.resume();
+        [0, 0.22].forEach((off, i) => {
+          const o = a.createOscillator(), g = a.createGain();
+          o.frequency.value = i ? 880 : 660; o.type = 'sine';
+          g.gain.setValueAtTime(0.0001, a.currentTime + off);
+          g.gain.exponentialRampToValueAtTime(0.25, a.currentTime + off + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + off + 0.18);
+          o.connect(g).connect(a.destination); o.start(a.currentTime + off); o.stop(a.currentTime + off + 0.2);
+        });
+      } catch (_) {}
+    },
+    vibrate() { if (Settings.data.vibrate && navigator.vibrate) try { navigator.vibrate([200, 100, 200]); } catch (_) {} },
+    async show({ title, body, tag, data, actions, silent }) {
+      if (!silent) { this.beep(); this.vibrate(); }
+      if (this.permission() !== 'granted') return false;
+      const opts = { body, tag, data, renotify: !!tag, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', requireInteraction: false };
+      try {
+        const reg = this.reg || (navigator.serviceWorker && await navigator.serviceWorker.getRegistration());
+        if (reg && reg.showNotification) { await reg.showNotification(title, { ...opts, actions: actions || [] }); return true; }
+      } catch (e) { Log.warn('showNotification: ' + e.message); }
+      try { const n = new Notification(title, opts); n.onclick = () => { window.focus(); if (data && data.m) Router.navigate(`${data.m}/${data.id}`); n.close(); }; return true; }
+      catch (e) { Log.warn('Notification: ' + e.message); return false; }
+    },
+    setBadge(n) {
+      document.title = n ? `(${n}) ${CONFIG.APP_TITLE}` : CONFIG.APP_TITLE;
+      try { if (n && navigator.setAppBadge) navigator.setAppBadge(n); else if (navigator.clearAppBadge) navigator.clearAppBadge(); } catch (_) {}
+    },
+    forModule(id) {
+      const def = () => Registry.modules.get(id);
+      return {
+        permission: () => Notify.permission(),
+        request: () => Notify.request(),
+        show: (title, body, opts = {}) => Notify.show({ title: `${def().icon} ${title}`, body, tag: opts.tag ? `${id}-${opts.tag}` : undefined, data: { m: id, id: opts.itemId }, silent: opts.silent }),
+      };
+    },
+  };
+
+  /* ---- CORE: Reminders ---- */
+  const Reminders = {
+    C: '__reminders',
+    key(m, id) { return `${m}/c:${this.C}/${id}`; },
+    async getRec(m, id) { const r = await Store.kvGet(this.key(m, id)); return r ? r.v : null; },
+    async putRec(m, rec, { silent = false } = {}) {
+      rec.updatedAt = Math.max(Date.now(), (rec.updatedAt || 0) + 1);
+      await Store.kvPut({ k: this.key(m, rec.id), m, c: this.C, n: rec.id, v: rec, u: rec.updatedAt });
+      Tabs.post({ type: 'changed', moduleId: m, collection: this.C });
+      if (!silent) { Events.emit('reminders:changed', { moduleId: m }); this.updateBadge(); }
+    },
+    info(r) {
+      return { id: r.id, stage: r.stage, deadline: r.deadline ?? null, overdueMin: r.overdueMin, nextAt: r.nextAt ?? null, lastSentAt: r.lastSentAt ?? null, sentCount: r.sentCount || 0, done: !!r.done, unseen: !!r.unseen && !r.done };
+    },
+    forModule(m) {
+      const R = this;
+      const guard = () => { if (Registry.isReadOnly(m)) throw new Error('Modul ist schreibgeschützt.'); };
+      const mutate = async (id, fn) => { guard(); const r = await R.getRec(m, id); if (!r || r.deletedAt) return null; fn(r, Date.now()); await R.putRec(m, r); return R.info(r); };
+      return {
+        STAGES: Schedule.STAGES.map(s => ({ ...s })),
+        stageLabel: id => Schedule.stageLabel(id),
+        stageShort: id => Schedule.stageShort(id),
+        preview: ({ stage, deadline = null, overdueMin = 15 }, now = Date.now()) => Schedule.nextAt({ stageMin: Schedule.stageMin(stage), deadline, overdueMin }, now),
+        snoozeOptions: () => Schedule.snoozeOptions(),
+        async set(id, { stage, deadline = null, overdueMin = 15, title = '' }) {
+          guard();
+          const now = Date.now();
+          let r = await R.getRec(m, id);
+          const stageMin = Schedule.stageMin(stage);
+          const t = String(title || '').slice(0, 120);
+          deadline = deadline || null;
+          if (!r || r.deletedAt) {
+            r = { id, stage, stageMin, deadline, overdueMin, title: t, nextAt: null, lastSentAt: null, sentCount: 0, done: false, unseen: false, createdAt: now, deletedAt: null };
+            r.nextAt = Schedule.nextAt(r, now);   // erste Erinnerung nach einem Intervall, nicht sofort
+          } else {
+            const changed = r.stage !== stage || (r.deadline || null) !== deadline || r.overdueMin !== overdueMin;
+            Object.assign(r, { stage, stageMin, deadline, overdueMin, title: t });
+            if (changed && !r.done) r.nextAt = Schedule.nextAt(r, now);
+          }
+          await R.putRec(m, r);
+          return R.info(r);
+        },
+        async get(id) { const r = await R.getRec(m, id); return r && !r.deletedAt ? R.info(r) : null; },
+        async list() { return (await Store.kvByCollection(m, R.C)).map(x => x.v).filter(r => !r.deletedAt).map(r => R.info(r)); },
+        snooze(id, minutes) { return mutate(id, (r, now) => { r.nextAt = now + minutes * 60000; r.unseen = false; }); },
+        snoozeUntil(id, ts) { return mutate(id, r => { r.nextAt = ts; r.unseen = false; }); },
+        done(id) { return mutate(id, r => { r.done = true; r.nextAt = null; r.unseen = false; }); },
+        reopen(id) { return mutate(id, (r, now) => { r.done = false; r.unseen = false; r.nextAt = Schedule.nextAt(r, now); }); },
+        seen(id) { return mutate(id, r => { r.unseen = false; }); },
+        remove(id) { return mutate(id, (r, now) => { r.deletedAt = now; r.done = true; r.nextAt = null; r.unseen = false; }); },
+      };
+    },
+    describe(r, now, atDeadline) {
+      if (r.deadline) {
+        if (atDeadline || Math.abs(now - r.deadline) < 60000) return '⏰ Jetzt fällig!';
+        if (now > r.deadline) return `🔴 Überfällig seit ${U.formatDuration((now - r.deadline) / 60000)}`;
+        return `Abgabe ${U.relTime(r.deadline, now)} (${U.formatDate(r.deadline)})`;
+      }
+      return `${r.sentCount}. Erinnerung · Stufe ${Schedule.stageLabel(r.stage)}`;
+    },
+    async tick({ catchUp = false } = {}) {
+      const run = async () => {
+        const now = Date.now(), fired = [];
+        const q = Settings.data.quiet;
+        for (const def of Registry.list()) {
+          if (Registry.isReadOnly(def.id)) continue;
+          const recs = await Store.kvByCollection(def.id, this.C);
+          for (const { v: r } of recs) {
+            if (r.deletedAt || r.done || r.nextAt == null || r.nextAt > now) continue;
+            const qEnd = Schedule.quietDefer(now, r, q);
+            if (qEnd) { r.nextAt = qEnd; await this.putRec(def.id, r, { silent: true }); continue; }
+            const atDeadline = !!r.deadline && r.nextAt === r.deadline;
+            r.lastSentAt = now; r.sentCount = (r.sentCount || 0) + 1; r.unseen = true;
+            r.nextAt = Schedule.nextAt(r, now);
+            await this.putRec(def.id, r, { silent: true });
+            fired.push({ def, r, atDeadline });
+          }
+        }
+        if (fired.length) {
+          await this.announce(fired, now, catchUp);
+          Events.emit('reminders:changed', {});
+          fired.forEach(f => Events.emit('reminder:fired', { moduleId: f.def.id, itemId: f.r.id }));
+        }
+        await this.updateBadge();
+      };
+      try {
+        if (navigator.locks && navigator.locks.request) await navigator.locks.request('pa-reminder-tick', run);
+        else await run();
+      } catch (e) { Log.error('Erinnerungstakt: ' + e.message); }
+    },
+    async announce(fired, now, catchUp) {
+      if (fired.length <= 3 && !(catchUp && fired.length > 1)) {
+        for (const { def, r, atDeadline } of fired) {
+          const body = this.describe(r, now, atDeadline);
+          await Notify.show({ title: `${def.icon} ${r.title || def.name}`, body, tag: `${def.id}-${r.id}`, data: { m: def.id, id: r.id }, actions: [{ action: 'done', title: '✓ Erledigt' }, { action: 'snooze', title: '⏰ 1 Std später' }] });
+          if (document.visibilityState === 'visible') UI.toast(`🔔 ${r.title || def.name} – ${body}`, { action: 'Ansehen', onAction: () => Router.navigate(def.id) });
+        }
+      } else {
+        const title = catchUp ? `🔔 ${fired.length} Erinnerungen (verpasst)` : `🔔 ${fired.length} Erinnerungen fällig`;
+        const body = fired.slice(0, 6).map(f => '• ' + (f.r.title || f.def.name)).join('\n') + (fired.length > 6 ? `\n… und ${fired.length - 6} weitere` : '');
+        await Notify.show({ title, body, tag: 'pa-summary', data: { m: fired[0].def.id } });
+        if (document.visibilityState === 'visible') UI.toast(title, { action: 'Ansehen', onAction: () => Router.navigate(fired[0].def.id) });
+      }
+    },
+    async counts() {
+      const out = {};
+      for (const def of Registry.list()) {
+        const recs = await Store.kvByCollection(def.id, this.C);
+        const n = recs.filter(({ v }) => !v.deletedAt && !v.done && v.unseen).length;
+        if (n) out[def.id] = n;
+      }
+      return out;
+    },
+    async updateBadge() {
+      try {
+        const c = await this.counts();
+        Notify.setBadge(Object.values(c).reduce((a, b) => a + b, 0));
+        Shell.setCounts(c);
+      } catch (_) {}
+    },
+    /** Aktion aus einer Benachrichtigung (über Service Worker/Outbox) */
+    async handleAction(m, id, action) {
+      const def = Registry.modules.get(m);
+      if (!def || Registry.isReadOnly(m)) return;
+      const api = this.forModule(m);
+      if (action === 'snooze') await api.snooze(id, 60);
+      try { await Registry.call(m, 'onReminderAction', id, action); } catch (_) {}
+      if (action === 'done') await api.done(id);
+      Events.emit('reminders:changed', { moduleId: m });
+    },
+    start() {
+      this.tick({ catchUp: true });
+      setInterval(() => this.tick(), CONFIG.TICK_MS);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { this.tick({ catchUp: true }); Events.emit('app:visible', {}); } });
+      Events.on('settings:changed', () => this.updateBadge());
+    },
+  };
+
+  /* ---- CORE: Outbox (Aktionen aus dem Service Worker) ---- */
+  const Outbox = {
+    async process() {
+      const run = async () => {
+        const items = await IDB.run('outbox', 'readonly', s => IDB.rq(s.getAll()));
+        for (const it of items.filter(i => i.kind === 'action')) {
+          try { await Reminders.handleAction(it.module, it.itemId, it.action); } catch (e) { Log.error('Outbox-Aktion: ' + e.message); }
+          await IDB.run('outbox', 'readwrite', s => { s.delete(it.id); });
+        }
+      };
+      try { if (navigator.locks && navigator.locks.request) await navigator.locks.request('pa-outbox', run); else await run(); }
+      catch (e) { Log.error('Outbox: ' + e.message); }
+    },
+  };
+
+  /* ---- CORE: Push ---- */
+  /* Service-Worker-Registrierung jetzt; Push-Abo beim Worker folgt mit Version 1.1. */
+  const SWReg = {
+    reg: null, wantReload: false,
+    async register() {
+      if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+      try {
+        const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+        this.reg = reg; Notify.reg = reg;
+        const onWaiting = () => { if (reg.waiting && navigator.serviceWorker.controller) VersionGuard.showUpdate('Neue Version bereit.'); };
+        onWaiting();
+        reg.addEventListener('updatefound', () => { const w = reg.installing; w && w.addEventListener('statechange', () => { if (w.state === 'installed') onWaiting(); }); });
+        navigator.serviceWorker.addEventListener('controllerchange', () => { if (this.wantReload) { this.wantReload = false; location.reload(); } });
+        navigator.serviceWorker.addEventListener('message', e => {
+          const d = e.data || {};
+          if (d.type === 'outbox') Outbox.process();
+          if (d.type === 'navigate' && d.hash) { location.hash = d.hash; }
+        });
+        navigator.serviceWorker.ready.then(r => { this.reg = r; Notify.reg = r; });
+      } catch (e) { Log.warn('Service Worker nicht registriert: ' + e.message); }
+    },
+    applyUpdate() {
+      if (this.reg && this.reg.waiting) { this.wantReload = true; this.reg.waiting.postMessage({ type: 'skipWaiting' }); setTimeout(() => location.reload(), 3000); }
+      else location.reload();
+    },
+  };
+
+  /* ---- CORE: Shell ---- */
+  const Shell = {
+    counts: {},
+    render() {
+      const nav = document.getElementById('nav');
+      nav.replaceChildren(...Registry.list().map(d => UI.h('a', { href: Router.link(d.id === 'start' ? '' : d.id), 'data-id': d.id },
+        UI.h('span', { class: 'ic', 'aria-hidden': 'true' }, d.icon), UI.h('span', {}, d.name), this.counts[d.id] ? UI.h('span', { class: 'count' }, this.counts[d.id]) : null)));
+      if (Router.current) this.highlight(Router.current.moduleId);
+    },
+    highlight(id) { document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.id === id)); },
+    setCounts(c) { const changed = JSON.stringify(c) !== JSON.stringify(this.counts); this.counts = c; if (changed) this.render(); },
+    status(text) { document.getElementById('status').textContent = text || ''; },
+  };
+
+  /* ---- CORE: System (nur für System-Module start/einstellungen) ---- */
+  const System = {
+    CONFIG, CHANGELOG, Registry, Backup, Settings, Notify, Reminders, Schedule, Log, Theme, VersionGuard, SWReg,
+    async storage() {
+      const out = { persisted: null, usage: null, quota: null };
+      try { if (navigator.storage?.persisted) out.persisted = await navigator.storage.persisted(); } catch (_) {}
+      try { if (navigator.storage?.estimate) { const e = await navigator.storage.estimate(); out.usage = e.usage; out.quota = e.quota; } } catch (_) {}
+      return out;
+    },
+    lastExportAt: () => Store.metaGet('lastExportAt', null),
+    async requestPersist() { try { return navigator.storage?.persist ? await navigator.storage.persist() : false; } catch (_) { return false; } },
+    async hints() {
+      const hints = [];
+      const st = await this.storage();
+      const lastExport = await Store.metaGet('lastExportAt', null);
+      const app = await Store.metaGet('app', {});
+      const since = lastExport || app.installedAt || Date.now();
+      const days = st.persisted === false ? 7 : 14;
+      const hasData = (await Store.kvAll()).some(r => r.c && r.c !== '__reminders');
+      if (hasData && Date.now() - since > days * 86400000) hints.push({ id: 'export', icon: '💾', text: lastExport ? `Letzte Sicherung vor ${U.formatDuration((Date.now() - lastExport) / 60000)}. Zeit für einen Export.` : 'Noch keine Sicherungsdatei exportiert.', action: 'Exportieren', run: () => Backup.exportFile() });
+      const p = Notify.permission();
+      if (p === 'default') hints.push({ id: 'notify', icon: '🔔', text: 'Benachrichtigungen sind noch nicht erlaubt – sonst kann dich die App nicht erinnern.', action: 'Erlauben', run: () => Notify.request() });
+      else if (p === 'denied') hints.push({ id: 'notify', icon: '🔕', text: 'Benachrichtigungen sind blockiert. Erlaube sie in den Browser-Einstellungen für diese Seite.' });
+      else if (p === 'unsupported' && U.isIOS() && !U.isStandalone()) hints.push({ id: 'ios', icon: '📱', text: 'iPhone: Für Benachrichtigungen die App über „Teilen → Zum Home-Bildschirm“ installieren und von dort öffnen.' });
+      hints.push({ id: 'push', icon: 'ℹ️', text: 'Erinnerungen kommen in dieser Version, solange die App (auch im Hintergrund-Tab) geöffnet ist. Verpasste werden beim Öffnen nachgeholt. Push bei geschlossener App folgt mit Version 1.1.', muted: true });
+      return hints;
+    },
+  };
+
+  /* ---- CORE: Boot ---- */
+  const App = {
+    register: def => Registry.register(def),
+    async boot() {
+      Theme.start();
+      window.addEventListener('error', e => { Log.error(`${e.message} (${e.filename?.split('/').pop()}:${e.lineno})`); });
+      window.addEventListener('unhandledrejection', e => { Log.error('Unbehandelt: ' + (e.reason && e.reason.message || e.reason)); });
+      try { await IDB.open(); }
+      catch (e) {
+        document.getElementById('view').replaceChildren(UI.errorCard(e, 'Datenspeicher nicht verfügbar'), UI.h('p', { class: 'muted' }, 'Möglicherweise ist privates Surfen aktiv oder der Speicher ist voll. Deine bisherigen Daten wurden nicht verändert.'));
+        return;
+      }
+      await Log.load();
+      await Settings.load();
+      Tabs.start();
+      await VersionGuard.check();
+      await Migrator.runAll();
+      Shell.render();
+      await Router.start();
+      VersionGuard.start();
+      SWReg.register();
+      Outbox.process();
+      for (const def of Registry.list()) if (typeof def.background === 'function') Registry.call(def.id, 'background').catch(() => {});
+      Reminders.start();
+      Backup.daily();
+      Events.on('settings:changed', ({ key }) => { if (key === 'hiddenModules') { Shell.render(); } });
+      const firstGesture = async () => {
+        Notify.unlockAudio();
+        if (!(await Store.metaGet('persistAsked', false))) { await Store.metaSet('persistAsked', true); System.requestPersist(); }
+        window.removeEventListener('pointerdown', firstGesture); window.removeEventListener('keydown', firstGesture);
+      };
+      window.addEventListener('pointerdown', firstGesture); window.addEventListener('keydown', firstGesture);
+      Log.info(`Start ${CONFIG.APP_VERSION}`);
+    },
+  };
+  window.App = App;
+  /* ==== ENDE CORE ==== */
+  </script>
+
+  <script>
+  /* ==== MODUL: start ==== */
+  (() => {
+    App.register({
+      id: 'start', name: 'Start', icon: '🏠', order: 0, system: true,
+      version: '1.0.0', schemaVersion: 1, migrations: {},
+      async mount(el, ctx) {
+        const { h } = ctx.ui;
+        const S = ctx.system;
+        const d = new Date();
+        const greet = d.getHours() < 11 ? 'Guten Morgen' : d.getHours() < 18 ? 'Hallo' : 'Guten Abend';
+        const hintsBox = h('div');
+        const tiles = h('div', { class: 'tiles' });
+        el.append(h('h2', {}, greet), h('p', { class: 'muted', style: { marginTop: '-6px' } }, d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })), hintsBox, tiles);
+
+        const renderHints = async () => {
+          const hints = await S.hints();
+          hintsBox.replaceChildren(...hints.map(x => h('div', { class: 'card hint' + (x.muted ? ' small muted' : '') },
+            h('span', { style: { fontSize: '1.3rem' } }, x.icon), h('div', { class: 'grow' }, x.text),
+            x.action ? h('button', { class: 'btn btn-sm btn-primary', onclick: async () => { await x.run(); renderHints(); } }, x.action) : null)));
+        };
+        const renderTiles = async () => {
+          const mods = S.Registry.list().filter(m => !m.system);
+          if (!mods.length) { tiles.replaceChildren(h('div', { class: 'empty' }, 'Keine Module aktiv.')); return; }
+          tiles.replaceChildren(...mods.map(m => {
+            const body = h('div', {}, h('span', { class: 'muted small' }, m.description || ''));
+            if (typeof m.widget === 'function') {
+              S.Registry.call(m.id, 'widget', body).catch(e => body.replaceChildren(h('span', { class: 'small', style: { color: 'var(--danger)' } }, '⚠️ Kachel-Fehler: ' + e.message)));
+            }
+            return h('div', { class: 'card tile' }, h('a', { class: 'tile-head', href: ctx.router.link(m.id) }, h('span', {}, m.icon), h('span', { class: 'grow' }, m.name), h('span', { class: 'muted' }, '›')), body);
+          }));
+        };
+        await Promise.all([renderHints(), renderTiles()]);
+        const re = ctx.util.debounce(renderTiles, 300);
+        ctx.events.on('store:changed', re);
+        ctx.events.on('reminders:changed', re);
+        ctx.events.on('notify:permission', renderHints);
+        ctx.every(60000, renderTiles);
+      },
+    });
+  })();
+  /* ==== ENDE MODUL: start ==== */
+  </script>
+
+  <script>
+  /* ==== MODUL: einstellungen ==== */
+  (() => {
+    App.register({
+      id: 'einstellungen', name: 'Einstellungen', icon: '⚙️', order: 1000, system: true,
+      version: '1.0.0', schemaVersion: 1, migrations: {},
+      async mount(el, ctx) {
+        const { h, toast, confirm, choose } = ctx.ui;
+        const S = ctx.system, U = ctx.util;
+        const card = (title, ...children) => h('div', { class: 'card' }, h('h3', {}, title), ...children);
+        const sw = (label, checked, onchange) => h('label', { class: 'switch' }, h('input', { type: 'checkbox', checked, onchange: e => onchange(e.target.checked) }), h('span', {}, label));
+
+        const parts = {};
+        const sections = ['darstellung', 'benachrichtigungen', 'sicherung', 'speicher', 'module', 'ueber', 'diagnose'];
+        sections.forEach(s => parts[s] = h('div'));
+        el.append(h('h2', {}, 'Einstellungen'), ...sections.map(s => parts[s]));
+
+        /* Darstellung */
+        const themeSel = h('select', { onchange: e => S.Theme.set(e.target.value) },
+          [['system', 'Wie System'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([v, l]) => h('option', { value: v, selected: S.Theme.get() === v }, l)));
+        parts.darstellung.append(card('🎨 Darstellung', h('label', { class: 'field' }, h('span', {}, 'Farbschema'), themeSel)));
+
+        /* Benachrichtigungen & Ruhezeiten */
+        const renderNotify = () => {
+          const p = S.Notify.permission();
+          const q = S.Settings.get('quiet');
+          const status = { granted: '✅ erlaubt', denied: '🔕 blockiert (in den Browser-Einstellungen ändern)', default: '❔ noch nicht gefragt', unsupported: '– nicht unterstützt' }[p];
+          const saveQ = async patch => { await S.Settings.set('quiet', { ...S.Settings.get('quiet'), ...patch }); };
+          const startIn = h('input', { type: 'time', value: U.minToTime(q.start), onchange: e => { const v = U.timeToMin(e.target.value); if (v != null) saveQ({ start: v }); } });
+          const endIn = h('input', { type: 'time', value: U.minToTime(q.end), onchange: e => { const v = U.timeToMin(e.target.value); if (v != null) saveQ({ end: v }); } });
+          parts.benachrichtigungen.replaceChildren(card('🔔 Benachrichtigungen',
+            h('dl', { class: 'kv' }, h('dt', {}, 'Status'), h('dd', {}, status)),
+            h('div', { class: 'row', style: { marginTop: '10px' } },
+              p === 'default' ? h('button', { class: 'btn btn-primary', onclick: async () => { await S.Notify.request(); renderNotify(); } }, 'Benachrichtigungen erlauben') : null,
+              h('button', { class: 'btn', onclick: async () => { S.Notify.unlockAudio(); const ok = await S.Notify.show({ title: '🔔 Test', body: 'So sieht eine Erinnerung aus.', tag: 'pa-test', actions: [] }); toast(ok ? 'Test-Benachrichtigung gesendet' : 'Nur Ton/Vibration – Benachrichtigungen nicht erlaubt'); } }, 'Test-Benachrichtigung')),
+            sw('Ton bei Erinnerungen (wenn die App offen ist)', S.Settings.get('sound'), v => S.Settings.set('sound', v)),
+            sw('Vibration (wo unterstützt)', S.Settings.get('vibrate'), v => S.Settings.set('vibrate', v)),
+            U.isIOS() && !U.isStandalone() ? h('p', { class: 'small muted' }, '📱 iPhone/iPad: Benachrichtigungen gibt es nur, wenn die App über „Teilen → Zum Home-Bildschirm“ installiert und von dort geöffnet wird.') : null,
+            h('p', { class: 'small muted' }, 'In Version 1.0 erinnert die App, solange sie geöffnet ist (auch als Hintergrund-Tab). Verpasste Erinnerungen werden beim Öffnen gesammelt nachgeholt. Push bei geschlossener App folgt mit dem Push-Dienst (Version 1.1).'),
+            h('h3', { style: { marginTop: '16px' } }, '🌙 Ruhezeiten'),
+            sw('Ruhezeit aktiv', q.enabled, v => { saveQ({ enabled: v }); }),
+            h('div', { class: 'row nowrap' }, h('label', { class: 'field grow' }, h('span', {}, 'Von'), startIn), h('label', { class: 'field grow' }, h('span', {}, 'Bis'), endIn)),
+            sw('Abgabe-Erinnerungen dürfen die Ruhezeit durchbrechen', q.breakForDeadline, v => saveQ({ breakForDeadline: v })),
+            h('p', { class: 'small muted' }, 'Erinnerungen in der Ruhezeit werden auf deren Ende verschoben und kommen dann gesammelt.')));
+        };
+        renderNotify();
+
+        /* Datensicherung */
+        const renderBackup = async () => {
+          const list = await S.Backup.list();
+          const fileIn = h('input', { type: 'file', accept: 'application/json,.json', class: 'sr-only', onchange: async e => {
+            const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+            try {
+              const data = JSON.parse(await f.text()); S.Backup.validate(data);
+              const mode = await choose('Sicherung importieren', [
+                { label: 'Zusammenführen (neuere Einträge gewinnen)', value: 'merge', primary: true },
+                { label: 'Ersetzen (aktuelle Daten der enthaltenen Module überschreiben)', value: 'replace', danger: true },
+              ], `Datei vom ${data.exportedAt ? new Date(data.exportedAt).toLocaleString('de-DE') : '?'}, App-Version ${data.appVersion}. Vorher wird automatisch ein Schnappschuss angelegt.`);
+              if (!mode) return;
+              const rep = await S.Backup.importData(data, mode);
+              await confirm(`Importiert: ${rep.imported.join(', ') || '–'}${rep.skipped.length ? '\nÜbersprungen: ' + rep.skipped.join(', ') : ''}\n\nDie App wird jetzt neu geladen.`, { ok: 'Neu laden', cancel: 'Später' }) && location.reload();
+            } catch (err) { toast('Import fehlgeschlagen: ' + err.message, { type: 'error' }); }
+          } });
+          const lastExport = await S.lastExportAt();
+          parts.sicherung.replaceChildren(card('💾 Datensicherung',
+            h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Deine Daten liegen nur in diesem Browser. Exportiere regelmäßig eine Sicherungsdatei und lege sie sicher ab (sie ist unverschlüsselt).'),
+            h('p', { class: 'small' }, lastExport ? `Letzter Export: ${U.formatDateTimeFull(lastExport)}` : 'Noch kein Export.'),
+            h('div', { class: 'row' },
+              h('button', { class: 'btn btn-primary', onclick: async () => { await S.Backup.exportFile(); toast('Sicherung exportiert'); } }, '⬇️ Exportieren'),
+              h('button', { class: 'btn', onclick: () => fileIn.click() }, '⬆️ Importieren'), fileIn,
+              h('button', { class: 'btn', onclick: async () => { await S.Backup.snapshot('manuell'); toast('Schnappschuss angelegt'); renderBackup(); } }, '📸 Schnappschuss')),
+            h('details', { class: 'fold' }, h('summary', {}, `Automatische Schnappschüsse (${list.length})`),
+              list.length ? h('table', { class: 'simple' }, h('tbody', {}, list.map(b => h('tr', {},
+                h('td', {}, U.formatDateTimeFull(b.createdAt), h('div', { class: 'small muted' }, `${b.reason} · v${b.appVersion} · ${U.formatBytes(b.size)}`)),
+                h('td', { style: { textAlign: 'right' } },
+                  h('button', { class: 'btn btn-sm', onclick: () => U.download(`persoenliche-app-schnappschuss-${b.id}.json`, JSON.stringify(b.data, null, 2)) }, '⬇️'),
+                  ' ',
+                  h('button', { class: 'btn btn-sm', onclick: async () => {
+                    if (!await confirm(`Auf den Stand vom ${U.formatDateTimeFull(b.createdAt)} zurücksetzen?\nDer aktuelle Stand wird vorher als Schnappschuss gesichert.`, { ok: 'Wiederherstellen', danger: true })) return;
+                    try { await S.Backup.importData(b.data, 'replace', 'vor Wiederherstellung'); location.reload(); } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
+                  } }, 'Wiederherstellen')))))) : h('p', { class: 'muted small' }, 'Noch keine.'))));
+        };
+        await renderBackup();
+
+        /* Speicher */
+        const renderStorage = async () => {
+          const st = await S.storage();
+          parts.speicher.replaceChildren(card('🗄️ Speicher',
+            h('dl', { class: 'kv' },
+              h('dt', {}, 'Dauerhaft'), h('dd', {}, st.persisted == null ? 'unbekannt' : st.persisted ? '✅ ja – der Browser löscht die Daten nicht automatisch' : '⚠️ nein – der Browser könnte Daten bei Speichermangel löschen'),
+              h('dt', {}, 'Belegt'), h('dd', {}, st.usage != null ? `${U.formatBytes(st.usage)} von ${U.formatBytes(st.quota)}` : 'unbekannt'),
+              h('dt', {}, 'Installiert'), h('dd', {}, U.isStandalone() ? 'ja (Home-Bildschirm/App)' : 'nein (Browser-Tab)')),
+            st.persisted === false ? h('button', { class: 'btn', style: { marginTop: '10px' }, onclick: async () => { const ok = await S.requestPersist(); toast(ok ? 'Speicher ist jetzt dauerhaft' : 'Browser hat abgelehnt – Installation als App hilft oft'); renderStorage(); } }, 'Dauerhaften Speicher anfordern') : null));
+        };
+        await renderStorage();
+
+        /* Module */
+        const renderModules = () => {
+          const hidden = S.Settings.get('hiddenModules');
+          const mods = S.Registry.list({ includeHidden: true }).filter(m => !m.system);
+          parts.module.replaceChildren(card('🧩 Module', ...mods.map(m => {
+            const settingsBox = h('div');
+            if (typeof m.settings === 'function') S.Registry.call(m.id, 'settings', settingsBox).catch(e => settingsBox.replaceChildren(h('span', { class: 'small' }, '⚠️ ' + e.message)));
+            return h('div', { style: { borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' } },
+              h('div', { class: 'row' }, h('strong', { class: 'grow' }, `${m.icon} ${m.name}`), h('span', { class: 'pill' }, `v${m.version || '?'} · Schema ${m.schemaVersion}`)),
+              S.Registry.isReadOnly(m.id) ? h('div', { class: 'ro-banner' }, '🔒 ' + S.Registry.st(m.id).lockReason) : null,
+              sw('Anzeigen', !hidden.includes(m.id), async v => {
+                const cur = S.Settings.get('hiddenModules').filter(x => x !== m.id);
+                if (!v) cur.push(m.id);
+                await S.Settings.set('hiddenModules', cur);
+                toast(v ? `${m.name} wird angezeigt` : `${m.name} ausgeblendet (Daten bleiben erhalten)`);
+              }),
+              settingsBox,
+              h('details', { class: 'fold' }, h('summary', {}, 'Gefahrenbereich'),
+                h('button', { class: 'btn btn-danger btn-sm', onclick: async () => {
+                  if (!await confirm(`Alle Daten von „${m.name}“ löschen?`, { ok: 'Weiter', danger: true })) return;
+                  if (!await confirm(`Wirklich? Vorher wird ein Schnappschuss angelegt, über den du die Daten wiederherstellen kannst.`, { ok: 'Endgültig löschen', danger: true })) return;
+                  await S.Backup.deleteModuleData(m.id); toast(`Daten von ${m.name} gelöscht`); renderBackup();
+                } }, 'Daten dieses Moduls löschen')));
+          })));
+        };
+        renderModules();
+
+        /* Über */
+        parts.ueber.append(card('ℹ️ Über',
+          h('dl', { class: 'kv' }, h('dt', {}, 'Version'), h('dd', {}, S.CONFIG.APP_VERSION), h('dt', {}, 'Datenbank'), h('dd', {}, S.CONFIG.DB_NAME)),
+          h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'btn btn-sm', onclick: async () => { await S.VersionGuard.checkRemote(); toast('Auf Updates geprüft'); } }, 'Auf Updates prüfen')),
+          h('details', { class: 'fold' }, h('summary', {}, 'Änderungsprotokoll'),
+            ...S.CHANGELOG.map(c => h('div', {}, h('strong', {}, `${c.version} · ${c.date}`), h('ul', { class: 'small' }, c.items.map(i => h('li', {}, i))))))));
+
+        /* Diagnose */
+        const renderDiag = () => {
+          const tests = S.Schedule.selfTest();
+          const allOk = tests.every(t => t.ok);
+          parts.diagnose.replaceChildren(card('🩺 Diagnose',
+            h('details', { class: 'fold' }, h('summary', {}, `Eskalationsregel – Testtabelle: ${allOk ? '✅ alle bestanden' : '❌ Fehler'}`),
+              h('table', { class: 'simple' }, h('thead', {}, h('tr', {}, h('th', {}, 'Verbleibend (Stufe 1 Tag)'), h('th', {}, 'Erwartet'), h('th', {}, 'Ergebnis'))),
+                h('tbody', {}, tests.map(t => h('tr', {}, h('td', {}, t.label), h('td', {}, typeof t.expected === 'number' ? `${t.expected} Min` : t.expected), h('td', { class: t.ok ? 'test-ok' : 'test-fail' }, (typeof t.got === 'number' ? `${t.got} Min` : t.got) + (t.ok ? ' ✓' : ' ✗'))))))),
+            h('details', { class: 'fold' }, h('summary', {}, `Protokoll (${S.Log.entries.length})`),
+              h('div', { class: 'log' }, S.Log.entries.slice().reverse().map(e => `${new Date(e.ts).toLocaleString('de-DE')} [${e.level}] ${e.moduleId}: ${e.msg}\n`)),
+              h('div', { class: 'row', style: { marginTop: '8px' } },
+                h('button', { class: 'btn btn-sm', onclick: () => U.download('persoenliche-app-diagnose.json', JSON.stringify({ version: S.CONFIG.APP_VERSION, ua: navigator.userAgent, log: S.Log.entries }, null, 2)) }, 'Protokoll herunterladen'),
+                h('button', { class: 'btn btn-sm', onclick: () => { S.Log.entries.length = 0; S.Log.persist(); renderDiag(); } }, 'Leeren')))));
+        };
+        renderDiag();
+
+        ctx.events.on('notify:permission', renderNotify);
+        ctx.events.on('settings:changed', ({ key }) => { if (key === 'hiddenModules') renderModules(); });
+      },
+    });
+  })();
+  /* ==== ENDE MODUL: einstellungen ==== */
+  </script>
+
+  <script>
+  /* ==== MODUL: todos ==== */
+  (() => {
+    const OVERDUE_OPTS = [5, 10, 15, 30, 60];
+    let col;
+
+    const cfg = async ctx => ({ defaultStage: await ctx.settings.get('defaultStage', '1d'), overdueMin: await ctx.settings.get('overdueMin', 15) });
+
+    /** Dringlichkeit einer Abgabe → Farbe */
+    function urgency(deadline, now) {
+      if (!deadline) return null;
+      const h = (deadline - now) / 3600000;
+      if (h <= 0) return 'red';
+      if (h <= 24) return 'orange';
+      if (h <= 72) return 'yellow';
+      return 'blue';
+    }
+
+    async function loadAll(ctx) {
+      const [todos, rems] = await Promise.all([col.all(), ctx.reminders.list()]);
+      const rm = new Map(rems.map(r => [r.id, r]));
+      return todos.map(t => ({ ...t, _r: rm.get(t.id) || null }));
+    }
+
+    function sortOpen(now) {
+      return (a, b) => {
+        const ao = !!a.deadline && a.deadline <= now, bo = !!b.deadline && b.deadline <= now;
+        if (ao !== bo) return ao ? -1 : 1;
+        if (a.deadline && b.deadline && a.deadline !== b.deadline) return a.deadline - b.deadline;
+        if (!!a.deadline !== !!b.deadline) return a.deadline ? -1 : 1;
+        return (a._r?.nextAt ?? Infinity) - (b._r?.nextAt ?? Infinity);
+      };
+    }
+
+    async function create(ctx, { title, stage, deadline }) {
+      const c = await cfg(ctx);
+      const t = await col.add({ title, note: '', stage, deadline: deadline || null, overdueMin: c.overdueMin, done: false, doneAt: null, seenAt: null });
+      await ctx.reminders.set(t.id, { stage, deadline: t.deadline, overdueMin: t.overdueMin, title });
+      return t;
+    }
+    async function complete(ctx, id) {
+      await col.update(id, { done: true, doneAt: Date.now() });
+      await ctx.reminders.done(id);
+    }
+    async function reopen(ctx, id) {
+      const t = await col.update(id, { done: false, doneAt: null });
+      const r = await ctx.reminders.get(id);
+      if (!r) await ctx.reminders.set(id, { stage: t.stage, deadline: t.deadline, overdueMin: t.overdueMin, title: t.title });
+      else await ctx.reminders.reopen(id);
+    }
+    async function markSeen(ctx, id) {
+      await ctx.reminders.seen(id);
+      await col.update(id, { seenAt: Date.now() });
+    }
+
+    /** Schnellwahl für die Abgabe */
+    function quickDeadlines() {
+      const now = new Date();
+      const at = (addDays, h, m = 0) => { const d = new Date(now); d.setDate(d.getDate() + addDays); d.setHours(h, m, 0, 0); return d.getTime(); };
+      const opts = [];
+      if (now.getHours() < 17) opts.push({ label: 'Heute 18:00', ts: at(0, 18) });
+      else if (now.getHours() < 21) opts.push({ label: 'Heute 22:00', ts: at(0, 22) });
+      opts.push({ label: 'Morgen 09:00', ts: at(1, 9) });
+      opts.push({ label: 'Morgen 18:00', ts: at(1, 18) });
+      opts.push({ label: 'In 3 Tagen', ts: at(3, 18) });
+      opts.push({ label: 'In 1 Woche', ts: at(7, 18) });
+      return opts;
+    }
+
+    function stageChips(ctx, current, onPick) {
+      const { h } = ctx.ui;
+      const box = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': 'Stufe' });
+      const render = val => box.replaceChildren(...ctx.reminders.STAGES.map(s => h('button', {
+        type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(s.id === val),
+        onclick: () => { render(s.id); onPick(s.id); },
+      }, s.label)));
+      render(current);
+      return box;
+    }
+
+    function deadlineEditor(ctx, current, onChange) {
+      const { h } = ctx.ui; const U = ctx.util;
+      const input = h('input', { type: 'datetime-local', value: U.toLocalInput(current), 'aria-label': 'Abgabe Datum und Uhrzeit', onchange: () => onChange(U.fromLocalInput(input.value)) });
+      const quick = h('div', { class: 'chips' },
+        h('button', { type: 'button', class: 'chip', onclick: () => { input.value = ''; onChange(null); } }, 'Keine'),
+        ...quickDeadlines().map(q => h('button', { type: 'button', class: 'chip', onclick: () => { input.value = U.toLocalInput(q.ts); onChange(q.ts); } }, q.label)));
+      return { el: h('div', { class: 'stack' }, quick, h('div', { class: 'dl-row' }, input)), input, set: ts => { input.value = U.toLocalInput(ts); } };
+    }
+
+    /** Meta-Zeile eines ToDos */
+    function metaLine(ctx, t, now) {
+      const { h } = ctx.ui; const U = ctx.util;
+      const r = t._r;
+      const out = [h('span', { class: 'pill', title: 'Stufe (Grundintervall)' }, '↻ ' + ctx.reminders.stageShort(t.stage))];
+      if (t.deadline) {
+        const u = urgency(t.deadline, now);
+        const txt = t.deadline <= now ? `Überfällig seit ${U.formatDuration((now - t.deadline) / 60000)}` : `Abgabe ${U.formatDate(t.deadline)} · ${U.relTime(t.deadline, now)}`;
+        out.push(h('span', { class: 'pill ' + u }, (t.deadline <= now ? '🔴 ' : '📅 ') + txt));
+      }
+      if (!t.done && r && r.nextAt) out.push(h('span', { class: 'pill', title: U.formatDateTimeFull(r.nextAt) }, '🔔 ' + (r.nextAt <= now ? 'gleich' : U.relTime(r.nextAt, now))));
+      if (r && r.sentCount) out.push(h('span', { class: 'pill', title: 'Bisherige Erinnerungen' }, `${r.sentCount}× erinnert`));
+      if (t.done && t.doneAt) out.push(h('span', { class: 'pill green' }, '✓ ' + U.formatDate(t.doneAt)));
+      return h('div', { class: 't-meta' }, out);
+    }
+
+    /** Bearbeiten-Dialog */
+    async function openEdit(ctx, id) {
+      const { h, dialog, confirm, toast } = ctx.ui; const U = ctx.util;
+      const t = await col.get(id);
+      if (!t) { toast('ToDo nicht gefunden'); return; }
+      const r = await ctx.reminders.get(id);
+      if (r && r.unseen) await markSeen(ctx, id);
+      let stage = t.stage, deadline = t.deadline;
+      const titleIn = h('input', { type: 'text', value: t.title, autofocus: true, 'aria-label': 'Titel' });
+      const noteIn = h('textarea', { 'aria-label': 'Notiz', placeholder: 'Notiz (optional)' }); noteIn.value = t.note || '';
+      const overdueSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: (t.overdueMin || 15) === m }, `alle ${m} Minuten`)));
+      const preview = h('div', { class: 'small muted' });
+      const upd = () => {
+        if (t.done) { preview.textContent = 'Erledigt – keine Erinnerungen.'; return; }
+        const changed = stage !== t.stage || (deadline || null) !== (t.deadline || null) || Number(overdueSel.value) !== (t.overdueMin || 15);
+        const n = changed || !r ? ctx.reminders.preview({ stage, deadline, overdueMin: Number(overdueSel.value) }) : r.nextAt;
+        preview.textContent = n ? `${changed ? 'Nach dem Speichern: n' : 'N'}ächste Erinnerung ${U.relTime(n)} (${U.formatDate(n)})` : '';
+      };
+      overdueSel.onchange = upd;
+      const dl = deadlineEditor(ctx, deadline, v => { deadline = v; upd(); });
+      upd();
+      const result = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close('save'); } },
+        h('h3', {}, 'ToDo bearbeiten'),
+        h('div', { class: 'stack' },
+          titleIn, noteIn,
+          h('div', { class: 'small muted' }, 'Stufe – so oft wirst du erinnert, bis es erledigt ist'),
+          stageChips(ctx, stage, v => { stage = v; upd(); }),
+          h('div', { class: 'small muted' }, 'Abgabe – je näher, desto öfter wirst du erinnert'),
+          dl.el,
+          h('label', { class: 'field' }, h('span', {}, 'Nach Ablauf der Abgabe erinnern'), overdueSel),
+          preview,
+          r ? h('div', { class: 'small muted' }, `Bisher ${r.sentCount}× erinnert${r.lastSentAt ? ', zuletzt ' + U.relTime(r.lastSentAt) : ''} · angelegt ${U.formatDate(t.createdAt)}`) : null),
+        h('div', { class: 'dlg-actions' },
+          h('button', { type: 'button', class: 'btn btn-ghost', style: { marginRight: 'auto', color: 'var(--danger)' }, onclick: () => close('delete') }, 'Löschen'),
+          h('button', { type: 'button', class: 'btn', onclick: () => close() }, 'Abbrechen'),
+          h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'ToDo bearbeiten' });
+
+      if (result === 'save') {
+        const title = titleIn.value.trim();
+        if (!title) { toast('Titel darf nicht leer sein'); return; }
+        const overdueMin = Number(overdueSel.value);
+        await col.update(id, { title, note: noteIn.value, stage, deadline: deadline || null, overdueMin });
+        await ctx.reminders.set(id, { stage, deadline: deadline || null, overdueMin, title });
+        toast('Gespeichert');
+      } else if (result === 'delete') {
+        if (await confirm(`„${t.title}“ löschen?`, { ok: 'Löschen', danger: true })) {
+          await col.remove(id); await ctx.reminders.remove(id);
+          toast('Gelöscht', { action: 'Rückgängig', onAction: async () => { await col.update(id, { deletedAt: null }); await ctx.reminders.set(id, { stage: t.stage, deadline: t.deadline, overdueMin: t.overdueMin, title: t.title }); if (t.done) await ctx.reminders.done(id); } });
+        }
+      }
+    }
+
+    App.register({
+      id: 'todos', name: 'ToDos', icon: '✅', order: 10,
+      description: 'Aufgaben mit hartnäckigen Erinnerungen', category: 'Alltag',
+      version: '1.0.0', schemaVersion: 1, migrations: {},
+
+      async init(ctx) { col = ctx.store.collection('todos', { sync: true }); },
+
+      async mount(el, ctx, route) {
+        const { h, toast } = ctx.ui; const U = ctx.util;
+        const c = await cfg(ctx);
+        let stage = c.defaultStage, deadline = null;
+
+        /* --- Eingabe --- */
+        const titleIn = h('input', { type: 'text', class: 'title-input', placeholder: 'Neues ToDo …', enterkeyhint: 'done', 'aria-label': 'Neues ToDo', autocomplete: 'off', disabled: ctx.readOnly });
+        const preview = h('div', { class: 'preview' });
+        const updPreview = () => {
+          const n = ctx.reminders.preview({ stage, deadline, overdueMin: c.overdueMin });
+          preview.textContent = `Erste Erinnerung ${U.relTime(n)} (${U.formatDate(n)})` + (deadline ? ' – danach immer häufiger bis zur Abgabe.' : `, danach im Abstand von ${ctx.reminders.stageLabel(stage)}, bis du es abhakst.`);
+        };
+        let chips = stageChips(ctx, stage, v => { stage = v; updPreview(); });
+        let dl = deadlineEditor(ctx, deadline, v => { deadline = v; updPreview(); });
+        const resetComposer = () => {
+          titleIn.value = ''; deadline = null; dl.set(null); updPreview(); titleIn.focus();
+        };
+        const form = h('form', { class: 'card composer', onsubmit: async e => {
+          e.preventDefault();
+          const title = titleIn.value.trim();
+          if (!title) { titleIn.focus(); return; }
+          const dlUsed = deadline;
+          resetComposer(); // sofort leeren, damit schnelles Weitertippen nicht verloren geht
+          try {
+            await create(ctx, { title, stage, deadline: dlUsed });
+            if (ctx.notify.permission() === 'default') {
+              toast('Damit ich dich erinnern kann, erlaube Benachrichtigungen.', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
+            } else toast('ToDo angelegt');
+          } catch (err) { if (!titleIn.value) titleIn.value = title; toast('Fehler: ' + err.message, { type: 'error' }); }
+        } },
+          titleIn,
+          h('div', { class: 'lbl' }, 'Stufe'), chips,
+          h('div', { class: 'lbl' }, 'Abgabe (optional)'), dl.el,
+          preview,
+          h('button', { type: 'submit', class: 'btn btn-primary btn-block', style: { marginTop: '12px' }, disabled: ctx.readOnly }, 'Hinzufügen'));
+        titleIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); form.requestSubmit(); } });
+        updPreview();
+
+        const firedBox = h('div');
+        const openBox = h('div');
+        const doneBox = h('div');
+        el.append(h('h2', {}, '✅ ToDos'), form, firedBox, openBox, doneBox);
+
+        let doneOpen = false;
+
+        const row = (t, now) => {
+          const u = t.deadline && !t.done ? urgency(t.deadline, now) : null;
+          return h('li', { class: 'todo' + (t.done ? ' done' : '') + (u === 'red' ? ' overdue' : u === 'orange' ? ' soon' : ''), 'data-id': t.id },
+            h('button', { class: 'check', 'aria-label': t.done ? 'Wieder öffnen' : 'Abhaken', title: t.done ? 'Wieder öffnen' : 'Abhaken', disabled: ctx.readOnly, onclick: async () => {
+              if (t.done) { await reopen(ctx, t.id); toast('Wieder geöffnet – Erinnerungen laufen weiter'); }
+              else { await complete(ctx, t.id); toast(`„${t.title}“ erledigt 🎉`, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) }); }
+            } }, h('span')),
+            h('div', { class: 't-body', onclick: () => ctx.router.navigate(`todos/${t.id}`) },
+              h('div', { class: 't-title' }, t.title),
+              t.note ? h('div', { class: 't-note' }, t.note) : null,
+              metaLine(ctx, t, now)),
+            t.done ? h('div', { class: 'done-actions' }, h('button', { class: 'btn btn-ghost btn-sm', title: 'Löschen', 'aria-label': 'Löschen', disabled: ctx.readOnly, onclick: async e => {
+              e.stopPropagation();
+              await col.remove(t.id); await ctx.reminders.remove(t.id);
+              toast('Gelöscht', { action: 'Rückgängig', onAction: async () => { await col.update(t.id, { deletedAt: null }); } });
+            } }, '🗑️')) : null);
+        };
+
+        const snoozeMenu = async t => {
+          const opt = await ctx.ui.choose('Später erinnern', ctx.reminders.snoozeOptions().map(o => ({ label: `${o.label} (${U.formatDate(o.until)})`, value: o.until })));
+          if (!opt) return;
+          await ctx.reminders.snoozeUntil(t.id, opt);
+          await col.update(t.id, { seenAt: Date.now() });
+          toast(`Erinnere dich ${U.relTime(opt)}`);
+        };
+
+        const render = async () => {
+          const now = Date.now();
+          const all = await loadAll(ctx);
+          const open = all.filter(t => !t.done).sort(sortOpen(now));
+          const done = all.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+          const fired = open.filter(t => t._r && t._r.unseen).sort((a, b) => (b._r.lastSentAt || 0) - (a._r.lastSentAt || 0));
+
+          firedBox.replaceChildren(...(fired.length ? [
+            h('div', { class: 'section-title' }, `🔔 Erinnert (${fired.length})`),
+            ...fired.map(t => h('div', { class: 'fired' },
+              h('div', { class: 't-title' }, t.title),
+              h('div', { class: 'small muted' }, `Erinnert ${U.relTime(t._r.lastSentAt, now)} · ${t._r.sentCount}. Erinnerung`),
+              metaLine(ctx, t, now),
+              h('div', { class: 'row' },
+                h('button', { class: 'btn btn-sm btn-primary', disabled: ctx.readOnly, onclick: async () => { await complete(ctx, t.id); toast(`„${t.title}“ erledigt 🎉`, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) }); } }, '✓ Erledigt'),
+                h('button', { class: 'btn btn-sm', disabled: ctx.readOnly, onclick: () => snoozeMenu(t) }, '⏰ Später'),
+                h('button', { class: 'btn btn-sm', disabled: ctx.readOnly, onclick: () => markSeen(ctx, t.id) }, '👁 Gesehen'))))] : []));
+
+          openBox.replaceChildren(
+            h('div', { class: 'section-title' }, `Offen (${open.length})`),
+            open.length ? h('ul', { class: 'todo-list' }, open.map(t => row(t, now))) : h('div', { class: 'card empty' }, 'Nichts offen. 🎉'));
+
+          if (done.length) {
+            const det = h('details', { class: 'fold', open: doneOpen, ontoggle: () => { doneOpen = det.open; } },
+              h('summary', {}, `Erledigt (${done.length})`),
+              h('ul', { class: 'todo-list' }, done.slice(0, 200).map(t => row(t, now))));
+            doneBox.replaceChildren(det);
+          } else doneBox.replaceChildren();
+        };
+
+        const re = U.debounce(render, 150);
+        ctx.events.on('store:changed', e => { if (e.moduleId === 'todos') re(); });
+        ctx.events.on('reminders:changed', re);
+        ctx.events.on('reminder:fired', re);
+        ctx.events.on('app:visible', re);
+        ctx.every(30000, () => { render(); updPreview(); });
+        await render();
+        if (!('ontouchstart' in window)) titleIn.focus();
+        if (route.parts[0]) this.onRoute(route, ctx);
+      },
+
+      async onRoute(route, ctx) {
+        const id = route.parts[0];
+        if (!id) return;
+        await openEdit(ctx, id);
+        ctx.router.navigate('todos', { replace: true });
+      },
+
+      async widget(el, ctx) {
+        const { h } = ctx.ui; const U = ctx.util;
+        const now = Date.now();
+        const all = (await loadAll(ctx)).filter(t => !t.done).sort(sortOpen(now));
+        const overdue = all.filter(t => t.deadline && t.deadline <= now).length;
+        const next = all.map(t => t._r?.nextAt).filter(Boolean).sort((a, b) => a - b)[0];
+        const fired = all.filter(t => t._r?.unseen).length;
+        el.replaceChildren(...[
+          h('div', { class: 'row', style: { gap: '6px' } },
+            h('span', { class: 'pill blue' }, `${all.length} offen`),
+            overdue ? h('span', { class: 'pill red' }, `${overdue} überfällig`) : null,
+            fired ? h('span', { class: 'pill orange' }, `🔔 ${fired} erinnert`) : null),
+          next ? h('div', { class: 'small muted', style: { marginTop: '6px' } }, `Nächste Erinnerung ${U.relTime(next, now)}`) : null,
+          all.length ? h('ul', { class: 'small', style: { margin: '8px 0 0', paddingLeft: '18px' } }, all.slice(0, 3).map(t =>
+            h('li', {}, h('a', { href: ctx.router.link(`todos/${t.id}`) }, t.title), t.deadline ? h('span', { class: 'muted' }, ` · ${t.deadline <= now ? 'überfällig' : U.relTime(t.deadline, now)}`) : null))) : h('div', { class: 'small muted', style: { marginTop: '6px' } }, 'Alles erledigt.')].filter(Boolean));
+      },
+
+      async settings(el, ctx) {
+        const { h, toast } = ctx.ui;
+        const c = await cfg(ctx);
+        el.append(
+          h('label', { class: 'field', style: { marginTop: '8px' } }, h('span', {}, 'Standard-Stufe für neue ToDos'),
+            h('select', { onchange: async e => { await ctx.settings.set('defaultStage', e.target.value); toast('Gespeichert'); } },
+              ctx.reminders.STAGES.map(s => h('option', { value: s.id, selected: s.id === c.defaultStage }, s.label)))),
+          h('label', { class: 'field', style: { marginTop: '8px' } }, h('span', {}, 'Erinnern nach Ablauf der Abgabe (Standard)'),
+            h('select', { onchange: async e => { await ctx.settings.set('overdueMin', Number(e.target.value)); toast('Gespeichert'); } },
+              OVERDUE_OPTS.map(m => h('option', { value: m, selected: m === c.overdueMin }, `alle ${m} Minuten`)))));
+      },
+
+      async onReminderAction(itemId, action, ctx) {
+        if (action === 'done') { const t = await col.get(itemId); if (t && !t.done) await col.update(itemId, { done: true, doneAt: Date.now() }); }
+        if (action === 'snooze') { const t = await col.get(itemId); if (t) await col.update(itemId, { seenAt: Date.now() }); }
+      },
+    });
+  })();
+  /* ==== ENDE MODUL: todos ==== */
+  </script>
+
+  <script>/* ==== BOOT ==== */ App.boot();</script>
+</body>
+</html>
