@@ -4,9 +4,13 @@ Modulare, persönliche Web-App. Läuft statisch auf GitHub Pages, Daten bleiben 
 
 ## Veröffentlichen
 
-1. Alle Dateien dieses Ordners ins Repo (Branch `main`, Wurzelverzeichnis) committen.
-2. *Settings → Pages → Deploy from a branch → main / (root)*.
-3. App unter `https://<benutzername>.github.io/<repo>/` öffnen.
+Automatisch über GitHub Actions (`.github/workflows/deploy.yml`, Pages-Quelle: *GitHub Actions*):
+
+- Push auf einen Branch `claude/**` → wird automatisch in `main` übernommen, der Branch gelöscht und die App veröffentlicht.
+- Push auf `main` → App wird veröffentlicht.
+- Verlauf und Status: Tab *Actions* im Repo.
+
+App: https://mistwe-chefe.github.io/mistwe-mobile/
 
 iPhone: In Safari öffnen → *Teilen → Zum Home-Bildschirm* → App über das Icon starten → Benachrichtigungen erlauben.
 
