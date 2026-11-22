@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1 – 2026-11-22
+
+- App-Symbol unter neuen Dateinamen (`icons/*-v2.png`): iOS hatte beim Hinzufügen zum Home-Bildschirm noch das alte `apple-touch-icon.png` aus dem Zwischenspeicher verwendet. Die alten Dateien bleiben (mit neuem Motiv) für ältere Versionen erhalten.
+- `sw.js` (SW_VERSION 1.3.1): neue Symbol-Dateien im Offline-Speicher und in Benachrichtigungen.
+
+Geänderte Dateien: `index.html`, `sw.js`, `manifest.webmanifest`, neu: `icons/icon-192-v2.png`, `icons/icon-512-v2.png`, `icons/icon-maskable-512-v2.png`, `icons/apple-touch-icon-v2.png`.
+
 ## Symbol – 2026-11-22
 
 - Neues App-Symbol: Taschenmesser (roter Griff mit weißem Kreuz) in allen Größen. App-Version bleibt 1.3.0, Daten unverändert.

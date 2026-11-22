@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.3.0">
+  <meta name="app-version" content="1.3.1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon-192-v2.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-v2.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Meine App">
@@ -223,7 +223,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.3.0',
+    APP_VERSION: '1.3.1',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -239,6 +239,9 @@
   };
 
   const CHANGELOG = [
+    { version: '1.3.1', date: '2026-11-22', items: [
+      'Neues App-Symbol (Taschenmesser) unter neuen Dateinamen, damit iOS beim Hinzufügen zum Home-Bildschirm nicht mehr das alte Symbol aus dem Zwischenspeicher nimmt',
+    ] },
     { version: '1.3.0', date: '2026-11-22', items: [
       'Kern: schlichte Linien-Symbole (SVG) statt Emojis in der ganzen App und in Benachrichtigungen',
       'Kern: Erinnerungsdienst akzeptiert ein frei gewähltes Intervall in Minuten (intervalMin), Stufen-IDs bleiben gültig',
@@ -1536,7 +1539,7 @@
     async show({ title, body, tag, data, actions, silent }) {
       if (!silent) { this.beep(); this.vibrate(); }
       if (this.permission() !== 'granted') return false;
-      const opts = { body, tag, data, renotify: !!tag, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', requireInteraction: false };
+      const opts = { body, tag, data, renotify: !!tag, icon: 'icons/icon-192-v2.png', badge: 'icons/icon-192-v2.png', requireInteraction: false };
       try {
         const reg = this.reg || (navigator.serviceWorker && await navigator.serviceWorker.getRegistration());
         if (reg && reg.showNotification) { await reg.showNotification(title, { ...opts, actions: actions || [] }); return true; }
