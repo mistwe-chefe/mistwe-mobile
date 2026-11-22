@@ -2,7 +2,7 @@
  * Bewusst klein und ohne Fachlogik. Kennt keine Module.
  * Liest nur `meta`, schreibt nur `outbox` (Architektur 4.2).
  */
-const SW_VERSION = '1.2.0';
+const SW_VERSION = '1.3.0';
 const CACHE = 'pa-shell-' + SW_VERSION;
 const DB_NAME = 'persoenliche-app';
 const DB_VERSION = 1;
@@ -129,8 +129,8 @@ function duration(min) {
 }
 function describe(it, now) {
   if (it.dl) {
-    if (it.at || Math.abs(now - it.dl) < 60000) return '⏰ Jetzt fällig!';
-    if (now > it.dl) return `🔴 Überfällig seit ${duration((now - it.dl) / 60000)}`;
+    if (it.at || Math.abs(now - it.dl) < 60000) return 'Jetzt fällig!';
+    if (now > it.dl) return `Überfällig seit ${duration((now - it.dl) / 60000)}`;
     return `Abgabe in ${duration((it.dl - now) / 60000)}`;
   }
   return `${it.n || 1}. Erinnerung`;
@@ -187,7 +187,7 @@ async function handlePush(p) {
   const now = Date.now();
   const opts = { icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' };
   if (p.type === 'test') {
-    return self.registration.showNotification('🔔 Test-Push', { ...opts, body: 'Push funktioniert' + (p.from ? ` (ausgelöst von ${p.from})` : '') + '.', tag: 'pa-test' });
+    return self.registration.showNotification('Test-Push', { ...opts, body: 'Push funktioniert' + (p.from ? ` (ausgelöst von ${p.from})` : '') + '.', tag: 'pa-test' });
   }
   const items = Array.isArray(p.items) ? p.items : [];
   const total = items.length + (p.more || 0);
@@ -201,19 +201,19 @@ async function handlePush(p) {
   } catch (_) {}
   const titled = await Promise.all(items.map(async it => ({ ...it, title: (names && names[`${it.m}/${it.id}`]) || await decryptTitle(key, it.t, it.m, it.id) })));
   notifyClients({ type: 'sync' }).catch(() => {});
-  if (!total) return self.registration.showNotification('🔔 Erinnerung', { ...opts, body: 'Öffne die App für Details.', tag: 'pa-push' });
+  if (!total) return self.registration.showNotification('Erinnerung', { ...opts, body: 'Öffne die App für Details.', tag: 'pa-push' });
   if (total <= 5) {
     // Jeder Push MUSS eine Benachrichtigung zeigen (Safari entzieht sonst das Abo).
-    await Promise.all(titled.map(it => self.registration.showNotification('🔔 ' + (it.title || 'ToDo fällig'), {
+    await Promise.all(titled.map(it => self.registration.showNotification('' + (it.title || 'ToDo fällig'), {
       ...opts, body: describe(it, now), tag: `${it.m}-${it.id}`, renotify: true,
       data: { m: it.m, id: it.id },
-      actions: [{ action: 'done', title: '✓ Erledigt' }, { action: 'snooze', title: '⏰ 1 Std später' }],
+      actions: [{ action: 'done', title: 'Erledigt' }, { action: 'snooze', title: '1 Std später' }],
     })));
     return;
   }
   const list = titled.slice(0, 6).map(it => '• ' + (it.title || 'ToDo')).join('\n');
   const first = titled.find(it => it.title);
-  return self.registration.showNotification(first ? `🔔 ${first.title} + ${total - 1} weitere` : `🔔 ${total} Erinnerungen fällig`, {
+  return self.registration.showNotification(first ? `${first.title} + ${total - 1} weitere` : `${total} Erinnerungen fällig`, {
     ...opts, body: list + (total > 6 ? `\n… und ${total - 6} weitere` : ''), tag: 'pa-summary', renotify: true,
     data: { m: titled[0] ? titled[0].m : undefined },
   });
@@ -223,7 +223,7 @@ self.addEventListener('push', event => {
   let p = {};
   try { p = event.data ? event.data.json() : {}; } catch (_) {}
   event.waitUntil(Promise.all([
-    handlePush(p).catch(() => self.registration.showNotification('🔔 Erinnerung', { body: 'Öffne die App für Details.', tag: 'pa-push', icon: 'icons/icon-192.png' })),
+    handlePush(p).catch(() => self.registration.showNotification('Erinnerung', { body: 'Öffne die App für Details.', tag: 'pa-push', icon: 'icons/icon-192.png' })),
     logReceipt(p),
   ]));
 });

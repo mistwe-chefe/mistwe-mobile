@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.2.0">
+  <meta name="app-version" content="1.3.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
@@ -66,7 +66,8 @@
   main#view { flex: 1; padding: 16px 16px calc(var(--nav-h) + env(safe-area-inset-bottom) + 24px); max-width: 780px; width: 100%; margin: 0 auto; }
   .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; background: var(--surface); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; }
   .nav a { flex: 1 0 72px; min-height: var(--nav-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--muted); font-size: .72rem; position: relative; }
-  .nav a .ic { font-size: 1.35rem; line-height: 1; }
+  .nav a .ic { font-size: 1.35rem; line-height: 1; display: flex; }
+  .nav a .ic svg.icon { width: 24px; height: 24px; }
   .nav a.active { color: var(--primary); font-weight: 600; }
   .nav a .count { position: absolute; top: 6px; left: calc(50% + 6px); background: var(--danger); color: #fff; border-radius: 999px; font-size: .68rem; min-width: 18px; height: 18px; padding: 0 5px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
   @media (min-width: 900px) {
@@ -139,14 +140,18 @@
   .kv dd { margin: 0; word-break: break-word; }
   table.simple { width: 100%; border-collapse: collapse; font-size: .88rem; }
   table.simple td, table.simple th { border-bottom: 1px solid var(--border); padding: 6px 4px; text-align: left; vertical-align: top; }
+  svg.icon { width: 1.15em; height: 1.15em; flex: 0 0 auto; vertical-align: -0.2em; }
+  .pill svg.icon { width: 1em; height: 1em; }
+  .card h3 svg.icon { color: var(--muted); }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   /* ==== ENDE CORE: KOMPONENTEN ==== */
 
   /* ==== MODUL-CSS: start ==== */
-  [data-module="start"] .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--gap); }
-  [data-module="start"] .tile { margin: 0; }
-  [data-module="start"] .tile-head { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); font-weight: 700; margin-bottom: 8px; }
+  [data-module="start"] .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--gap); }
+  [data-module="start"] .module-btn { min-height: 64px; font-size: 1.05rem; font-weight: 600; background: var(--surface); box-shadow: var(--shadow); gap: 10px; }
+  [data-module="start"] .module-btn svg.icon { width: 22px; height: 22px; color: var(--primary); }
   [data-module="start"] .hint { display: flex; gap: 10px; align-items: center; }
+  [data-module="start"] .hint-ic { width: 20px; height: 20px; color: var(--muted); }
   /* ==== ENDE MODUL-CSS: start ==== */
 
   /* ==== MODUL-CSS: einstellungen ==== */
@@ -190,6 +195,11 @@
   dialog.dlg .composer .lbl { font-size: .8rem; color: var(--muted); margin: 12px 0 6px; font-weight: 600; }
   dialog.dlg .composer .preview { font-size: .85rem; color: var(--muted); margin-top: 10px; }
   dialog.dlg .composer .dl-row input { width: 100%; }
+  .iv { display: flex; gap: 8px; }
+  .iv .iv-field { flex: 1; display: flex; align-items: center; gap: 6px; }
+  .iv .iv-field input { text-align: right; min-width: 0; }
+  .iv .iv-field span { color: var(--muted); font-size: .88rem; }
+  .iv.invalid input { border-color: var(--danger); }
   /* ==== ENDE MODUL-CSS: todos ==== */
   </style>
 </head>
@@ -213,7 +223,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.2.0',
+    APP_VERSION: '1.3.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -229,10 +239,16 @@
   };
 
   const CHANGELOG = [
+    { version: '1.3.0', date: '2026-11-22', items: [
+      'Kern: schlichte Linien-Symbole (SVG) statt Emojis in der ganzen App und in Benachrichtigungen',
+      'Kern: Erinnerungsdienst akzeptiert ein frei gewähltes Intervall in Minuten (intervalMin), Stufen-IDs bleiben gültig',
+      'Modul todos: Intervall frei in Tagen/Stunden/Minuten einstellbar (Standard 2 Stunden) statt fester Stufen',
+      'Modul start: nur noch Schaltflächen zu den Modulen (keine Kachel-Details)',
+    ] },
     { version: '1.2.0', date: '2026-11-22', items: [
       'Modul todos: aktive ToDos stehen oben; neues ToDo über den Knopf „Neues ToDo“ unten (Fenster über dem Modul)',
       'Modul todos: Bereich „Erinnert“ entfernt; Öffnen des Moduls gilt als gesehen',
-      'Modul todos: eigene Einstellungen (Standard-Stufe, Abstand bei Überfälligkeit) direkt im Modul über ⚙️',
+      'Modul todos: eigene Einstellungen (Standard-Stufe, Abstand bei Überfälligkeit) direkt im Modul über ',
       'Antippen einer Benachrichtigung öffnet das ToDo-Modul statt des Bearbeiten-Fensters',
       'Kern/Service Worker 1.2.0: Benachrichtigungen zeigen den ToDo-Namen zuverlässig (lokaler Namensindex), bis zu 5 Einzelmitteilungen, Sammelmitteilung mit Namen im Titel',
       'Modul einstellungen: nur noch modulübergreifende Einstellungen',
@@ -683,8 +699,53 @@
     post(msg) { try { this.ch && this.ch.postMessage(msg); } catch (_) {} },
   };
 
+  /* ---- CORE: Icons ---- */
+  /* Schlichte Linien-Symbole (24×24, currentColor). Nur feste, eigene Pfade – nie Nutzerdaten. */
+  const ICONS = {
+    home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
+    todos: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/>',
+    settings: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    bell: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+    'bell-off': '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4M3 3l18 18"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    repeat: '<path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/>',
+    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>',
+    check: '<path d="m5 12 5 5 9-10"/>',
+    alert: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 8h.01"/>',
+    cloud: '<path d="M7 18a5 5 0 0 1-.5-10A6 6 0 0 1 18 9a4.5 4.5 0 0 1-1 9z"/>',
+    'cloud-off': '<path d="M7 18a5 5 0 0 1-.5-10A6 6 0 0 1 18 9a4.5 4.5 0 0 1-1 9z"/><path d="M3 3l18 18"/>',
+    refresh: '<path d="M20 12a8 8 0 1 1-2.3-5.7L20 8"/><path d="M20 3v5h-5"/>',
+    download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+    upload: '<path d="M12 16V5M7 10l5-5 5 5M5 20h14"/>',
+    save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    database: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    activity: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
+    chevron: '<path d="m9 6 6 6-6 6"/>',
+  };
+  const ICON_CACHE = new Map();
+
   /* ---- CORE: UI ---- */
   const UI = {
+    /** Symbol als SVG-Element; unbekannte Namen (z. B. alte Emoji-Icons) werden als Text gezeigt */
+    icon(name, cls = '') {
+      if (!ICONS[name]) return document.createTextNode(String(name || ''));
+      if (!ICON_CACHE.has(name)) {
+        const doc = new DOMParser().parseFromString(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`, 'image/svg+xml');
+        ICON_CACHE.set(name, doc.documentElement);
+      }
+      const el = document.importNode(ICON_CACHE.get(name), true);
+      el.setAttribute('class', ('icon ' + cls).trim()); el.setAttribute('aria-hidden', 'true');
+      return el;
+    },
     h(tag, attrs, ...children) {
       const el = document.createElement(tag);
       if (attrs && (typeof attrs !== 'object' || attrs instanceof Node || Array.isArray(attrs))) { children.unshift(attrs); attrs = null; }
@@ -711,7 +772,7 @@
       let timer;
       const close = () => { clearTimeout(timer); t.remove(); };
       if (opts.action) t.append(h('button', { onclick: () => { close(); opts.onAction && opts.onAction(); } }, opts.action));
-      t.append(h('button', { 'aria-label': 'Schließen', onclick: close }, '✕'));
+      t.append(h('button', { 'aria-label': 'Schließen', onclick: close }, UI.icon('x')));
       box.append(t);
       while (box.children.length > 4) box.firstChild.remove();
       timer = setTimeout(close, opts.timeout || (opts.action ? 6000 : 3500));
@@ -763,7 +824,7 @@
     errorCard(err, title = 'In diesem Modul ist ein Fehler aufgetreten', retry) {
       const { h } = UI;
       return h('div', { class: 'card error-card' },
-        h('h3', {}, '⚠️ ' + title),
+        h('h3', {}, UI.icon('alert'), ' ' + title),
         h('p', { class: 'small' }, 'Der Rest der App funktioniert weiter. Deine Daten sind nicht betroffen.'),
         h('pre', {}, String(err && (err.stack || err.message) || err)),
         retry ? h('button', { class: 'btn btn-sm', onclick: retry }, 'Erneut versuchen') : null);
@@ -869,7 +930,7 @@
         store,
         reminders: Reminders.forModule(id),
         notify: Notify.forModule(id),
-        ui: { h: UI.h, toast: UI.toast, confirm: UI.confirm, prompt: UI.prompt, dialog: UI.dialog, choose: UI.choose, list: UI.list, errorCard: UI.errorCard },
+        ui: { h: UI.h, icon: UI.icon, toast: UI.toast, confirm: UI.confirm, prompt: UI.prompt, dialog: UI.dialog, choose: UI.choose, list: UI.list, errorCard: UI.errorCard },
         router: Router.api,
         events: {
           on: (name, fn) => { const off = Events.on(name, fn); if (st.mounted) st.subs.push(off); return off; },
@@ -906,7 +967,7 @@
       const ctx = this.ctx(id);
       const doMount = async () => {
         el.replaceChildren();
-        if (st.readOnly) el.append(UI.h('div', { class: 'ro-banner' }, '🔒 Schreibgeschützt: ' + st.lockReason));
+        if (st.readOnly) el.append(UI.h('div', { class: 'ro-banner' }, UI.icon('lock'), ' Schreibgeschützt: ' + st.lockReason));
         const inner = UI.h('div');
         el.append(inner);
         st.mounted = true;
@@ -944,7 +1005,7 @@
     },
     showUpdate(text) {
       const { h } = UI;
-      UI.banner('update', [h('span', { class: 'grow' }, '✨ ' + text), h('button', { class: 'btn btn-primary btn-sm', onclick: () => SWReg.applyUpdate() }, 'Jetzt neu laden')]);
+      UI.banner('update', [h('span', { class: 'grow' }, '' + text), h('button', { class: 'btn btn-primary btn-sm', onclick: () => SWReg.applyUpdate() }, 'Jetzt neu laden')]);
     },
     async checkRemote() {
       if (location.protocol === 'file:' || !navigator.onLine) return;
@@ -956,7 +1017,7 @@
       } catch (_) { /* offline */ }
     },
     start() {
-      if (this.newerSeen) UI.banner('older', [UI.h('span', { class: 'grow' }, `⚠️ Auf diesem Gerät lief schon Version ${this.newerSeen}. Du nutzt gerade ${CONFIG.APP_VERSION} (z. B. aus dem Cache).`), UI.h('button', { class: 'btn btn-sm', onclick: () => SWReg.applyUpdate() }, 'Neu laden')], 'warn');
+      if (this.newerSeen) UI.banner('older', [UI.h('span', { class: 'grow' }, `Auf diesem Gerät lief schon Version ${this.newerSeen}. Du nutzt gerade ${CONFIG.APP_VERSION} (z. B. aus dem Cache).`), UI.h('button', { class: 'btn btn-sm', onclick: () => SWReg.applyUpdate() }, 'Neu laden')], 'warn');
       this.checkRemote();
       setInterval(() => { if (document.visibilityState === 'visible') this.checkRemote(); }, CONFIG.UPDATE_CHECK_MS);
     },
@@ -1086,7 +1147,7 @@
     async saveState(patch) { this.state = { ...(this.state || {}), ...patch }; await Store.metaSet('sync', this.state); },
     setStatus(s, err = '') {
       this.status = s; this.lastError = err;
-      const txt = { off: '', idle: '☁️', ok: '☁️', syncing: '⟳', offline: '☁️ offline', error: '⚠️ Sync', auth: '⚠️ abgemeldet' }[s] || '';
+      const txt = { off: '', idle: '', ok: '', syncing: '⟳', offline: 'offline', error: 'Sync', auth: 'abgemeldet' }[s] || '';
       try { Shell.status(txt); document.getElementById('status').title = err || ({ ok: 'Synchronisiert', syncing: 'Synchronisiere …' }[s] || ''); } catch (_) {}
       Events.emit('sync:status', { state: s, error: err });
     },
@@ -1115,7 +1176,7 @@
       if (e && e.status === 401) {
         await this.saveState({ enabled: false, revoked: true, token: null });
         this.setStatus('auth', 'Dieses Gerät ist beim Push-Dienst nicht mehr angemeldet.');
-        UI.banner('sync', [UI.h('span', { class: 'grow' }, '⚠️ Dieses Gerät wurde vom Push-Dienst abgemeldet. Deine Daten bleiben erhalten.'), UI.h('button', { class: 'btn btn-sm', onclick: () => Router.navigate('einstellungen') }, 'Neu verbinden')], 'warn');
+        UI.banner('sync', [UI.h('span', { class: 'grow' }, 'Dieses Gerät wurde vom Push-Dienst abgemeldet. Deine Daten bleiben erhalten.'), UI.h('button', { class: 'btn btn-sm', onclick: () => Router.navigate('einstellungen') }, 'Neu verbinden')], 'warn');
         return;
       }
       Log.warn('Sync: ' + (e && e.message || e));
@@ -1256,7 +1317,7 @@
         const list = fired.map(f => ({ def: Registry.modules.get(f.m), r: f.r, atDeadline: f.atDeadline })).filter(f => f.def && Registry.isActive(f.def.id));
         // Mit Push zeigt der Service Worker die Benachrichtigung; die offene App zeigt dann nur einen Hinweis.
         if (list.length && !Push.subscribedHere) await Reminders.announce(list, Date.now(), false);
-        else if (list.length && document.visibilityState === 'visible') UI.toast(`🔔 ${list.length === 1 ? (list[0].r.title || list[0].def.name) : list.length + ' Erinnerungen'}`, { action: 'Ansehen', onAction: () => Router.navigate(list[0].def.id) });
+        else if (list.length && document.visibilityState === 'visible') UI.toast(`${list.length === 1 ? (list[0].r.title || list[0].def.name) : list.length + ' Erinnerungen'}`, { action: 'Ansehen', onAction: () => Router.navigate(list[0].def.id) });
         list.forEach(f => Events.emit('reminder:fired', { moduleId: f.def.id, itemId: f.r.id }));
       }
       await Reminders.updateBadge();
@@ -1492,7 +1553,7 @@
       return {
         permission: () => Notify.permission(),
         request: () => Notify.request(),
-        show: (title, body, opts = {}) => Notify.show({ title: `${def().icon} ${title}`, body, tag: opts.tag ? `${id}-${opts.tag}` : undefined, data: { m: id, id: opts.itemId }, silent: opts.silent }),
+        show: (title, body, opts = {}) => Notify.show({ title, body, tag: opts.tag ? `${id}-${opts.tag}` : undefined, data: { m: id, id: opts.itemId }, silent: opts.silent }),
       };
     },
   };
@@ -1520,20 +1581,22 @@
         STAGES: Schedule.STAGES.map(s => ({ ...s })),
         stageLabel: id => Schedule.stageLabel(id),
         stageShort: id => Schedule.stageShort(id),
-        preview: ({ stage, deadline = null, overdueMin = 15 }, now = Date.now()) => Schedule.nextAt({ stageMin: Schedule.stageMin(stage), deadline, overdueMin }, now),
+        /** intervalMin (frei in Minuten) hat Vorrang vor der Stufen-ID */
+        preview: ({ stage, intervalMin, deadline = null, overdueMin = 15 }, now = Date.now()) => Schedule.nextAt({ stageMin: intervalMin ? Math.max(1, Math.round(intervalMin)) : Schedule.stageMin(stage), deadline, overdueMin }, now),
         snoozeOptions: () => Schedule.snoozeOptions(),
-        async set(id, { stage, deadline = null, overdueMin = 15, title = '' }) {
+        async set(id, { stage, intervalMin, deadline = null, overdueMin = 15, title = '' }) {
           guard();
           const now = Date.now();
           let r = await R.getRec(m, id);
-          const stageMin = Schedule.stageMin(stage);
+          const stageMin = intervalMin ? Math.max(1, Math.round(intervalMin)) : Schedule.stageMin(stage);
+          if (intervalMin) stage = 'custom';
           const t = String(title || '').slice(0, 120);
           deadline = deadline || null;
           if (!r || r.deletedAt) {
             r = { id, stage, stageMin, deadline, overdueMin, title: t, nextAt: null, lastSentAt: null, sentCount: 0, done: false, unseen: false, createdAt: now, deletedAt: null };
             r.nextAt = Schedule.nextAt(r, now);   // erste Erinnerung nach einem Intervall, nicht sofort
           } else {
-            const changed = r.stage !== stage || (r.deadline || null) !== deadline || r.overdueMin !== overdueMin;
+            const changed = r.stage !== stage || r.stageMin !== stageMin || (r.deadline || null) !== deadline || r.overdueMin !== overdueMin;
             Object.assign(r, { stage, stageMin, deadline, overdueMin, title: t });
             if (changed && !r.done) r.nextAt = Schedule.nextAt(r, now);
           }
@@ -1552,11 +1615,11 @@
     },
     describe(r, now, atDeadline) {
       if (r.deadline) {
-        if (atDeadline || Math.abs(now - r.deadline) < 60000) return '⏰ Jetzt fällig!';
-        if (now > r.deadline) return `🔴 Überfällig seit ${U.formatDuration((now - r.deadline) / 60000)}`;
+        if (atDeadline || Math.abs(now - r.deadline) < 60000) return 'Jetzt fällig!';
+        if (now > r.deadline) return `Überfällig seit ${U.formatDuration((now - r.deadline) / 60000)}`;
         return `Abgabe ${U.relTime(r.deadline, now)} (${U.formatDate(r.deadline)})`;
       }
-      return `${r.sentCount}. Erinnerung · Stufe ${Schedule.stageLabel(r.stage)}`;
+      return `${r.sentCount}. Erinnerung · alle ${U.formatDuration(r.stageMin || Schedule.stageMin(r.stage))}`;
     },
     async tick({ catchUp = false } = {}) {
       // Mit erreichbarem Push-Dienst löst der Server aus; die App zeigt nur an (Architektur 10.4)
@@ -1594,12 +1657,12 @@
       if (fired.length <= 5) {
         for (const { def, r, atDeadline } of fired) {
           const body = this.describe(r, now, atDeadline);
-          await Notify.show({ title: `🔔 ${r.title || def.name}`, body, tag: `${def.id}-${r.id}`, data: { m: def.id, id: r.id }, actions: [{ action: 'done', title: '✓ Erledigt' }, { action: 'snooze', title: '⏰ 1 Std später' }] });
-          if (document.visibilityState === 'visible') UI.toast(`🔔 ${r.title || def.name} – ${body}`, { action: 'Öffnen', onAction: () => Router.navigate(def.id) });
+          await Notify.show({ title: `${r.title || def.name}`, body, tag: `${def.id}-${r.id}`, data: { m: def.id, id: r.id }, actions: [{ action: 'done', title: 'Erledigt' }, { action: 'snooze', title: '1 Std später' }] });
+          if (document.visibilityState === 'visible') UI.toast(`${r.title || def.name} – ${body}`, { action: 'Öffnen', onAction: () => Router.navigate(def.id) });
         }
       } else {
         const first = fired[0].r.title || fired[0].def.name;
-        const title = `🔔 ${first} + ${fired.length - 1} weitere${catchUp ? ' (verpasst)' : ''}`;
+        const title = `${first} + ${fired.length - 1} weitere${catchUp ? ' (verpasst)' : ''}`;
         const body = fired.slice(0, 6).map(f => '• ' + (f.r.title || f.def.name)).join('\n') + (fired.length > 6 ? `\n… und ${fired.length - 6} weitere` : '');
         await Notify.show({ title, body, tag: 'pa-summary', data: { m: fired[0].def.id } });
         if (document.visibilityState === 'visible') UI.toast(title, { action: 'Ansehen', onAction: () => Router.navigate(fired[0].def.id) });
@@ -1774,7 +1837,7 @@
     render() {
       const nav = document.getElementById('nav');
       nav.replaceChildren(...Registry.list().map(d => UI.h('a', { href: Router.link(d.id === 'start' ? '' : d.id), 'data-id': d.id },
-        UI.h('span', { class: 'ic', 'aria-hidden': 'true' }, d.icon), UI.h('span', {}, d.name), this.counts[d.id] ? UI.h('span', { class: 'count' }, this.counts[d.id]) : null)));
+        UI.h('span', { class: 'ic', 'aria-hidden': 'true' }, UI.icon(d.icon)), UI.h('span', {}, d.name), this.counts[d.id] ? UI.h('span', { class: 'count' }, this.counts[d.id]) : null)));
       if (Router.current) this.highlight(Router.current.moduleId);
     },
     highlight(id) { document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.id === id)); },
@@ -1808,18 +1871,18 @@
       const since = lastExport || app.installedAt || Date.now();
       const days = Sync.enabled() ? 30 : st.persisted === false ? 7 : 14;
       const hasData = (await Store.kvAll()).some(r => r.c && r.c !== '__reminders');
-      if (hasData && Date.now() - since > days * 86400000) hints.push({ id: 'export', icon: '💾', text: lastExport ? `Letzte Sicherung vor ${U.formatDuration((Date.now() - lastExport) / 60000)}. Zeit für einen Export.` : 'Noch keine Sicherungsdatei exportiert.', action: 'Exportieren', run: () => Backup.exportFile() });
+      if (hasData && Date.now() - since > days * 86400000) hints.push({ id: 'export', icon: 'save', text: lastExport ? `Letzte Sicherung vor ${U.formatDuration((Date.now() - lastExport) / 60000)}. Zeit für einen Export.` : 'Noch keine Sicherungsdatei exportiert.', action: 'Exportieren', run: () => Backup.exportFile() });
       const p = Notify.permission();
-      if (p === 'default') hints.push({ id: 'notify', icon: '🔔', text: 'Benachrichtigungen sind noch nicht erlaubt – sonst kann dich die App nicht erinnern.', action: 'Erlauben', run: () => Notify.request() });
-      else if (p === 'denied') hints.push({ id: 'notify', icon: '🔕', text: 'Benachrichtigungen sind blockiert. Erlaube sie in den Browser-Einstellungen für diese Seite.' });
-      else if (p === 'unsupported' && U.isIOS() && !U.isStandalone()) hints.push({ id: 'ios', icon: '📱', text: 'iPhone: Für Benachrichtigungen die App über „Teilen → Zum Home-Bildschirm“ installieren und von dort öffnen.' });
+      if (p === 'default') hints.push({ id: 'notify', icon: 'bell', text: 'Benachrichtigungen sind noch nicht erlaubt – sonst kann dich die App nicht erinnern.', action: 'Erlauben', run: () => Notify.request() });
+      else if (p === 'denied') hints.push({ id: 'notify', icon: 'bell-off', text: 'Benachrichtigungen sind blockiert. Erlaube sie in den Browser-Einstellungen für diese Seite.' });
+      else if (p === 'unsupported' && U.isIOS() && !U.isStandalone()) hints.push({ id: 'ios', icon: 'phone', text: 'iPhone: Für Benachrichtigungen die App über „Teilen → Zum Home-Bildschirm“ installieren und von dort öffnen.' });
       if (!Sync.enabled()) {
         const revoked = !!(Sync.state && Sync.state.revoked);
-        hints.push({ id: 'push', icon: revoked ? '⚠️' : '☁️', muted: !revoked,
+        hints.push({ id: 'push', icon: revoked ? 'alert' : 'cloud', muted: !revoked,
           text: revoked ? 'Dieses Gerät wurde vom Push-Dienst abgemeldet. Bitte neu verbinden – deine Daten sind noch da.' : 'Push ist noch nicht eingerichtet: Erinnerungen kommen nur, solange die App geöffnet ist (verpasste werden beim Öffnen nachgeholt).',
           action: revoked ? 'Neu verbinden' : 'Einrichten', run: () => Router.navigate('einstellungen') });
       } else if (Push.supported() && !Push.subscribedHere) {
-        hints.push({ id: 'push', icon: '🔔', text: 'Push ist auf diesem Gerät noch nicht aktiv. Ohne Push erinnert dieses Gerät nur, solange die App geöffnet ist.', action: 'Push aktivieren',
+        hints.push({ id: 'push', icon: 'bell', text: 'Push ist auf diesem Gerät noch nicht aktiv. Ohne Push erinnert dieses Gerät nur, solange die App geöffnet ist.', action: 'Push aktivieren',
           run: async () => { try { await Push.enable(); UI.toast('Push aktiviert'); } catch (e) { UI.toast(e.message, { type: 'error', timeout: 8000 }); } } });
       }
       return hints;
@@ -1875,7 +1938,7 @@
   /* ==== MODUL: start ==== */
   (() => {
     App.register({
-      id: 'start', name: 'Start', icon: '🏠', order: 0, system: true,
+      id: 'start', name: 'Start', icon: 'home', order: 0, system: true,
       version: '1.0.0', schemaVersion: 1, migrations: {},
       async mount(el, ctx) {
         const { h } = ctx.ui;
@@ -1889,28 +1952,21 @@
         const renderHints = async () => {
           const hints = await S.hints();
           hintsBox.replaceChildren(...hints.map(x => h('div', { class: 'card hint' + (x.muted ? ' small muted' : '') },
-            h('span', { style: { fontSize: '1.3rem' } }, x.icon), h('div', { class: 'grow' }, x.text),
+            ctx.ui.icon(x.icon, 'hint-ic'), h('div', { class: 'grow' }, x.text),
             x.action ? h('button', { class: 'btn btn-sm btn-primary', onclick: async () => { await x.run(); renderHints(); } }, x.action) : null)));
         };
-        const renderTiles = async () => {
+        const renderTiles = () => {
           const mods = S.Registry.list().filter(m => !m.system);
-          if (!mods.length) { tiles.replaceChildren(h('div', { class: 'empty' }, 'Keine Module aktiv.')); return; }
-          tiles.replaceChildren(...mods.map(m => {
-            const body = h('div', {}, h('span', { class: 'muted small' }, m.description || ''));
-            if (typeof m.widget === 'function') {
-              S.Registry.call(m.id, 'widget', body).catch(e => body.replaceChildren(h('span', { class: 'small', style: { color: 'var(--danger)' } }, '⚠️ Kachel-Fehler: ' + e.message)));
-            }
-            return h('div', { class: 'card tile' }, h('a', { class: 'tile-head', href: ctx.router.link(m.id) }, h('span', {}, m.icon), h('span', { class: 'grow' }, m.name), h('span', { class: 'muted' }, '›')), body);
-          }));
+          tiles.replaceChildren(...(mods.length
+            ? mods.map(m => h('a', { class: 'btn module-btn', href: ctx.router.link(m.id) }, ctx.ui.icon(m.icon), h('span', {}, m.name)))
+            : [h('div', { class: 'empty' }, 'Keine Module aktiv.')]));
         };
-        await Promise.all([renderHints(), renderTiles()]);
-        const re = ctx.util.debounce(renderTiles, 300);
-        ctx.events.on('store:changed', re);
-        ctx.events.on('reminders:changed', re);
+        renderTiles();
+        await renderHints();
         ctx.events.on('notify:permission', renderHints);
         ctx.events.on('push:changed', renderHints);
         ctx.events.on('sync:status', ctx.util.debounce(renderHints, 500));
-        ctx.every(60000, renderTiles);
+        ctx.events.on('settings:changed', ({ key }) => { if (key === 'hiddenModules') renderTiles(); });
       },
     });
   })();
@@ -1921,12 +1977,12 @@
   /* ==== MODUL: einstellungen ==== */
   (() => {
     App.register({
-      id: 'einstellungen', name: 'Einstellungen', icon: '⚙️', order: 1000, system: true,
+      id: 'einstellungen', name: 'Einstellungen', icon: 'settings', order: 1000, system: true,
       version: '1.0.0', schemaVersion: 1, migrations: {},
       async mount(el, ctx) {
         const { h, toast, confirm, choose } = ctx.ui;
         const S = ctx.system, U = ctx.util;
-        const card = (title, ...children) => h('div', { class: 'card' }, h('h3', {}, title), ...children);
+        const card = (title, ...children) => { const [ic, ...rest] = String(title).split(' '); return h('div', { class: 'card' }, h('h3', {}, ctx.ui.icon(ic), rest.join(' ')), ...children); };
         const sw = (label, checked, onchange) => h('label', { class: 'switch' }, h('input', { type: 'checkbox', checked, onchange: e => onchange(e.target.checked) }), h('span', {}, label));
 
         const parts = {};
@@ -1937,26 +1993,26 @@
         /* Darstellung */
         const themeSel = h('select', { onchange: e => S.Theme.set(e.target.value) },
           [['system', 'Wie System'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([v, l]) => h('option', { value: v, selected: S.Theme.get() === v }, l)));
-        parts.darstellung.append(card('🎨 Darstellung', h('label', { class: 'field' }, h('span', {}, 'Farbschema'), themeSel)));
+        parts.darstellung.append(card('sun Darstellung', h('label', { class: 'field' }, h('span', {}, 'Farbschema'), themeSel)));
 
         /* Benachrichtigungen & Ruhezeiten */
         const renderNotify = () => {
           const p = S.Notify.permission();
           const q = S.Settings.get('quiet');
-          const status = { granted: '✅ erlaubt', denied: '🔕 blockiert (in den Browser-Einstellungen ändern)', default: '❔ noch nicht gefragt', unsupported: '– nicht unterstützt' }[p];
+          const status = { granted: 'erlaubt', denied: 'blockiert (in den Browser-Einstellungen ändern)', default: 'noch nicht gefragt', unsupported: '– nicht unterstützt' }[p];
           const saveQ = async patch => { await S.Settings.set('quiet', { ...S.Settings.get('quiet'), ...patch }); };
           const startIn = h('input', { type: 'time', value: U.minToTime(q.start), onchange: e => { const v = U.timeToMin(e.target.value); if (v != null) saveQ({ start: v }); } });
           const endIn = h('input', { type: 'time', value: U.minToTime(q.end), onchange: e => { const v = U.timeToMin(e.target.value); if (v != null) saveQ({ end: v }); } });
-          parts.benachrichtigungen.replaceChildren(card('🔔 Benachrichtigungen',
+          parts.benachrichtigungen.replaceChildren(card('bell Benachrichtigungen',
             h('dl', { class: 'kv' }, h('dt', {}, 'Status'), h('dd', {}, status)),
             h('div', { class: 'row', style: { marginTop: '10px' } },
               p === 'default' ? h('button', { class: 'btn btn-primary', onclick: async () => { await S.Notify.request(); renderNotify(); } }, 'Benachrichtigungen erlauben') : null,
-              h('button', { class: 'btn', onclick: async () => { S.Notify.unlockAudio(); const ok = await S.Notify.show({ title: '🔔 Test', body: 'So sieht eine Erinnerung aus.', tag: 'pa-test', actions: [] }); toast(ok ? 'Test-Benachrichtigung gesendet' : 'Nur Ton/Vibration – Benachrichtigungen nicht erlaubt'); } }, 'Test-Benachrichtigung')),
+              h('button', { class: 'btn', onclick: async () => { S.Notify.unlockAudio(); const ok = await S.Notify.show({ title: 'Test', body: 'So sieht eine Erinnerung aus.', tag: 'pa-test', actions: [] }); toast(ok ? 'Test-Benachrichtigung gesendet' : 'Nur Ton/Vibration – Benachrichtigungen nicht erlaubt'); } }, 'Test-Benachrichtigung')),
             sw('Ton bei Erinnerungen (wenn die App offen ist)', S.Settings.get('sound'), v => S.Settings.set('sound', v)),
             sw('Vibration (wo unterstützt)', S.Settings.get('vibrate'), v => S.Settings.set('vibrate', v)),
-            U.isIOS() && !U.isStandalone() ? h('p', { class: 'small muted' }, '📱 iPhone/iPad: Benachrichtigungen gibt es nur, wenn die App über „Teilen → Zum Home-Bildschirm“ installiert und von dort geöffnet wird.') : null,
+            U.isIOS() && !U.isStandalone() ? h('p', { class: 'small muted' }, 'iPhone/iPad: Benachrichtigungen gibt es nur, wenn die App über „Teilen → Zum Home-Bildschirm“ installiert und von dort geöffnet wird.') : null,
             h('p', { class: 'small muted' }, S.Sync.enabled() ? 'Der Push-Dienst erinnert auch bei geschlossener App (sofern Push auf dem Gerät aktiv ist). Ist der Server länger nicht erreichbar, erinnert die App lokal, solange sie geöffnet ist.' : 'Ohne Push-Dienst erinnert die App, solange sie geöffnet ist (auch als Hintergrund-Tab). Verpasste Erinnerungen werden beim Öffnen gesammelt nachgeholt. Für Erinnerungen bei geschlossener App „Push & Sync“ einrichten.'),
-            h('h3', { style: { marginTop: '16px' } }, '🌙 Ruhezeiten'),
+            h('h3', { style: { marginTop: '16px' } }, ctx.ui.icon('moon'), 'Ruhezeiten'),
             sw('Ruhezeit aktiv', q.enabled, v => { saveQ({ enabled: v }); }),
             h('div', { class: 'row nowrap' }, h('label', { class: 'field grow' }, h('span', {}, 'Von'), startIn), h('label', { class: 'field grow' }, h('span', {}, 'Bis'), endIn)),
             sw('Abgabe-Erinnerungen dürfen die Ruhezeit durchbrechen', q.breakForDeadline, v => saveQ({ breakForDeadline: v })),
@@ -2002,7 +2058,7 @@
                 submit.disabled = false; submit.textContent = mode === 'setup' ? 'Einrichten' : 'Verbinden';
               }
             } },
-              h('h3', {}, mode === 'setup' ? '☁️ Push & Sync einrichten' : '☁️ Mit bestehendem Konto verbinden'),
+              h('h3', {}, mode === 'setup' ? 'Push & Sync einrichten' : 'Mit bestehendem Konto verbinden'),
               h('div', { class: 'stack' },
                 field('Server-Adresse', apiIn, 'Adresse deines Cloudflare Workers (siehe worker/README.md).'),
                 mode === 'setup' ? field('Einrichtungs-Code (SETUP_SECRET)', secretIn, 'Nur für die erste Einrichtung nötig.') : null,
@@ -2017,8 +2073,8 @@
 
           if (!Y.enabled()) {
             const revoked = !!(Y.state && Y.state.revoked);
-            parts.sync.replaceChildren(card('☁️ Push & Sync',
-              revoked ? h('div', { class: 'ro-banner' }, '⚠️ Dieses Gerät wurde abgemeldet (z. B. weil das Sync-Passwort geändert wurde). Bitte neu verbinden. Deine Daten sind noch da.') : null,
+            parts.sync.replaceChildren(card('cloud Push & Sync',
+              revoked ? h('div', { class: 'ro-banner' }, 'Dieses Gerät wurde abgemeldet (z. B. weil das Sync-Passwort geändert wurde). Bitte neu verbinden. Deine Daten sind noch da.') : null,
               h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Mit dem eigenen Push-Dienst (Cloudflare Worker) kommen Erinnerungen auch bei geschlossener App, und deine ToDos werden zwischen deinen Geräten abgeglichen – Ende-zu-Ende-verschlüsselt. Ohne Push-Dienst funktioniert alles weiter lokal.'),
               h('div', { class: 'row' },
                 h('button', { class: 'btn btn-primary', onclick: async () => { if (await connectDialog('setup')) { toast('Push & Sync eingerichtet'); renderSync(); } } }, 'Neu einrichten'),
@@ -2029,13 +2085,13 @@
 
           const st = Y.state;
           const pending = await Y.pendingCount();
-          const statusText = { idle: 'bereit', ok: '✅ synchronisiert', syncing: '⟳ synchronisiere …', offline: '📴 offline – wird nachgeholt', error: '⚠️ Fehler: ' + Y.lastError, auth: '⚠️ abgemeldet' }[Y.status] || Y.status;
-          const pushText = !P.supported() ? '– ' + P.unsupportedReason() : P.subscribedHere ? '✅ aktiv' : S.Notify.permission() === 'denied' ? '🔕 Benachrichtigungen blockiert' : '❔ nicht aktiv';
+          const statusText = { idle: 'bereit', ok: 'synchronisiert', syncing: '⟳ synchronisiere …', offline: 'offline – wird nachgeholt', error: 'Fehler: ' + Y.lastError, auth: 'abgemeldet' }[Y.status] || Y.status;
+          const pushText = !P.supported() ? '– ' + P.unsupportedReason() : P.subscribedHere ? 'aktiv' : S.Notify.permission() === 'denied' ? 'Benachrichtigungen blockiert' : 'nicht aktiv';
           const devBox = h('div');
           const b = {};
-          b.sync = h('button', { class: 'btn btn-primary' }, '⟳ Jetzt synchronisieren');
+          b.sync = h('button', { class: 'btn btn-primary' }, ctx.ui.icon('refresh'), 'Jetzt synchronisieren');
           b.sync.onclick = busy(b.sync, async () => { await Y.run(); if (Y.status !== 'ok') throw new Error(Y.lastError || 'Synchronisierung fehlgeschlagen'); toast('Synchronisiert'); });
-          b.push = h('button', { class: 'btn' + (P.subscribedHere ? '' : ' btn-primary') }, P.subscribedHere ? 'Push hier deaktivieren' : '🔔 Push auf diesem Gerät aktivieren');
+          b.push = h('button', { class: 'btn' + (P.subscribedHere ? '' : ' btn-primary') }, P.subscribedHere ? 'Push hier deaktivieren' : 'Push auf diesem Gerät aktivieren');
           b.push.onclick = busy(b.push, async () => { if (P.subscribedHere) { await P.disable(); toast('Push auf diesem Gerät deaktiviert'); } else { await P.enable(); toast('Push aktiviert – jetzt Test-Push probieren'); } });
           b.test = h('button', { class: 'btn' }, 'Test-Push');
           b.test.onclick = busy(b.test, async () => {
@@ -2050,18 +2106,18 @@
               const d = await S.Api.req('GET', '/v1/status');
               const cronAge = d.cronAt ? (d.now - d.cronAt) / 1000 : null;
               const rows = [
-                h('dt', {}, 'Server-Takt'), h('dd', {}, cronAge == null ? '⚠️ Cron ist noch nie gelaufen (Cron-Trigger im Worker prüfen)' : cronAge < 150 ? `✅ läuft (zuletzt vor ${Math.round(cronAge)} s)` : `⚠️ zuletzt vor ${U.formatDuration(cronAge / 60)} – Cron-Trigger prüfen`),
-                h('dt', {}, 'Absender'), h('dd', {}, d.vapidSubject === 'ungültig' ? '⚠️ VAPID_SUBJECT fehlt/ungültig' : d.vapidSubject),
+                h('dt', {}, 'Server-Takt'), h('dd', {}, cronAge == null ? 'Cron ist noch nie gelaufen (Cron-Trigger im Worker prüfen)' : cronAge < 150 ? `läuft (zuletzt vor ${Math.round(cronAge)} s)` : `zuletzt vor ${U.formatDuration(cronAge / 60)} – Cron-Trigger prüfen`),
+                h('dt', {}, 'Absender'), h('dd', {}, d.vapidSubject === 'ungültig' ? 'VAPID_SUBJECT fehlt/ungültig' : d.vapidSubject),
               ];
-              if (!d.subscriptions.length) rows.push(h('dt', {}, 'Abo'), h('dd', {}, P.subscribedHere ? '⚠️ Server kennt kein Abo dieses Geräts – „Push hier deaktivieren“ und neu aktivieren' : 'keins'));
+              if (!d.subscriptions.length) rows.push(h('dt', {}, 'Abo'), h('dd', {}, P.subscribedHere ? 'Server kennt kein Abo dieses Geräts – „Push hier deaktivieren“ und neu aktivieren' : 'keins'));
               d.subscriptions.forEach(s => rows.push(h('dt', {}, 'Letzter Push'), h('dd', {}, s.lastAt
-                ? `${U.relTime(s.lastAt)} an ${s.host}: ${s.lastStatus >= 200 && s.lastStatus < 300 ? '✅ angenommen (' + s.lastStatus + ')' : '❌ ' + s.lastStatus + ' ' + (s.lastReason || '')}${s.failCount ? ` · ${s.failCount} Fehler in Folge` : ''}`
+                ? `${U.relTime(s.lastAt)} an ${s.host}: ${s.lastStatus >= 200 && s.lastStatus < 300 ? 'angenommen (' + s.lastStatus + ')' : 'abgelehnt ' + s.lastStatus + ' ' + (s.lastReason || '')}${s.failCount ? ` · ${s.failCount} Fehler in Folge` : ''}`
                 : `noch keiner an ${s.host}`)));
               // Empfang laut Service Worker dieses Geräts (auch bei geschlossener App)
               const logs = (await S.pushLog()).slice(0, 5);
               rows.push(h('dt', {}, 'Empfangen hier'), h('dd', {}, logs.length ? logs.map(l => `${new Date(l.at).toLocaleTimeString('de-DE')}${l.type === 'test' ? ' (Test)' : ''}`).join(' · ') : 'noch kein Push empfangen'));
               if (d.lastReceivedAt) rows.push(h('dt', {}, 'Server weiß'), h('dd', {}, `letzter Empfang ${U.relTime(d.lastReceivedAt)}`));
-              if (d.migrationMissing) rows.push(h('dt', {}, 'Hinweis'), h('dd', {}, '⚠️ D1-Migration 0002 fehlt: npx wrangler d1 migrations apply pa-db --remote'));
+              if (d.migrationMissing) rows.push(h('dt', {}, 'Hinweis'), h('dd', {}, 'D1-Migration 0002 fehlt: npx wrangler d1 migrations apply pa-db --remote'));
               diagBox.replaceChildren(h('dl', { class: 'kv', style: { marginTop: '8px' } }, rows));
             } catch (err) { diagBox.replaceChildren(h('span', { class: 'muted' }, err.status === 404 ? 'Diagnose braucht Worker-Version 1.1 (Worker neu deployen).' : 'Diagnose nicht verfügbar: ' + err.message)); }
           };
@@ -2072,7 +2128,7 @@
               const { devices } = await S.Api.req('GET', '/v1/devices');
               devBox.replaceChildren(h('table', { class: 'simple' }, h('tbody', {}, devices.map(d => h('tr', {},
                 h('td', {}, h('strong', {}, d.name || 'Gerät'), d.current ? h('span', { class: 'pill blue', style: { marginLeft: '6px' } }, 'dieses') : null,
-                  h('div', { class: 'small muted' }, `${d.push ? '🔔 Push' : 'ohne Push'} · zuletzt ${d.lastSeenAt ? U.relTime(d.lastSeenAt) : '–'} · seit ${U.formatDate(d.createdAt, false)}`)),
+                  h('div', { class: 'small muted' }, `${d.push ? 'Push' : 'ohne Push'} · zuletzt ${d.lastSeenAt ? U.relTime(d.lastSeenAt) : '–'} · seit ${U.formatDate(d.createdAt, false)}`)),
                 h('td', { style: { textAlign: 'right' } }, d.current ? null : h('button', { class: 'btn btn-sm', onclick: async () => {
                   if (!await confirm(`Gerät „${d.name}“ abmelden? Es erhält dann keine Pushes mehr und synchronisiert nicht mehr. Seine lokalen Daten bleiben erhalten.`, { ok: 'Abmelden', danger: true })) return;
                   try { await S.Api.req('DELETE', `/v1/devices/${encodeURIComponent(d.id)}`); toast('Gerät abgemeldet'); b.dev.onclick(); } catch (err) { toast(err.message, { type: 'error' }); }
@@ -2107,7 +2163,7 @@
             if (!await confirm('Dieses Gerät vom Push-Dienst abmelden? Es bekommt dann keine Pushes mehr und gleicht nicht mehr ab. Alle Daten auf diesem Gerät bleiben erhalten.', { ok: 'Abmelden', danger: true })) return;
             await Y.disconnect(); toast('Abgemeldet – lokale Daten bleiben erhalten'); renderSync();
           };
-          parts.sync.replaceChildren(card('☁️ Push & Sync',
+          parts.sync.replaceChildren(card('cloud Push & Sync',
             h('dl', { class: 'kv' },
               h('dt', {}, 'Status'), h('dd', {}, statusText),
               h('dt', {}, 'Zuletzt'), h('dd', {}, st.lastOkAt ? U.relTime(st.lastOkAt) : '–'),
@@ -2116,7 +2172,7 @@
               h('dt', {}, 'Gerät'), h('dd', {}, st.deviceName || '–'),
               h('dt', {}, 'Server'), h('dd', {}, st.api)),
             h('div', { class: 'row', style: { marginTop: '12px' } }, b.sync, P.supported() ? b.push : null, b.test),
-            !P.supported() && U.isIOS() ? h('p', { class: 'small muted' }, '📱 ' + P.unsupportedReason()) : null,
+            !P.supported() && U.isIOS() ? h('p', { class: 'small muted' }, '' + P.unsupportedReason()) : null,
             h('p', { class: 'small muted' }, 'Erinnerungen löst jetzt der Server aus – auch wenn alle Geräte die App geschlossen haben. Die Ruhezeiten unten gelten auch dort. Inhalte (Titel, Notizen) sind Ende-zu-Ende-verschlüsselt.'),
             h('details', { class: 'fold' }, h('summary', {}, 'Push-Diagnose'), diagBox, h('button', { class: 'btn btn-sm', style: { marginTop: '8px' }, onclick: loadDiag }, 'Aktualisieren')),
             h('details', { class: 'fold' }, h('summary', {}, 'Geräte & Konto'),
@@ -2141,18 +2197,18 @@
             } catch (err) { toast('Import fehlgeschlagen: ' + err.message, { type: 'error' }); }
           } });
           const lastExport = await S.lastExportAt();
-          parts.sicherung.replaceChildren(card('💾 Datensicherung',
+          parts.sicherung.replaceChildren(card('save Datensicherung',
             h('p', { class: 'small muted', style: { marginTop: 0 } }, S.Sync.enabled() ? 'Deine Daten liegen in diesem Browser und verschlüsselt auf deinem Push-Dienst. Exportiere trotzdem gelegentlich eine Sicherungsdatei (sie ist unverschlüsselt) und lege sie sicher ab.' : 'Deine Daten liegen nur in diesem Browser. Exportiere regelmäßig eine Sicherungsdatei und lege sie sicher ab (sie ist unverschlüsselt).'),
             h('p', { class: 'small' }, lastExport ? `Letzter Export: ${U.formatDateTimeFull(lastExport)}` : 'Noch kein Export.'),
             h('div', { class: 'row' },
-              h('button', { class: 'btn btn-primary', onclick: async () => { await S.Backup.exportFile(); toast('Sicherung exportiert'); } }, '⬇️ Exportieren'),
-              h('button', { class: 'btn', onclick: () => fileIn.click() }, '⬆️ Importieren'), fileIn,
-              h('button', { class: 'btn', onclick: async () => { await S.Backup.snapshot('manuell'); toast('Schnappschuss angelegt'); renderBackup(); } }, '📸 Schnappschuss')),
+              h('button', { class: 'btn btn-primary', onclick: async () => { await S.Backup.exportFile(); toast('Sicherung exportiert'); } }, ctx.ui.icon('download'), 'Exportieren'),
+              h('button', { class: 'btn', onclick: () => fileIn.click() }, ctx.ui.icon('upload'), 'Importieren'), fileIn,
+              h('button', { class: 'btn', onclick: async () => { await S.Backup.snapshot('manuell'); toast('Schnappschuss angelegt'); renderBackup(); } }, ctx.ui.icon('save'), 'Schnappschuss')),
             h('details', { class: 'fold' }, h('summary', {}, `Automatische Schnappschüsse (${list.length})`),
               list.length ? h('table', { class: 'simple' }, h('tbody', {}, list.map(b => h('tr', {},
                 h('td', {}, U.formatDateTimeFull(b.createdAt), h('div', { class: 'small muted' }, `${b.reason} · v${b.appVersion} · ${U.formatBytes(b.size)}`)),
                 h('td', { style: { textAlign: 'right' } },
-                  h('button', { class: 'btn btn-sm', onclick: () => U.download(`persoenliche-app-schnappschuss-${b.id}.json`, JSON.stringify(b.data, null, 2)) }, '⬇️'),
+                  h('button', { class: 'btn btn-sm', onclick: () => U.download(`persoenliche-app-schnappschuss-${b.id}.json`, JSON.stringify(b.data, null, 2)), 'aria-label': 'Herunterladen' }, ctx.ui.icon('download')),
                   ' ',
                   h('button', { class: 'btn btn-sm', onclick: async () => {
                     if (!await confirm(`Auf den Stand vom ${U.formatDateTimeFull(b.createdAt)} zurücksetzen?\nDer aktuelle Stand wird vorher als Schnappschuss gesichert.`, { ok: 'Wiederherstellen', danger: true })) return;
@@ -2164,9 +2220,9 @@
         /* Speicher */
         const renderStorage = async () => {
           const st = await S.storage();
-          parts.speicher.replaceChildren(card('🗄️ Speicher',
+          parts.speicher.replaceChildren(card('database Speicher',
             h('dl', { class: 'kv' },
-              h('dt', {}, 'Dauerhaft'), h('dd', {}, st.persisted == null ? 'unbekannt' : st.persisted ? '✅ ja – der Browser löscht die Daten nicht automatisch' : '⚠️ nein – der Browser könnte Daten bei Speichermangel löschen'),
+              h('dt', {}, 'Dauerhaft'), h('dd', {}, st.persisted == null ? 'unbekannt' : st.persisted ? 'ja – der Browser löscht die Daten nicht automatisch' : 'nein – der Browser könnte Daten bei Speichermangel löschen'),
               h('dt', {}, 'Belegt'), h('dd', {}, st.usage != null ? `${U.formatBytes(st.usage)} von ${U.formatBytes(st.quota)}` : 'unbekannt'),
               h('dt', {}, 'Installiert'), h('dd', {}, U.isStandalone() ? 'ja (Home-Bildschirm/App)' : 'nein (Browser-Tab)')),
             st.persisted === false ? h('button', { class: 'btn', style: { marginTop: '10px' }, onclick: async () => { const ok = await S.requestPersist(); toast(ok ? 'Speicher ist jetzt dauerhaft' : 'Browser hat abgelehnt – Installation als App hilft oft'); renderStorage(); } }, 'Dauerhaften Speicher anfordern') : null));
@@ -2177,10 +2233,10 @@
         const renderModules = () => {
           const hidden = S.Settings.get('hiddenModules');
           const mods = S.Registry.list({ includeHidden: true }).filter(m => !m.system);
-          parts.module.replaceChildren(card('🧩 Module', ...mods.map(m => {
+          parts.module.replaceChildren(card('grid Module', ...mods.map(m => {
             return h('div', { style: { borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' } },
-              h('div', { class: 'row' }, h('strong', { class: 'grow' }, `${m.icon} ${m.name}`), h('span', { class: 'pill' }, `v${m.version || '?'} · Schema ${m.schemaVersion}`)),
-              S.Registry.isReadOnly(m.id) ? h('div', { class: 'ro-banner' }, '🔒 ' + S.Registry.st(m.id).lockReason) : null,
+              h('div', { class: 'row' }, h('strong', { class: 'grow row', style: { gap: '8px' } }, ctx.ui.icon(m.icon), m.name), h('span', { class: 'pill' }, `v${m.version || '?'} · Schema ${m.schemaVersion}`)),
+              S.Registry.isReadOnly(m.id) ? h('div', { class: 'ro-banner' }, '' + S.Registry.st(m.id).lockReason) : null,
               sw('Anzeigen', !hidden.includes(m.id), async v => {
                 const cur = S.Settings.get('hiddenModules').filter(x => x !== m.id);
                 if (!v) cur.push(m.id);
@@ -2198,7 +2254,7 @@
         renderModules();
 
         /* Über */
-        parts.ueber.append(card('ℹ️ Über',
+        parts.ueber.append(card('info Über',
           h('dl', { class: 'kv' }, h('dt', {}, 'Version'), h('dd', {}, S.CONFIG.APP_VERSION), h('dt', {}, 'Datenbank'), h('dd', {}, S.CONFIG.DB_NAME)),
           h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'btn btn-sm', onclick: async () => { await S.VersionGuard.checkRemote(); toast('Auf Updates geprüft'); } }, 'Auf Updates prüfen')),
           h('details', { class: 'fold' }, h('summary', {}, 'Änderungsprotokoll'),
@@ -2208,8 +2264,8 @@
         const renderDiag = () => {
           const tests = S.Schedule.selfTest();
           const allOk = tests.every(t => t.ok);
-          parts.diagnose.replaceChildren(card('🩺 Diagnose',
-            h('details', { class: 'fold' }, h('summary', {}, `Eskalationsregel – Testtabelle: ${allOk ? '✅ alle bestanden' : '❌ Fehler'}`),
+          parts.diagnose.replaceChildren(card('activity Diagnose',
+            h('details', { class: 'fold' }, h('summary', {}, `Eskalationsregel – Testtabelle: ${allOk ? 'alle bestanden' : 'Fehler'}`),
               h('table', { class: 'simple' }, h('thead', {}, h('tr', {}, h('th', {}, 'Verbleibend (Stufe 1 Tag)'), h('th', {}, 'Erwartet'), h('th', {}, 'Ergebnis'))),
                 h('tbody', {}, tests.map(t => h('tr', {}, h('td', {}, t.label), h('td', {}, typeof t.expected === 'number' ? `${t.expected} Min` : t.expected), h('td', { class: t.ok ? 'test-ok' : 'test-fail' }, (typeof t.got === 'number' ? `${t.got} Min` : t.got) + (t.ok ? ' ✓' : ' ✗'))))))),
             h('details', { class: 'fold' }, h('summary', {}, `Protokoll (${S.Log.entries.length})`),
@@ -2237,7 +2293,11 @@
     const OVERDUE_OPTS = [5, 10, 15, 30, 60];
     let col;
 
-    const cfg = async ctx => ({ defaultStage: await ctx.settings.get('defaultStage', '1d'), overdueMin: await ctx.settings.get('overdueMin', 15) });
+    const DEFAULT_INTERVAL = 120; // 2 Stunden
+    const cfg = async ctx => ({ intervalMin: await ctx.settings.get('defaultIntervalMin', DEFAULT_INTERVAL), overdueMin: await ctx.settings.get('overdueMin', 15) });
+    /** Intervall eines ToDos in Minuten (ältere Einträge haben nur eine Stufen-ID) */
+    const ivOf = (ctx, t) => t.intervalMin || (ctx.reminders.STAGES.find(s => s.id === t.stage) || { min: 1440 }).min;
+    const remArgs = (ctx, t) => ({ intervalMin: ivOf(ctx, t), deadline: t.deadline || null, overdueMin: t.overdueMin || 15, title: t.title });
 
     /** Dringlichkeit einer Abgabe → Farbe */
     function urgency(deadline, now) {
@@ -2265,10 +2325,10 @@
       };
     }
 
-    async function create(ctx, { title, stage, deadline }) {
+    async function create(ctx, { title, note = '', intervalMin, deadline }) {
       const c = await cfg(ctx);
-      const t = await col.add({ title, note: '', stage, deadline: deadline || null, overdueMin: c.overdueMin, done: false, doneAt: null, seenAt: null });
-      await ctx.reminders.set(t.id, { stage, deadline: t.deadline, overdueMin: t.overdueMin, title });
+      const t = await col.add({ title, note, stage: 'custom', intervalMin, deadline: deadline || null, overdueMin: c.overdueMin, done: false, doneAt: null, seenAt: null });
+      await ctx.reminders.set(t.id, remArgs(ctx, t));
       return t;
     }
     async function complete(ctx, id) {
@@ -2278,7 +2338,7 @@
     async function reopen(ctx, id) {
       const t = await col.update(id, { done: false, doneAt: null });
       const r = await ctx.reminders.get(id);
-      if (!r) await ctx.reminders.set(id, { stage: t.stage, deadline: t.deadline, overdueMin: t.overdueMin, title: t.title });
+      if (!r) await ctx.reminders.set(id, remArgs(ctx, t));
       else await ctx.reminders.reopen(id);
     }
     async function markSeen(ctx, id) {
@@ -2300,15 +2360,18 @@
       return opts;
     }
 
-    function stageChips(ctx, current, onPick) {
+    /** Intervall frei einstellen: Tage / Stunden / Minuten */
+    function intervalEditor(ctx, min, onChange) {
       const { h } = ctx.ui;
-      const box = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': 'Stufe' });
-      const render = val => box.replaceChildren(...ctx.reminders.STAGES.map(s => h('button', {
-        type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(s.id === val),
-        onclick: () => { render(s.id); onPick(s.id); },
-      }, s.label)));
-      render(current);
-      return box;
+      const num = (v, max, label) => h('label', { class: 'iv-field' },
+        h('input', { type: 'number', inputmode: 'numeric', min: 0, max, step: 1, value: v, 'aria-label': label, oninput: upd, onfocus: e => e.target.select() }),
+        h('span', {}, label));
+      const d = num(Math.floor(min / 1440), 365, 'Tage'), hh = num(Math.floor((min % 1440) / 60), 23, 'Std'), mm = num(min % 60, 59, 'Min');
+      const val = el => Math.max(0, Math.floor(Number(el.querySelector('input').value) || 0));
+      const total = () => val(d) * 1440 + val(hh) * 60 + val(mm);
+      function upd() { const t = total(); box.classList.toggle('invalid', t < 1); if (t >= 1) onChange(t); }
+      const box = h('div', { class: 'iv' }, d, hh, mm);
+      return { el: box, get: total };
     }
 
     function deadlineEditor(ctx, current, onChange) {
@@ -2324,15 +2387,15 @@
     function metaLine(ctx, t, now) {
       const { h } = ctx.ui; const U = ctx.util;
       const r = t._r;
-      const out = [h('span', { class: 'pill', title: 'Stufe (Grundintervall)' }, '↻ ' + ctx.reminders.stageShort(t.stage))];
+      const out = [h('span', { class: 'pill', title: 'Erinnerungs-Intervall' }, ctx.ui.icon('repeat'), 'alle ' + U.formatDuration(ivOf(ctx, t)))];
       if (t.deadline) {
         const u = urgency(t.deadline, now);
         const txt = t.deadline <= now ? `Überfällig seit ${U.formatDuration((now - t.deadline) / 60000)}` : `Abgabe ${U.formatDate(t.deadline)} · ${U.relTime(t.deadline, now)}`;
-        out.push(h('span', { class: 'pill ' + u }, (t.deadline <= now ? '🔴 ' : '📅 ') + txt));
+        out.push(h('span', { class: 'pill ' + u }, ctx.ui.icon(t.deadline <= now ? 'alert' : 'calendar'), txt));
       }
-      if (!t.done && r && r.nextAt) out.push(h('span', { class: 'pill', title: U.formatDateTimeFull(r.nextAt) }, '🔔 ' + (r.nextAt <= now ? 'gleich' : U.relTime(r.nextAt, now))));
+      if (!t.done && r && r.nextAt) out.push(h('span', { class: 'pill', title: U.formatDateTimeFull(r.nextAt) }, ctx.ui.icon('bell'), r.nextAt <= now ? 'gleich' : U.relTime(r.nextAt, now)));
       if (r && r.sentCount) out.push(h('span', { class: 'pill', title: 'Bisherige Erinnerungen' }, `${r.sentCount}× erinnert`));
-      if (t.done && t.doneAt) out.push(h('span', { class: 'pill green' }, '✓ ' + U.formatDate(t.doneAt)));
+      if (t.done && t.doneAt) out.push(h('span', { class: 'pill green' }, ctx.ui.icon('check'), U.formatDate(t.doneAt)));
       return h('div', { class: 't-meta' }, out);
     }
 
@@ -2343,15 +2406,15 @@
       if (!t) { toast('ToDo nicht gefunden'); return; }
       const r = await ctx.reminders.get(id);
       if (r && r.unseen) await markSeen(ctx, id);
-      let stage = t.stage, deadline = t.deadline;
+      let iv = ivOf(ctx, t), deadline = t.deadline;
       const titleIn = h('input', { type: 'text', value: t.title, autofocus: true, 'aria-label': 'Titel' });
       const noteIn = h('textarea', { 'aria-label': 'Notiz', placeholder: 'Notiz (optional)' }); noteIn.value = t.note || '';
       const overdueSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: (t.overdueMin || 15) === m }, `alle ${m} Minuten`)));
       const preview = h('div', { class: 'small muted' });
       const upd = () => {
         if (t.done) { preview.textContent = 'Erledigt – keine Erinnerungen.'; return; }
-        const changed = stage !== t.stage || (deadline || null) !== (t.deadline || null) || Number(overdueSel.value) !== (t.overdueMin || 15);
-        const n = changed || !r ? ctx.reminders.preview({ stage, deadline, overdueMin: Number(overdueSel.value) }) : r.nextAt;
+        const changed = iv !== ivOf(ctx, t) || (deadline || null) !== (t.deadline || null) || Number(overdueSel.value) !== (t.overdueMin || 15);
+        const n = changed || !r ? ctx.reminders.preview({ intervalMin: iv, deadline, overdueMin: Number(overdueSel.value) }) : r.nextAt;
         preview.textContent = n ? `${changed ? 'Nach dem Speichern: n' : 'N'}ächste Erinnerung ${U.relTime(n)} (${U.formatDate(n)})` : '';
       };
       overdueSel.onchange = upd;
@@ -2361,8 +2424,8 @@
         h('h3', {}, 'ToDo bearbeiten'),
         h('div', { class: 'stack' },
           titleIn, noteIn,
-          h('div', { class: 'small muted' }, 'Stufe – so oft wirst du erinnert, bis es erledigt ist'),
-          stageChips(ctx, stage, v => { stage = v; upd(); }),
+          h('div', { class: 'small muted' }, 'Intervall – so oft wirst du erinnert, bis es erledigt ist'),
+          intervalEditor(ctx, iv, v => { iv = v; upd(); }).el,
           h('div', { class: 'small muted' }, 'Abgabe – je näher, desto öfter wirst du erinnert'),
           dl.el,
           h('label', { class: 'field' }, h('span', {}, 'Nach Ablauf der Abgabe erinnern'), overdueSel),
@@ -2377,13 +2440,13 @@
         const title = titleIn.value.trim();
         if (!title) { toast('Titel darf nicht leer sein'); return; }
         const overdueMin = Number(overdueSel.value);
-        await col.update(id, { title, note: noteIn.value, stage, deadline: deadline || null, overdueMin });
-        await ctx.reminders.set(id, { stage, deadline: deadline || null, overdueMin, title });
+        const nt = await col.update(id, { title, note: noteIn.value, stage: 'custom', intervalMin: iv, deadline: deadline || null, overdueMin });
+        await ctx.reminders.set(id, remArgs(ctx, nt));
         toast('Gespeichert');
       } else if (result === 'delete') {
         if (await confirm(`„${t.title}“ löschen?`, { ok: 'Löschen', danger: true })) {
           await col.remove(id); await ctx.reminders.remove(id);
-          toast('Gelöscht', { action: 'Rückgängig', onAction: async () => { await col.update(id, { deletedAt: null }); await ctx.reminders.set(id, { stage: t.stage, deadline: t.deadline, overdueMin: t.overdueMin, title: t.title }); if (t.done) await ctx.reminders.done(id); } });
+          toast('Gelöscht', { action: 'Rückgängig', onAction: async () => { await col.update(id, { deletedAt: null }); await ctx.reminders.set(id, remArgs(ctx, t)); if (t.done) await ctx.reminders.done(id); } });
         }
       }
     }
@@ -2392,13 +2455,13 @@
     async function openCreate(ctx) {
       const { h, dialog, toast } = ctx.ui; const U = ctx.util;
       const c = await cfg(ctx);
-      let stage = c.defaultStage, deadline = null;
+      let iv = c.intervalMin, deadline = null;
       const titleIn = h('input', { type: 'text', class: 'title-input', placeholder: 'Was ist zu tun?', enterkeyhint: 'done', 'aria-label': 'Titel', autocomplete: 'off', autofocus: true });
       const noteIn = h('textarea', { 'aria-label': 'Notiz', placeholder: 'Notiz (optional)', rows: 2 });
       const preview = h('div', { class: 'preview' });
       const upd = () => {
-        const n = ctx.reminders.preview({ stage, deadline, overdueMin: c.overdueMin });
-        preview.textContent = `Erste Erinnerung ${U.relTime(n)} (${U.formatDate(n)})` + (deadline ? ' – danach immer häufiger bis zur Abgabe.' : `, danach im Abstand von ${ctx.reminders.stageLabel(stage)}, bis du es abhakst.`);
+        const n = ctx.reminders.preview({ intervalMin: iv, deadline, overdueMin: c.overdueMin });
+        preview.textContent = `Erste Erinnerung ${U.relTime(n)} (${U.formatDate(n)})` + (deadline ? ' – danach immer häufiger bis zur Abgabe.' : `, danach alle ${U.formatDuration(iv)}, bis du es abhakst.`);
       };
       const dl = deadlineEditor(ctx, deadline, v => { deadline = v; upd(); });
       upd();
@@ -2406,8 +2469,8 @@
         const form = h('form', { class: 'composer', onsubmit: e => { e.preventDefault(); if (titleIn.value.trim()) close(true); else titleIn.focus(); } },
           h('h3', {}, 'Neues ToDo'),
           titleIn,
-          h('div', { class: 'lbl' }, 'Stufe – so oft wirst du erinnert, bis es erledigt ist'),
-          stageChips(ctx, stage, v => { stage = v; upd(); }),
+          h('div', { class: 'lbl' }, 'Intervall – so oft wirst du erinnert, bis es erledigt ist'),
+          intervalEditor(ctx, iv, v => { iv = v; upd(); }).el,
           h('div', { class: 'lbl' }, 'Abgabe (optional) – je näher, desto öfter'),
           dl.el,
           h('div', { style: { marginTop: '10px' } }, noteIn),
@@ -2420,8 +2483,7 @@
       }, { label: 'Neues ToDo' });
       if (!ok) return;
       try {
-        const t = await create(ctx, { title: titleIn.value.trim(), stage, deadline });
-        if (noteIn.value.trim()) await col.update(t.id, { note: noteIn.value });
+        await create(ctx, { title: titleIn.value.trim(), note: noteIn.value.trim() ? noteIn.value : '', intervalMin: iv, deadline });
         if (ctx.notify.permission() === 'default') toast('Damit ich dich erinnern kann, erlaube Benachrichtigungen.', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
         else toast('ToDo angelegt');
       } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
@@ -2431,19 +2493,20 @@
     async function openSettings(ctx) {
       const { h, dialog, toast } = ctx.ui;
       const c = await cfg(ctx);
-      const stageSel = h('select', {}, ctx.reminders.STAGES.map(s => h('option', { value: s.id, selected: s.id === c.defaultStage }, s.label)));
+      let iv = c.intervalMin;
+      const ivEd = intervalEditor(ctx, iv, v => { iv = v; });
       const overSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: m === c.overdueMin }, `alle ${m} Minuten`)));
       const ok = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close(true); } },
-        h('h3', {}, '⚙️ ToDo-Einstellungen'),
+        h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'ToDo-Einstellungen'),
         h('div', { class: 'stack' },
-          h('label', { class: 'field' }, h('span', {}, 'Standard-Stufe für neue ToDos'), stageSel),
+          h('div', { class: 'field' }, h('span', { class: 'small muted', style: { display: 'block', marginBottom: '4px' } }, 'Standard-Intervall für neue ToDos'), ivEd.el),
           h('label', { class: 'field' }, h('span', {}, 'Erinnern nach Ablauf der Abgabe (Standard für neue ToDos)'), overSel),
           h('p', { class: 'small muted', style: { margin: 0 } }, 'Ruhezeiten und Benachrichtigungen gelten für alle Module – sie stehen im Tab „Einstellungen“.')),
         h('div', { class: 'dlg-actions' },
           h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
           h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'ToDo-Einstellungen' });
       if (!ok) return;
-      await ctx.settings.set('defaultStage', stageSel.value);
+      if (ivEd.get() >= 1) await ctx.settings.set('defaultIntervalMin', ivEd.get());
       await ctx.settings.set('overdueMin', Number(overSel.value));
       toast('Gespeichert');
     }
@@ -2458,9 +2521,9 @@
     let highlightId = null;
 
     App.register({
-      id: 'todos', name: 'ToDos', icon: '✅', order: 10,
+      id: 'todos', name: 'ToDos', icon: 'todos', order: 10,
       description: 'Aufgaben mit hartnäckigen Erinnerungen', category: 'Alltag',
-      version: '1.2.0', schemaVersion: 1, migrations: {},
+      version: '1.3.0', schemaVersion: 1, migrations: {},
 
       async init(ctx) { col = ctx.store.collection('todos', { sync: true }); },
 
@@ -2470,10 +2533,10 @@
         const doneBox = h('div');
         el.append(
           h('div', { class: 'head' },
-            h('h2', {}, '✅ ToDos'),
-            h('button', { class: 'btn btn-ghost', title: 'ToDo-Einstellungen', 'aria-label': 'ToDo-Einstellungen', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, '⚙️')),
+            h('h2', {}, 'ToDos'),
+            h('button', { class: 'btn btn-ghost', title: 'ToDo-Einstellungen', 'aria-label': 'ToDo-Einstellungen', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, ctx.ui.icon('settings'))),
           openBox, doneBox,
-          h('button', { class: 'btn btn-primary fab', onclick: () => openCreate(ctx), disabled: ctx.readOnly }, '＋ Neues ToDo'));
+          h('button', { class: 'btn btn-primary fab', onclick: () => openCreate(ctx), disabled: ctx.readOnly }, ctx.ui.icon('plus'), 'Neues ToDo'));
 
         let doneOpen = false;
 
@@ -2482,7 +2545,7 @@
           return h('li', { class: 'todo' + (t.done ? ' done' : '') + (u === 'red' ? ' overdue' : u === 'orange' ? ' soon' : '') + (t.id === highlightId ? ' flash' : ''), 'data-id': t.id },
             h('button', { class: 'check', 'aria-label': t.done ? 'Wieder öffnen' : 'Abhaken', title: t.done ? 'Wieder öffnen' : 'Abhaken', disabled: ctx.readOnly, onclick: async () => {
               if (t.done) { await reopen(ctx, t.id); toast('Wieder geöffnet – Erinnerungen laufen weiter'); }
-              else { await complete(ctx, t.id); toast(`„${t.title}“ erledigt 🎉`, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) }); }
+              else { await complete(ctx, t.id); toast(`„${t.title}“ erledigt `, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) }); }
             } }, h('span')),
             h('div', { class: 't-body', onclick: () => openEdit(ctx, t.id) },
               h('div', { class: 't-title' }, t.title),
@@ -2492,7 +2555,7 @@
               e.stopPropagation();
               await col.remove(t.id); await ctx.reminders.remove(t.id);
               toast('Gelöscht', { action: 'Rückgängig', onAction: async () => { await col.update(t.id, { deletedAt: null }); } });
-            } }, '🗑️')) : null);
+            } }, ctx.ui.icon('trash'))) : null);
         };
 
         const render = async () => {
@@ -2502,7 +2565,7 @@
           const done = all.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
           openBox.replaceChildren(
             h('div', { class: 'section-title' }, `Aktiv (${open.length})`),
-            open.length ? h('ul', { class: 'todo-list' }, open.map(t => row(t, now))) : h('div', { class: 'card empty' }, 'Nichts offen. 🎉 Neues ToDo über den Knopf unten.'));
+            open.length ? h('ul', { class: 'todo-list' }, open.map(t => row(t, now))) : h('div', { class: 'card empty' }, 'Nichts offen. Neues ToDo über den Knopf unten.'));
           if (done.length) {
             const det = h('details', { class: 'fold', open: doneOpen, ontoggle: () => { doneOpen = det.open; } },
               h('summary', {}, `Erledigt (${done.length})`),
@@ -2537,21 +2600,6 @@
       },
 
       unmount() { this._render = null; },
-
-      async widget(el, ctx) {
-        const { h } = ctx.ui; const U = ctx.util;
-        const now = Date.now();
-        const all = (await loadAll(ctx)).filter(t => !t.done).sort(sortOpen(now));
-        const overdue = all.filter(t => t.deadline && t.deadline <= now).length;
-        const next = all.map(t => t._r?.nextAt).filter(Boolean).sort((a, b) => a - b)[0];
-        el.replaceChildren(...[
-          h('div', { class: 'row', style: { gap: '6px' } },
-            h('span', { class: 'pill blue' }, `${all.length} offen`),
-            overdue ? h('span', { class: 'pill red' }, `${overdue} überfällig`) : null),
-          next ? h('div', { class: 'small muted', style: { marginTop: '6px' } }, `Nächste Erinnerung ${U.relTime(next, now)}`) : null,
-          all.length ? h('ul', { class: 'small', style: { margin: '8px 0 0', paddingLeft: '18px' } }, all.slice(0, 3).map(t =>
-            h('li', {}, h('a', { href: ctx.router.link(`todos/${t.id}`) }, t.title), t.deadline ? h('span', { class: 'muted' }, ` · ${t.deadline <= now ? 'überfällig' : U.relTime(t.deadline, now)}`) : null))) : h('div', { class: 'small muted', style: { marginTop: '6px' } }, 'Alles erledigt.')].filter(Boolean));
-      },
 
       async onReminderAction(itemId, action, ctx) {
         if (action === 'done') { const t = await col.get(itemId); if (t && !t.done) await col.update(itemId, { done: true, doneAt: Date.now() }); }

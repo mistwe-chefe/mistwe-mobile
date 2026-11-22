@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.0 – 2026-11-22
+
+- Kern: schlichte Linien-Symbole (SVG, `currentColor`) statt Emojis – Navigation, Einstellungen, ToDo-Liste, Hinweise, Toasts. Benachrichtigungen ohne Emojis.
+- Kern: `ctx.ui.icon(name)` für Module; Modul-`icon` ist jetzt ein Symbolname (unbekannte Namen werden als Text gezeigt).
+- Kern: `ctx.reminders.set/preview` akzeptieren `intervalMin` (frei in Minuten, hat Vorrang vor der Stufen-ID). Abwärtskompatibel, Worker unverändert (er nutzt bereits `stageMin`).
+- Modul `todos`: Intervall frei in Tagen/Stunden/Minuten, Standard 2 Stunden (einstellbar über das Einstellungs-Symbol im Modul). Bestehende ToDos behalten ihr Intervall.
+- Modul `todos`: neues optionales Feld `intervalMin` im Datensatz (keine Migration nötig, Schema bleibt 1).
+- Modul `start`: nur noch Schaltflächen zu den Modulen.
+- `sw.js` (SW_VERSION 1.3.0): Benachrichtigungen ohne Emojis.
+
+Geänderte Dateien: `index.html`, `sw.js`.
+
 ## 1.2.0 – 2026-11-22
 
 Bedienung des ToDo-Moduls überarbeitet.
