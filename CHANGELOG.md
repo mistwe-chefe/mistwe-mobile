@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.2 – 2026-11-22
+
+- Modul Wecker: Die App übergibt jede Weckzeit als vollständiges Datum („TT.MM.JJJJ HH:MM“, Datum des tatsächlichen Klingelns).
+- Kurzbefehl „PA Wecker stellen“: in der Wiederholung zuerst „Datumsangaben aus Eingabe abrufen“, dann „Wecker erstellen“ mit diesen Datumsangaben. Behebt „Keine Konvertierung von Text in Datum“. Anleitung im Modul angepasst.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert.
+
 ## 1.7.1 – 2026-11-22
 
 - Modul Wecker: Die Uhrzeiten gehen jetzt über die Zwischenablage an den Kurzbefehl „PA Wecker stellen“ (Aktion „Zwischenablage abrufen“). Die Share-Sheet-Einstellung, die es in aktuellen iOS-Versionen nicht mehr gibt, ist nicht mehr nötig. Einrichtungsanleitung im Modul angepasst.

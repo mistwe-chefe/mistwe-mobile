@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.7.1">
+  <meta name="app-version" content="1.7.2">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -310,7 +310,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.7.1',
+    APP_VERSION: '1.7.2',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -326,6 +326,9 @@
   };
 
   const CHANGELOG = [
+    { version: '1.7.2', date: '2026-11-22', items: [
+      'Modul wecker: Uhrzeiten gehen als vollständiges Datum („TT.MM.JJJJ HH:MM“) an den Kurzbefehl; Anleitung um „Datumsangaben aus Eingabe abrufen“ ergänzt (behebt „Keine Konvertierung von Text in Datum“)',
+    ] },
     { version: '1.7.1', date: '2026-11-22', items: [
       'Modul wecker: Uhrzeiten gehen über die Zwischenablage an den Kurzbefehl („Zwischenablage abrufen“) – keine Share-Sheet-Einstellung mehr nötig; Einrichtungsanleitung angepasst',
     ] },
@@ -3265,13 +3268,16 @@
     const times = (start, count, gap) => { const s = toMin(start); return s == null ? [] : Array.from({ length: count }, (_, i) => fmt((s + i * gap) % 1440)); };
     const clamp = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) && String(v).trim() !== '' ? Math.min(hi, Math.max(lo, n)) : d; };
     const runUrl = (name, text) => 'shortcuts://run-shortcut?name=' + encodeURIComponent(name) + (text != null ? '&input=text&text=' + encodeURIComponent(text) : '');
+    /** Zeile für den Kurzbefehl: „TT.MM.JJJJ HH:MM“ – Datum des tatsächlichen Klingelns, damit iOS den Text sicher als Datum erkennt */
+    const stamp = d => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const lines = (start, count, gap) => { const s = toMin(start); if (s == null) return []; const f = firstRing(s); return Array.from({ length: count }, (_, i) => stamp(new Date(f.getTime() + i * gap * 60000))); };
     /** Wecker ohne Wiederholung klingeln beim nächsten Erreichen der Uhrzeit */
     const firstRing = (startMin, now = new Date()) => { const d = new Date(now); d.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0); if (d <= now) d.setDate(d.getDate() + 1); return d; };
 
     App.register({
       id: 'wecker', name: 'Wecker', icon: 'alarm', order: 30,
       description: 'Viele Wecker auf einmal stellen und alle Wecker löschen (über iOS-Kurzbefehle)', category: 'Alltag',
-      version: '1.0.1', schemaVersion: 1, migrations: {},
+      version: '1.0.2', schemaVersion: 1, migrations: {},
       /* Daten (lokal, nicht synchronisiert): Einstellung „cfg“ { start: 'HH:MM', count, gapMin },
          Wert „letzte“ { at, kind: 'set'|'test'|'delete', times: ['HH:MM', …] } */
 
@@ -3291,8 +3297,8 @@
         const open = url => { location.href = url; };   // direkt aus dem Tipp-Ereignis, sonst blockiert iOS den Wechsel zu Kurzbefehle
         /** Uhrzeiten in die Zwischenablage legen (der Kurzbefehl liest sie dort mit „Zwischenablage abrufen“), dann Kurzbefehl starten.
             Zusätzlich gehen sie als URL-Eingabe mit. Schlägt das Kopieren fehl, wird nichts gestartet – sonst würde der Kurzbefehl alte Inhalte lesen. */
-        const sendTimes = async (kind, list) => {
-          const text = list.join('\n');
+        const sendTimes = async (kind, list, payload) => {
+          const text = payload.join('\n');
           try { await navigator.clipboard.writeText(text); }
           catch (_) { toast('Zwischenablage nicht verfügbar – bitte erneut tippen', { type: 'error' }); return; }
           remember(kind, list);
@@ -3325,7 +3331,7 @@
         setBtn.onclick = () => {
           const list = times(cfg.start, cfg.count, cfg.gapMin);
           if (!list.length) { toast('Bitte eine Uhrzeit wählen', { type: 'error' }); return; }
-          sendTimes('set', list);
+          sendTimes('set', list, lines(cfg.start, cfg.count, cfg.gapMin));
         };
 
         const renderDel = (confirming = false) => {
@@ -3360,17 +3366,18 @@
             h('li', {}, 'Aktion ', b('Zwischenablage abrufen'), ' hinzufügen.'),
             h('li', {}, 'Aktion ', b('Text teilen'), ' hinzufügen: ', b('Zwischenablage'), ' teilen nach ', b('Neue Zeilen'), '.'),
             h('li', {}, 'Aktion ', b('Wiederholen mit jedem'), ' hinzufügen, Eingabe: ', b('Geteilter Text'), '.'),
-            h('li', {}, 'In die Wiederholung die Aktion ', b('Wecker erstellen'), ' ziehen. Auf das Uhrzeit-Feld tippen und die Variable ', b('Wiederholungsobjekt'), ' wählen (steht in der Leiste über der Tastatur). Name z. B. „Aufstehen“.'),
+            h('li', {}, 'In die Wiederholung die Aktion ', b('Datumsangaben aus Eingabe abrufen'), ' ziehen (Suche: „Datum“), Eingabe: ', b('Wiederholungsobjekt'), '.'),
+            h('li', {}, 'Darunter, ebenfalls in der Wiederholung, die Aktion ', b('Wecker erstellen'), '. Uhrzeit-Feld: Variable ', b('Datumsangaben'), ' (Leiste über der Tastatur). Name z. B. „Aufstehen“.'),
             h('li', {}, 'Optional ganz unten: ', b('Mitteilung anzeigen'), ' („Wecker gestellt“).')),
           h('div', { class: 'sc-name' }, h('code', {}, SC_DEL), copyBtn(SC_DEL)),
           h('ol', { class: 'steps' },
             h('li', {}, 'Neuen Kurzbefehl anlegen und genau so benennen.'),
             h('li', {}, 'Aktion ', b('Alle Wecker abrufen'), ' hinzufügen.'),
             h('li', {}, 'Aktion ', b('Wecker löschen'), ' hinzufügen, Wecker: ', b('Wecker'), ' (Ergebnis der vorigen Aktion).')),
-          h('p', { class: 'small muted' }, 'Beim ersten Ausführen fragt iOS, ob Kurzbefehle geöffnet, die Zwischenablage gelesen und Wecker gelöscht werden dürfen – jeweils mit „Öffnen“ bzw. „Immer erlauben“ bestätigen. Danach kehrst du über „◀“ oben links zurück.'),
+          h('p', { class: 'small muted' }, 'Nicht mit ▶ im Kurzbefehl-Editor testen – dann fehlen die Uhrzeiten in der Zwischenablage. Immer aus der App starten. Beim ersten Ausführen fragt iOS, ob Kurzbefehle geöffnet, die Zwischenablage gelesen und Wecker gelöscht werden dürfen – jeweils mit „Öffnen“ bzw. „Immer erlauben“ bestätigen. Danach kehrst du über „◀“ oben links zurück.'),
           h('button', { type: 'button', class: 'btn btn-sm', disabled: ctx.readOnly, onclick: () => {
             const n = new Date(Date.now() + 2 * 60000); const t = fmt(n.getHours() * 60 + n.getMinutes());
-            sendTimes('test', [t]);
+            sendTimes('test', [t], [stamp(n)]);
           } }, ctx.ui.icon('clock'), 'Test: 1 Wecker in 2 Minuten'));
 
         el.append(h('div', {},
