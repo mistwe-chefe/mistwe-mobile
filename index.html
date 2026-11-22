@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.3.1">
+  <meta name="app-version" content="1.4.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -201,6 +201,44 @@
   .iv .iv-field span { color: var(--muted); font-size: .88rem; }
   .iv.invalid input { border-color: var(--danger); }
   /* ==== ENDE MODUL-CSS: todos ==== */
+
+  /* ==== MODUL-CSS: ernaehrung ==== */
+  [data-module="ernaehrung"] .head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  [data-module="ernaehrung"] .head h2 { flex: 1; margin: 0; }
+  [data-module="ernaehrung"] .daynav { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+  [data-module="ernaehrung"] .daynav .btn { padding: 0 10px; }
+  [data-module="ernaehrung"] .day-label { flex: 1; position: relative; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; cursor: pointer; border-radius: var(--radius-sm); }
+  [data-module="ernaehrung"] .day-label:hover { background: var(--surface-2); }
+  [data-module="ernaehrung"] .day-label input[type=date] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; }
+  [data-module="ernaehrung"] .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  [data-module="ernaehrung"] .unit-in { display: flex; align-items: center; gap: 6px; }
+  [data-module="ernaehrung"] .unit-in input { text-align: right; font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 0; }
+  [data-module="ernaehrung"] .unit-in span { color: var(--muted); font-size: .9rem; min-width: 2.2em; }
+  [data-module="ernaehrung"] .add-row { display: flex; gap: 8px; margin-top: 10px; }
+  [data-module="ernaehrung"] .add-row input { flex: 1; min-width: 0; }
+  [data-module="ernaehrung"] .claude-btn { margin-top: 8px; }
+  [data-module="ernaehrung"] .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 12px 0 4px; }
+  [data-module="ernaehrung"] .stat { background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px; }
+  [data-module="ernaehrung"] .stat .v { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  [data-module="ernaehrung"] .stat .l { font-size: .78rem; color: var(--muted); }
+  [data-module="ernaehrung"] .chart-title { display: flex; justify-content: space-between; align-items: baseline; margin-top: 16px; font-weight: 600; }
+  [data-module="ernaehrung"] .chart { position: relative; padding-top: 30px; touch-action: pan-y; }
+  [data-module="ernaehrung"] .chart svg { width: 100%; height: auto; display: block; overflow: visible; user-select: none; -webkit-user-select: none; }
+  [data-module="ernaehrung"] .chart .grid { stroke: var(--border); stroke-width: 1; }
+  [data-module="ernaehrung"] .chart .axis-t { fill: var(--muted); font-size: 12px; font-family: var(--font); }
+  [data-module="ernaehrung"] .chart .line { fill: none; stroke: var(--primary); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  [data-module="ernaehrung"] .chart .dot { fill: var(--primary); stroke: var(--surface); stroke-width: 2; }
+  [data-module="ernaehrung"] .chart .bar { fill: var(--primary); }
+  [data-module="ernaehrung"] .chart .goal { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  [data-module="ernaehrung"] .chart .goal-t { stroke: var(--surface); stroke-width: 4px; paint-order: stroke; stroke-linejoin: round; }
+  [data-module="ernaehrung"] .chart .guide { stroke: var(--muted); stroke-width: 1; }
+  [data-module="ernaehrung"] .chart .hl { fill: var(--primary); stroke: var(--surface); stroke-width: 2; }
+  [data-module="ernaehrung"] .chart .tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: var(--radius-sm); padding: 3px 8px; font-size: .8rem; pointer-events: none; white-space: nowrap; }
+  [data-module="ernaehrung"] .chart .empty { padding: 18px 8px; }
+  [data-module="ernaehrung"] .hist .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  [data-module="ernaehrung"] .hist tbody tr { cursor: pointer; }
+  [data-module="ernaehrung"] .hist tbody tr:hover { background: var(--surface-2); }
+  /* ==== ENDE MODUL-CSS: ernaehrung ==== */
   </style>
 </head>
 <body>
@@ -223,7 +261,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.3.1',
+    APP_VERSION: '1.4.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -239,6 +277,12 @@
   };
 
   const CHANGELOG = [
+    { version: '1.4.0', date: '2026-11-22', items: [
+      'Neues Modul ernaehrung: Gewicht und Kalorien pro Tag eintragen (auch für vergangene Tage), kcal lassen sich dazurechnen',
+      'Modul ernaehrung: Verlauf als Diagramme (7 Tage bis alles) mit Kennzahlen, Zielen (kcal/Tag, Zielgewicht) und Eintragstabelle; Daten werden zwischen Geräten synchronisiert',
+      'Modul ernaehrung: Knopf „kcal mit Claude schätzen“ öffnet einen neuen temporären Claude-Chat mit vorbereitetem Prompt',
+      'Kern: neue Symbole (Waage, Pfeil links, externer Link)',
+    ] },
     { version: '1.3.1', date: '2026-11-22', items: [
       'Neues App-Symbol (Taschenmesser) unter neuen Dateinamen, damit iOS beim Hinzufügen zum Home-Bildschirm nicht mehr das alte Symbol aus dem Zwischenspeicher nimmt',
     ] },
@@ -733,6 +777,9 @@
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
     chevron: '<path d="m9 6 6 6-6 6"/>',
+    'chevron-left': '<path d="m15 6-6 6 6 6"/>',
+    scale: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7.5 11a6 6 0 0 1 9 0"/><path d="m12 11 1.8-2.6"/>',
+    external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   };
   const ICON_CACHE = new Map();
 
@@ -2611,6 +2658,292 @@
     });
   })();
   /* ==== ENDE MODUL: todos ==== */
+  </script>
+
+
+  <script>
+  /* ==== MODUL: ernaehrung ==== */
+  (() => {
+    let col;
+    const pad = n => String(n).padStart(2, '0');
+    const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const dateOf = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+    const addDays = (k, n) => { const d = dateOf(k); d.setDate(d.getDate() + n); return keyOf(d); };
+    const todayKey = () => keyOf(new Date());
+    const isKey = k => /^\d{4}-\d{2}-\d{2}$/.test(String(k || ''));
+    /** Zahl aus Eingabe („72,4“, „1.850“) – null = leer, NaN = ungültig */
+    const parseNum = (s, thousands = false) => {
+      let t = String(s ?? '').replace(/\s/g, '');
+      if (thousands) t = t.replace(/\.(?=\d{3}$)/, '');
+      t = t.replace(',', '.');
+      if (!t) return null;
+      const n = Number(t);
+      return Number.isFinite(n) ? n : NaN;
+    };
+    const fmtKg = n => n == null ? '–' : n.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const fmtKcal = n => n == null ? '–' : Math.round(n).toLocaleString('de-DE');
+    const fmtShort = k => dateOf(k).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+    const fmtLong = k => {
+      const t = todayKey(), d = dateOf(k);
+      const pre = k === t ? 'Heute, ' : k === addDays(t, -1) ? 'Gestern, ' : '';
+      return pre + d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+    };
+
+    /* Temporärer Claude-Chat (Inkognito) mit vorausgefülltem Prompt. Die Lebensmittel fügt der Nutzer dort selbst ein. */
+    const CLAUDE_PROMPT = 'Schätze bitte die Kalorien (kcal) der Lebensmittel und Getränke, die ich unten aufliste. Wenn keine Menge dabeisteht, nimm eine übliche Portion an. Nenne pro Position die angenommene Menge und die kcal und am Ende die Gesamtsumme als eine einzige Zahl.\n\nLebensmittel:\n';
+    const claudeUrl = () => 'https://claude.ai/new?incognito=true&q=' + encodeURIComponent(CLAUDE_PROMPT);
+
+    const RANGES = [
+      { id: '7', label: '7 Tage', days: 7 },
+      { id: '30', label: '30 Tage', days: 30 },
+      { id: '90', label: '90 Tage', days: 90 },
+      { id: '365', label: '1 Jahr', days: 365 },
+      { id: 'all', label: 'Alles', days: null },
+    ];
+
+    /* ---- Diagramme (SVG, ohne Bibliothek; Text immer über textContent) ---- */
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const s = (tag, attrs = {}, text) => {
+      const el = document.createElementNS(SVGNS, tag);
+      for (const [k, v] of Object.entries(attrs)) if (v != null) el.setAttribute(k, String(v));
+      if (text != null) el.textContent = String(text);
+      return el;
+    };
+    function niceTicks(min, max, count = 4) {
+      const span = max - min || 1;
+      const raw = span / count, mag = 10 ** Math.floor(Math.log10(raw));
+      const step = [1, 2, 2.5, 5, 10].map(f => f * mag).find(x => x >= raw) || 10 * mag;
+      const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step;
+      const ticks = [];
+      for (let v = lo; v <= hi + step / 2; v += step) ticks.push(+v.toFixed(6));
+      return { lo, hi, ticks };
+    }
+    /** type: 'line' | 'bar'; values: Map<Tag, Zahl>; goal: Ziellinie oder null */
+    function chart(ctx, { title, keys, values, type, goal, fmt, unit, zero, width }) {
+      const { h } = ctx.ui;
+      // viewBox in echter Pixelbreite, damit Schrift und Punkte auf jedem Gerät gleich groß sind
+      const W = Math.max(280, Math.round(width || 640)), H = 190, L = 46, R = 8, T = 10, B = 24;
+      const pw = W - L - R, ph = H - T - B;
+      const pts = keys.map((k, i) => ({ k, i, v: values.get(k) })).filter(p => p.v != null);
+      const wrap = h('div', { class: 'chart' });
+      if (!pts.length) { wrap.append(h('div', { class: 'empty small' }, 'Keine Einträge in diesem Zeitraum.')); return wrap; }
+      let vmin = Math.min(...pts.map(p => p.v)), vmax = Math.max(...pts.map(p => p.v));
+      if (goal != null) { vmin = Math.min(vmin, goal); vmax = Math.max(vmax, goal); }
+      if (zero) vmin = 0;
+      else { const pv = Math.max(0.5, (vmax - vmin) * 0.1); vmin -= pv; vmax += pv; }
+      if (vmax <= vmin) vmax = vmin + 1;
+      const { lo, hi, ticks } = niceTicks(vmin, vmax);
+      const n = keys.length, slot = pw / n;
+      const x = i => L + slot * (i + 0.5);
+      const y = v => T + ph - ((v - lo) / (hi - lo || 1)) * ph;
+      const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${title}: ${pts.length} Werte, siehe Tabelle „Einträge“` });
+      ticks.forEach(t => {
+        svg.append(s('line', { class: 'grid', x1: L, x2: W - R, y1: y(t), y2: y(t) }));
+        svg.append(s('text', { class: 'axis-t', x: L - 6, y: y(t) + 4, 'text-anchor': 'end' }, fmt(t)));
+      });
+      [...new Set([0, Math.floor((n - 1) / 2), n - 1])].forEach((i, j, arr) => {
+        const anchor = arr.length === 1 ? 'middle' : j === 0 ? 'start' : j === arr.length - 1 ? 'end' : 'middle';
+        const xx = anchor === 'start' ? L : anchor === 'end' ? W - R : x(i);
+        svg.append(s('text', { class: 'axis-t', x: xx, y: H - 6, 'text-anchor': anchor }, fmtShort(keys[i])));
+      });
+      if (type === 'bar') {
+        const bw = Math.max(1, Math.min(28, slot - 2));
+        const base = y(Math.max(lo, 0));
+        pts.forEach(p => {
+          const x0 = x(p.i) - bw / 2, y0 = Math.min(y(p.v), base - 1);
+          const r = Math.min(4, bw / 2, base - y0);
+          svg.append(s('path', { class: 'bar', d: `M${x0} ${base}V${y0 + r}Q${x0} ${y0} ${x0 + r} ${y0}H${x0 + bw - r}Q${x0 + bw} ${y0} ${x0 + bw} ${y0 + r}V${base}Z` }));
+        });
+      } else {
+        svg.append(s('path', { class: 'line', d: pts.map((p, j) => `${j ? 'L' : 'M'}${x(p.i).toFixed(1)} ${y(p.v).toFixed(1)}`).join('') }));
+        if (pts.length <= 45) pts.forEach(p => svg.append(s('circle', { class: 'dot', cx: x(p.i), cy: y(p.v), r: 4 })));
+      }
+      if (goal != null) {
+        svg.append(s('line', { class: 'goal', x1: L, x2: W - R, y1: y(goal), y2: y(goal) }));
+        svg.append(s('text', { class: 'axis-t goal-t', x: L + 4, y: y(goal) - 5, 'text-anchor': 'start' }, `Ziel ${fmt(goal)}`));
+      }
+      // Hover / Antippen: Hilfslinie + Wert
+      const guide = s('line', { class: 'guide', y1: T, y2: T + ph, visibility: 'hidden' });
+      const hl = s('circle', { class: 'hl', r: 5, visibility: 'hidden' });
+      const hit = s('rect', { x: L, y: T, width: pw, height: ph, fill: 'transparent' });
+      svg.append(guide, hl, hit);
+      const tip = h('div', { class: 'tip', hidden: true });
+      const show = e => {
+        const rect = svg.getBoundingClientRect();
+        const sx = (e.clientX - rect.left) / rect.width * W;
+        const i = Math.max(0, Math.min(n - 1, Math.floor((sx - L) / slot)));
+        let best = pts[0];
+        for (const p of pts) if (Math.abs(p.i - i) < Math.abs(best.i - i)) best = p;
+        const gx = x(best.i);
+        guide.setAttribute('x1', gx); guide.setAttribute('x2', gx); guide.setAttribute('visibility', 'visible');
+        if (type === 'line') { hl.setAttribute('cx', gx); hl.setAttribute('cy', y(best.v)); hl.setAttribute('visibility', 'visible'); }
+        tip.textContent = `${fmtLong(best.k)}: ${fmt(best.v)} ${unit}`;
+        tip.style.left = Math.max(14, Math.min(86, gx / W * 100)) + '%';
+        tip.hidden = false;
+      };
+      const hide = () => { guide.setAttribute('visibility', 'hidden'); hl.setAttribute('visibility', 'hidden'); tip.hidden = true; };
+      hit.addEventListener('pointermove', show);
+      hit.addEventListener('pointerdown', show);
+      hit.addEventListener('pointerleave', hide);
+      wrap.append(tip, svg);
+      return wrap;
+    }
+
+    /** Einstellungen des Moduls: Ziele */
+    async function openSettings(ctx) {
+      const { h, dialog, toast } = ctx.ui;
+      const kg = await ctx.settings.get('weightGoal', null), kc = await ctx.settings.get('kcalGoal', null);
+      const kcIn = h('input', { type: 'text', inputmode: 'numeric', value: kc != null ? String(kc) : '', placeholder: 'z. B. 2000', autocomplete: 'off' });
+      const kgIn = h('input', { type: 'text', inputmode: 'decimal', value: kg != null ? fmtKg(kg) : '', placeholder: 'z. B. 75,0', autocomplete: 'off' });
+      const msg = h('div', { class: 'small', style: { color: 'var(--danger)', minHeight: '1.2em' } });
+      const ok = await dialog(close => h('form', { onsubmit: e => {
+        e.preventDefault();
+        const a = parseNum(kcIn.value, true), b = parseNum(kgIn.value);
+        if (Number.isNaN(a) || (a != null && (a < 500 || a > 10000))) { msg.textContent = 'kcal-Ziel bitte zwischen 500 und 10.000.'; return; }
+        if (Number.isNaN(b) || (b != null && (b < 20 || b > 400))) { msg.textContent = 'Zielgewicht bitte zwischen 20 und 400 kg.'; return; }
+        close(true);
+      } },
+        h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'Ziele'),
+        h('div', { class: 'stack' },
+          h('label', { class: 'field' }, h('span', {}, 'kcal pro Tag (leer = kein Ziel)'), kcIn),
+          h('label', { class: 'field' }, h('span', {}, 'Zielgewicht in kg (leer = kein Ziel)'), kgIn),
+          h('p', { class: 'small muted', style: { margin: 0 } }, 'Die Ziele erscheinen als gestrichelte Linie in den Diagrammen.'),
+          msg),
+        h('div', { class: 'dlg-actions' },
+          h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
+          h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'Ziele' });
+      if (!ok) return;
+      const a = parseNum(kcIn.value, true), b = parseNum(kgIn.value);
+      await ctx.settings.set('kcalGoal', a == null ? null : Math.round(a));
+      await ctx.settings.set('weightGoal', b == null ? null : Math.round(b * 10) / 10);
+      toast('Gespeichert');
+    }
+
+    App.register({
+      id: 'ernaehrung', name: 'Ernährung', icon: 'scale', order: 20,
+      description: 'Gewicht und Kalorien pro Tag mit Verlauf', category: 'Gesundheit',
+      version: '1.0.0', schemaVersion: 1, migrations: {},
+
+      /* Datensatz (ernaehrung/tage, synchronisiert): id = Datum „JJJJ-MM-TT“ (ein Eintrag pro Tag)
+         { id, createdAt, updatedAt, deletedAt, date: 'JJJJ-MM-TT', weightKg: Zahl|null, kcal: Zahl|null } */
+      async init(ctx) { col = ctx.store.collection('tage', { sync: true }); },
+
+      async mount(el, ctx) {
+        const { h, toast } = ctx.ui;
+        let day = todayKey();
+        let range = await ctx.settings.get('range', '30');
+        const editBox = h('div'), chartsBox = h('div'), histBox = h('div');
+        el.append(
+          h('div', { class: 'head' },
+            h('h2', {}, 'Ernährung'),
+            h('button', { class: 'btn btn-ghost', title: 'Ziele', 'aria-label': 'Ziele', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, ctx.ui.icon('settings'))),
+          editBox, chartsBox, histBox);
+
+        /* Eintrag für einen Tag */
+        const renderEdit = async () => {
+          const rec = await col.get(day);
+          const today = todayKey();
+          const wIn = h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': 'Gewicht in kg', value: rec && rec.weightKg != null ? fmtKg(rec.weightKg) : '' });
+          const kIn = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': 'Kilokalorien', value: rec && rec.kcal != null ? String(Math.round(rec.kcal)) : '' });
+          const addIn = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: 'kcal dazurechnen, z. B. 450', 'aria-label': 'kcal zum Tageswert dazurechnen' });
+          const dateIn = h('input', { type: 'date', value: day, max: today, 'aria-label': 'Tag wählen', onchange: () => { if (isKey(dateIn.value) && dateIn.value <= todayKey()) { day = dateIn.value; renderEdit(); } } });
+
+          const save = async () => {
+            const w = parseNum(wIn.value), k = parseNum(kIn.value, true);
+            if (Number.isNaN(w) || (w != null && (w < 20 || w > 400))) { toast('Gewicht bitte in kg zwischen 20 und 400 eingeben', { type: 'error' }); wIn.focus(); return; }
+            if (Number.isNaN(k) || (k != null && (k < 0 || k > 20000))) { toast('kcal bitte zwischen 0 und 20.000 eingeben', { type: 'error' }); kIn.focus(); return; }
+            const patch = { date: day, weightKg: w == null ? null : Math.round(w * 10) / 10, kcal: k == null ? null : Math.round(k) };
+            const cur = await col.get(day);
+            try {
+              if (patch.weightKg == null && patch.kcal == null) {
+                if (cur) { await col.remove(day); toast(`Eintrag für ${fmtLong(day)} gelöscht`); }
+                return;
+              }
+              if (cur) await col.update(day, patch); else await col.add({ id: day, ...patch });
+              toast(`Gespeichert: ${fmtLong(day)}`);
+            } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
+          };
+          const add = () => {
+            const a = parseNum(addIn.value, true);
+            if (a == null || Number.isNaN(a) || a <= 0) { addIn.focus(); return; }
+            const cur = parseNum(kIn.value, true);
+            kIn.value = String(Math.round((cur && !Number.isNaN(cur) ? cur : 0) + a));
+            addIn.value = '';
+            save();
+          };
+          addIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); add(); } });
+
+          editBox.replaceChildren(h('form', { class: 'card', onsubmit: e => { e.preventDefault(); save(); } },
+            h('div', { class: 'daynav' },
+              h('button', { type: 'button', class: 'btn btn-ghost', 'aria-label': 'Vorheriger Tag', onclick: () => { day = addDays(day, -1); renderEdit(); } }, ctx.ui.icon('chevron-left')),
+              h('label', { class: 'day-label' }, h('span', {}, fmtLong(day)), ctx.ui.icon('calendar', 'muted'), dateIn),
+              h('button', { type: 'button', class: 'btn btn-ghost', 'aria-label': 'Nächster Tag', disabled: day >= today, onclick: () => { day = addDays(day, 1); renderEdit(); } }, ctx.ui.icon('chevron'))),
+            h('div', { class: 'fields' },
+              h('label', { class: 'field' }, h('span', {}, 'Gewicht'), h('div', { class: 'unit-in' }, wIn, h('span', {}, 'kg'))),
+              h('label', { class: 'field' }, h('span', {}, 'Kalorien'), h('div', { class: 'unit-in' }, kIn, h('span', {}, 'kcal')))),
+            h('div', { class: 'add-row' }, addIn, h('button', { type: 'button', class: 'btn', onclick: add, disabled: ctx.readOnly }, ctx.ui.icon('plus'), 'Dazu')),
+            h('button', { type: 'submit', class: 'btn btn-primary btn-block', style: { marginTop: '10px' }, disabled: ctx.readOnly }, ctx.ui.icon('save'), 'Speichern'),
+            h('a', { class: 'btn btn-block claude-btn', href: claudeUrl(), target: '_blank', rel: 'noopener noreferrer' }, ctx.ui.icon('external'), 'kcal mit Claude schätzen'),
+            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Öffnet einen neuen temporären Chat. Füge dort deine Lebensmittel ein und trage die Summe hier ein. Beide Felder leeren und speichern löscht den Eintrag des Tages.')));
+        };
+
+        /* Verlauf: Kennzahlen, Diagramme, Tabelle */
+        const renderCharts = async () => {
+          const all = (await col.all()).filter(r => isKey(r.id)).sort((a, b) => (a.id < b.id ? -1 : 1));
+          const kcalGoal = await ctx.settings.get('kcalGoal', null), weightGoal = await ctx.settings.get('weightGoal', null);
+          const end = todayKey();
+          const R = RANGES.find(r => r.id === range) || RANGES[1];
+          const start = R.days ? addDays(end, -(R.days - 1)) : (all.length && all[0].id < end ? all[0].id : end);
+          const keys = [];
+          for (let k = start; k <= end; k = addDays(k, 1)) keys.push(k);
+          const inRange = all.filter(r => r.id >= start && r.id <= end);
+          const wMap = new Map(), kMap = new Map();
+          inRange.forEach(r => { if (r.weightKg != null) wMap.set(r.id, r.weightKg); if (r.kcal != null) kMap.set(r.id, r.kcal); });
+
+          const lastW = [...all].reverse().find(r => r.weightKg != null);
+          const wIn = inRange.filter(r => r.weightKg != null);
+          const delta = wIn.length >= 2 ? wIn[wIn.length - 1].weightKg - wIn[0].weightKg : null;
+          const kIn = inRange.filter(r => r.kcal != null);
+          const avgK = kIn.length ? kIn.reduce((a, r) => a + r.kcal, 0) / kIn.length : null;
+          const cw = Math.max(280, (chartsBox.clientWidth || el.clientWidth || 360) - 34);
+          const stat = (v, l) => h('div', { class: 'stat' }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, l));
+
+          chartsBox.replaceChildren(h('div', { class: 'card' },
+            h('div', { class: 'chips scroll', role: 'radiogroup', 'aria-label': 'Zeitraum' }, RANGES.map(r => h('button', { type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(r.id === range), onclick: async () => { range = r.id; renderCharts(); await ctx.settings.set('range', range); } }, r.label))),
+            h('div', { class: 'stats' },
+              stat(lastW ? `${fmtKg(lastW.weightKg)} kg` : '–', lastW ? `Aktuell (${fmtLong(lastW.id)})` : 'Aktuelles Gewicht'),
+              stat(delta == null ? '–' : `${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${fmtKg(Math.abs(delta))} kg`, 'Veränderung im Zeitraum'),
+              stat(avgK == null ? '–' : `${fmtKcal(avgK)} kcal`, `Ø pro Tag (${kIn.length} ${kIn.length === 1 ? 'Tag' : 'Tage'})${kcalGoal ? ` · Ziel ${fmtKcal(kcalGoal)}` : ''}`)),
+            h('div', { class: 'chart-title' }, h('span', {}, 'Gewicht'), h('span', { class: 'small muted' }, 'kg')),
+            chart(ctx, { title: 'Gewicht', keys, values: wMap, type: 'line', goal: weightGoal, fmt: v => fmtKg(v), unit: 'kg', zero: false, width: cw }),
+            h('div', { class: 'chart-title' }, h('span', {}, 'Kalorien'), h('span', { class: 'small muted' }, 'kcal pro Tag')),
+            chart(ctx, { title: 'Kalorien', keys, values: kMap, type: 'bar', goal: kcalGoal, fmt: v => fmtKcal(v), unit: 'kcal', zero: true, width: cw })));
+
+          const rows = [...inRange].reverse().slice(0, 120);
+          histBox.replaceChildren(rows.length ? h('details', { class: 'fold' },
+            h('summary', {}, `Einträge (${inRange.length})`),
+            h('div', { class: 'card' }, h('table', { class: 'simple hist' },
+              h('thead', {}, h('tr', {}, h('th', {}, 'Tag'), h('th', { class: 'num' }, 'Gewicht'), h('th', { class: 'num' }, 'kcal'))),
+              h('tbody', {}, rows.map(r => h('tr', { title: 'Bearbeiten', onclick: () => { day = r.id; renderEdit(); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
+                h('td', {}, fmtLong(r.id)),
+                h('td', { class: 'num' }, r.weightKg != null ? `${fmtKg(r.weightKg)} kg` : '–'),
+                h('td', { class: 'num' }, r.kcal != null ? fmtKcal(r.kcal) : '–'))))),
+              inRange.length > rows.length ? h('p', { class: 'small muted' }, `Die ${rows.length} neuesten von ${inRange.length} Einträgen.`) : null)) : null);
+        };
+
+        const re = ctx.util.debounce(renderCharts, 150);
+        ctx.events.on('store:changed', e => {
+          if (e.moduleId !== 'ernaehrung') return;
+          re();
+          if (e.remote) renderEdit(); // Änderung von einem anderen Gerät/Tab
+        });
+        ctx.events.on('app:visible', () => { if (day > todayKey()) day = todayKey(); re(); });
+        await renderEdit();
+        await renderCharts();
+      },
+    });
+  })();
+  /* ==== ENDE MODUL: ernaehrung ==== */
   </script>
 
   <script>/* ==== BOOT ==== */ App.boot();</script>

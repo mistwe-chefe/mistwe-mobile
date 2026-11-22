@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.0 – 2026-11-22
+
+- Neues Modul **Ernährung** (`ernaehrung`): Gewicht und Kalorien pro Tag eintragen (auch für vergangene Tage), kcal lassen sich dazurechnen.
+- Verlauf als Diagramme (7 Tage, 30 Tage, 90 Tage, 1 Jahr, alles) mit Kennzahlen, Zielen (kcal/Tag, Zielgewicht) und Eintragstabelle. Die Einträge werden wie die ToDos verschlüsselt zwischen Geräten synchronisiert.
+- Knopf „kcal mit Claude schätzen“ öffnet einen neuen temporären Claude-Chat mit vorbereitetem Prompt.
+- Kern: neue Symbole (Waage, Pfeil links, externer Link).
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert.
+
 ## 1.3.1 – 2026-11-22
 
 - App-Symbol unter neuen Dateinamen (`icons/*-v2.png`): iOS hatte beim Hinzufügen zum Home-Bildschirm noch das alte `apple-touch-icon.png` aus dem Zwischenspeicher verwendet. Die alten Dateien bleiben (mit neuem Motiv) für ältere Versionen erhalten.
