@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.1.3">
+  <meta name="app-version" content="1.2.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
@@ -177,10 +177,19 @@
   [data-module="todos"] .t-title { font-weight: 500; word-break: break-word; }
   [data-module="todos"] .t-meta { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 5px; }
   [data-module="todos"] .t-note { font-size: .85rem; color: var(--muted); margin-top: 3px; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  [data-module="todos"] .fired { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; }
-  [data-module="todos"] .fired .t-title { font-weight: 600; }
-  [data-module="todos"] .fired .row { margin-top: 8px; gap: 6px; }
+  [data-module="todos"] { padding-bottom: 72px; }
   [data-module="todos"] .done-actions { display: flex; gap: 4px; align-items: center; padding-top: 4px; }
+  [data-module="todos"] .head { display: flex; align-items: center; gap: 8px; }
+  [data-module="todos"] .head h2 { flex: 1; margin: 0; }
+  [data-module="todos"] .fab { position: fixed; z-index: 25; right: 16px; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); border-radius: 999px; min-height: 52px; padding: 0 22px; font-weight: 600; box-shadow: 0 6px 18px rgba(37,99,235,.35); }
+  @media (min-width: 900px) { [data-module="todos"] .fab { bottom: 28px; right: 32px; } }
+  body:has([data-module="todos"] .fab) .toasts { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 84px); }
+  @media (min-width: 900px) { body:has([data-module="todos"] .fab) .toasts { bottom: 96px; } }
+  [data-module="todos"] li.todo.flash { animation: todo-flash 2.2s ease-out; }
+  @keyframes todo-flash { 0%, 40% { background: var(--primary-bg); } 100% { background: transparent; } }
+  dialog.dlg .composer .lbl { font-size: .8rem; color: var(--muted); margin: 12px 0 6px; font-weight: 600; }
+  dialog.dlg .composer .preview { font-size: .85rem; color: var(--muted); margin-top: 10px; }
+  dialog.dlg .composer .dl-row input { width: 100%; }
   /* ==== ENDE MODUL-CSS: todos ==== */
   </style>
 </head>
@@ -204,7 +213,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.1.3',
+    APP_VERSION: '1.2.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -220,6 +229,14 @@
   };
 
   const CHANGELOG = [
+    { version: '1.2.0', date: '2026-11-22', items: [
+      'Modul todos: aktive ToDos stehen oben; neues ToDo über den Knopf „Neues ToDo“ unten (Fenster über dem Modul)',
+      'Modul todos: Bereich „Erinnert“ entfernt; Öffnen des Moduls gilt als gesehen',
+      'Modul todos: eigene Einstellungen (Standard-Stufe, Abstand bei Überfälligkeit) direkt im Modul über ⚙️',
+      'Antippen einer Benachrichtigung öffnet das ToDo-Modul statt des Bearbeiten-Fensters',
+      'Kern/Service Worker 1.2.0: Benachrichtigungen zeigen den ToDo-Namen zuverlässig (lokaler Namensindex), bis zu 5 Einzelmitteilungen, Sammelmitteilung mit Namen im Titel',
+      'Modul einstellungen: nur noch modulübergreifende Einstellungen',
+    ] },
     { version: '1.1.3', date: '2026-11-22', items: [
       'Kern: Service Worker 1.1.3 protokolliert jeden empfangenen Push (Diagnose: kommt der Push bei geschlossener App an?) und zeigt die Mitteilung spätestens nach 1,5 s',
       'Kern: Push-Abo wird beim Start einmal neu gemeldet, damit der Server verworfene alte Abos dieses Geräts entfernt',
@@ -1463,7 +1480,7 @@
         const reg = this.reg || (navigator.serviceWorker && await navigator.serviceWorker.getRegistration());
         if (reg && reg.showNotification) { await reg.showNotification(title, { ...opts, actions: actions || [] }); return true; }
       } catch (e) { Log.warn('showNotification: ' + e.message); }
-      try { const n = new Notification(title, opts); n.onclick = () => { window.focus(); if (data && data.m) Router.navigate(`${data.m}/${data.id}`); n.close(); }; return true; }
+      try { const n = new Notification(title, opts); n.onclick = () => { window.focus(); if (data && data.m) Router.navigate(data.m); n.close(); }; return true; }
       catch (e) { Log.warn('Notification: ' + e.message); return false; }
     },
     setBadge(n) {
@@ -1574,14 +1591,15 @@
       } catch (e) { Log.error('Erinnerungstakt: ' + e.message); }
     },
     async announce(fired, now, catchUp) {
-      if (fired.length <= 3 && !(catchUp && fired.length > 1)) {
+      if (fired.length <= 5) {
         for (const { def, r, atDeadline } of fired) {
           const body = this.describe(r, now, atDeadline);
-          await Notify.show({ title: `${def.icon} ${r.title || def.name}`, body, tag: `${def.id}-${r.id}`, data: { m: def.id, id: r.id }, actions: [{ action: 'done', title: '✓ Erledigt' }, { action: 'snooze', title: '⏰ 1 Std später' }] });
-          if (document.visibilityState === 'visible') UI.toast(`🔔 ${r.title || def.name} – ${body}`, { action: 'Ansehen', onAction: () => Router.navigate(def.id) });
+          await Notify.show({ title: `🔔 ${r.title || def.name}`, body, tag: `${def.id}-${r.id}`, data: { m: def.id, id: r.id }, actions: [{ action: 'done', title: '✓ Erledigt' }, { action: 'snooze', title: '⏰ 1 Std später' }] });
+          if (document.visibilityState === 'visible') UI.toast(`🔔 ${r.title || def.name} – ${body}`, { action: 'Öffnen', onAction: () => Router.navigate(def.id) });
         }
       } else {
-        const title = catchUp ? `🔔 ${fired.length} Erinnerungen (verpasst)` : `🔔 ${fired.length} Erinnerungen fällig`;
+        const first = fired[0].r.title || fired[0].def.name;
+        const title = `🔔 ${first} + ${fired.length - 1} weitere${catchUp ? ' (verpasst)' : ''}`;
         const body = fired.slice(0, 6).map(f => '• ' + (f.r.title || f.def.name)).join('\n') + (fired.length > 6 ? `\n… und ${fired.length - 6} weitere` : '');
         await Notify.show({ title, body, tag: 'pa-summary', data: { m: fired[0].def.id } });
         if (document.visibilityState === 'visible') UI.toast(title, { action: 'Ansehen', onAction: () => Router.navigate(fired[0].def.id) });
@@ -1613,7 +1631,22 @@
       if (action === 'done') await api.done(id);
       Events.emit('reminders:changed', { moduleId: m });
     },
+    /** Lokaler Namensindex für den Service Worker (meta.notifyTitles), damit Push-Mitteilungen den ToDo-Namen zeigen,
+        auch wenn das Entschlüsseln im Service Worker zu lange dauert. Bleibt auf dem Gerät, geht nie an den Server. */
+    async syncTitles() {
+      try {
+        const map = {};
+        for (const def of Registry.modules.values()) {
+          for (const { v } of await Store.kvByCollection(def.id, this.C)) if (!v.deletedAt && !v.done && v.title) map[`${def.id}/${v.id}`] = String(v.title).slice(0, 120);
+        }
+        await Store.metaSet('notifyTitles', map);
+      } catch (e) { Log.warn('Namensindex: ' + e.message); }
+    },
     start() {
+      const titles = U.debounce(() => this.syncTitles(), 800);
+      this.syncTitles();
+      Events.on('reminders:changed', titles);
+      Events.on('store:changed', e => { if (e && e.collection === this.C) titles(); });
       this.tick({ catchUp: true });
       setInterval(() => this.tick(), CONFIG.TICK_MS);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { this.tick({ catchUp: true }); Events.emit('app:visible', {}); } });
@@ -2145,8 +2178,6 @@
           const hidden = S.Settings.get('hiddenModules');
           const mods = S.Registry.list({ includeHidden: true }).filter(m => !m.system);
           parts.module.replaceChildren(card('🧩 Module', ...mods.map(m => {
-            const settingsBox = h('div');
-            if (typeof m.settings === 'function') S.Registry.call(m.id, 'settings', settingsBox).catch(e => settingsBox.replaceChildren(h('span', { class: 'small' }, '⚠️ ' + e.message)));
             return h('div', { style: { borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' } },
               h('div', { class: 'row' }, h('strong', { class: 'grow' }, `${m.icon} ${m.name}`), h('span', { class: 'pill' }, `v${m.version || '?'} · Schema ${m.schemaVersion}`)),
               S.Registry.isReadOnly(m.id) ? h('div', { class: 'ro-banner' }, '🔒 ' + S.Registry.st(m.id).lockReason) : null,
@@ -2156,7 +2187,6 @@
                 await S.Settings.set('hiddenModules', cur);
                 toast(v ? `${m.name} wird angezeigt` : `${m.name} ausgeblendet (Daten bleiben erhalten)`);
               }),
-              settingsBox,
               h('details', { class: 'fold' }, h('summary', {}, 'Gefahrenbereich'),
                 h('button', { class: 'btn btn-danger btn-sm', onclick: async () => {
                   if (!await confirm(`Alle Daten von „${m.name}“ löschen?`, { ok: 'Weiter', danger: true })) return;
@@ -2358,66 +2388,103 @@
       }
     }
 
+    /** Fenster „Neues ToDo“ – liegt über der Modul-Oberfläche */
+    async function openCreate(ctx) {
+      const { h, dialog, toast } = ctx.ui; const U = ctx.util;
+      const c = await cfg(ctx);
+      let stage = c.defaultStage, deadline = null;
+      const titleIn = h('input', { type: 'text', class: 'title-input', placeholder: 'Was ist zu tun?', enterkeyhint: 'done', 'aria-label': 'Titel', autocomplete: 'off', autofocus: true });
+      const noteIn = h('textarea', { 'aria-label': 'Notiz', placeholder: 'Notiz (optional)', rows: 2 });
+      const preview = h('div', { class: 'preview' });
+      const upd = () => {
+        const n = ctx.reminders.preview({ stage, deadline, overdueMin: c.overdueMin });
+        preview.textContent = `Erste Erinnerung ${U.relTime(n)} (${U.formatDate(n)})` + (deadline ? ' – danach immer häufiger bis zur Abgabe.' : `, danach im Abstand von ${ctx.reminders.stageLabel(stage)}, bis du es abhakst.`);
+      };
+      const dl = deadlineEditor(ctx, deadline, v => { deadline = v; upd(); });
+      upd();
+      const ok = await dialog(close => {
+        const form = h('form', { class: 'composer', onsubmit: e => { e.preventDefault(); if (titleIn.value.trim()) close(true); else titleIn.focus(); } },
+          h('h3', {}, 'Neues ToDo'),
+          titleIn,
+          h('div', { class: 'lbl' }, 'Stufe – so oft wirst du erinnert, bis es erledigt ist'),
+          stageChips(ctx, stage, v => { stage = v; upd(); }),
+          h('div', { class: 'lbl' }, 'Abgabe (optional) – je näher, desto öfter'),
+          dl.el,
+          h('div', { style: { marginTop: '10px' } }, noteIn),
+          preview,
+          h('div', { class: 'dlg-actions' },
+            h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
+            h('button', { type: 'submit', class: 'btn btn-primary' }, 'Anlegen')));
+        titleIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); form.requestSubmit(); } });
+        return form;
+      }, { label: 'Neues ToDo' });
+      if (!ok) return;
+      try {
+        const t = await create(ctx, { title: titleIn.value.trim(), stage, deadline });
+        if (noteIn.value.trim()) await col.update(t.id, { note: noteIn.value });
+        if (ctx.notify.permission() === 'default') toast('Damit ich dich erinnern kann, erlaube Benachrichtigungen.', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
+        else toast('ToDo angelegt');
+      } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
+    }
+
+    /** Einstellungen des Moduls – direkt im Modul */
+    async function openSettings(ctx) {
+      const { h, dialog, toast } = ctx.ui;
+      const c = await cfg(ctx);
+      const stageSel = h('select', {}, ctx.reminders.STAGES.map(s => h('option', { value: s.id, selected: s.id === c.defaultStage }, s.label)));
+      const overSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: m === c.overdueMin }, `alle ${m} Minuten`)));
+      const ok = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close(true); } },
+        h('h3', {}, '⚙️ ToDo-Einstellungen'),
+        h('div', { class: 'stack' },
+          h('label', { class: 'field' }, h('span', {}, 'Standard-Stufe für neue ToDos'), stageSel),
+          h('label', { class: 'field' }, h('span', {}, 'Erinnern nach Ablauf der Abgabe (Standard für neue ToDos)'), overSel),
+          h('p', { class: 'small muted', style: { margin: 0 } }, 'Ruhezeiten und Benachrichtigungen gelten für alle Module – sie stehen im Tab „Einstellungen“.')),
+        h('div', { class: 'dlg-actions' },
+          h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
+          h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'ToDo-Einstellungen' });
+      if (!ok) return;
+      await ctx.settings.set('defaultStage', stageSel.value);
+      await ctx.settings.set('overdueMin', Number(overSel.value));
+      toast('Gespeichert');
+    }
+
+    /** Alle ausgelösten Erinnerungen als gesehen markieren (Modul ist offen und sichtbar) */
+    async function markAllSeen(ctx) {
+      if (ctx.readOnly || document.visibilityState !== 'visible') return;
+      const rems = await ctx.reminders.list();
+      for (const r of rems) if (r.unseen) await ctx.reminders.seen(r.id);
+    }
+
+    let highlightId = null;
+
     App.register({
       id: 'todos', name: 'ToDos', icon: '✅', order: 10,
       description: 'Aufgaben mit hartnäckigen Erinnerungen', category: 'Alltag',
-      version: '1.0.0', schemaVersion: 1, migrations: {},
+      version: '1.2.0', schemaVersion: 1, migrations: {},
 
       async init(ctx) { col = ctx.store.collection('todos', { sync: true }); },
 
       async mount(el, ctx, route) {
         const { h, toast } = ctx.ui; const U = ctx.util;
-        const c = await cfg(ctx);
-        let stage = c.defaultStage, deadline = null;
-
-        /* --- Eingabe --- */
-        const titleIn = h('input', { type: 'text', class: 'title-input', placeholder: 'Neues ToDo …', enterkeyhint: 'done', 'aria-label': 'Neues ToDo', autocomplete: 'off', disabled: ctx.readOnly });
-        const preview = h('div', { class: 'preview' });
-        const updPreview = () => {
-          const n = ctx.reminders.preview({ stage, deadline, overdueMin: c.overdueMin });
-          preview.textContent = `Erste Erinnerung ${U.relTime(n)} (${U.formatDate(n)})` + (deadline ? ' – danach immer häufiger bis zur Abgabe.' : `, danach im Abstand von ${ctx.reminders.stageLabel(stage)}, bis du es abhakst.`);
-        };
-        let chips = stageChips(ctx, stage, v => { stage = v; updPreview(); });
-        let dl = deadlineEditor(ctx, deadline, v => { deadline = v; updPreview(); });
-        const resetComposer = () => {
-          titleIn.value = ''; deadline = null; dl.set(null); updPreview(); titleIn.focus();
-        };
-        const form = h('form', { class: 'card composer', onsubmit: async e => {
-          e.preventDefault();
-          const title = titleIn.value.trim();
-          if (!title) { titleIn.focus(); return; }
-          const dlUsed = deadline;
-          resetComposer(); // sofort leeren, damit schnelles Weitertippen nicht verloren geht
-          try {
-            await create(ctx, { title, stage, deadline: dlUsed });
-            if (ctx.notify.permission() === 'default') {
-              toast('Damit ich dich erinnern kann, erlaube Benachrichtigungen.', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
-            } else toast('ToDo angelegt');
-          } catch (err) { if (!titleIn.value) titleIn.value = title; toast('Fehler: ' + err.message, { type: 'error' }); }
-        } },
-          titleIn,
-          h('div', { class: 'lbl' }, 'Stufe'), chips,
-          h('div', { class: 'lbl' }, 'Abgabe (optional)'), dl.el,
-          preview,
-          h('button', { type: 'submit', class: 'btn btn-primary btn-block', style: { marginTop: '12px' }, disabled: ctx.readOnly }, 'Hinzufügen'));
-        titleIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); form.requestSubmit(); } });
-        updPreview();
-
-        const firedBox = h('div');
         const openBox = h('div');
         const doneBox = h('div');
-        el.append(h('h2', {}, '✅ ToDos'), form, firedBox, openBox, doneBox);
+        el.append(
+          h('div', { class: 'head' },
+            h('h2', {}, '✅ ToDos'),
+            h('button', { class: 'btn btn-ghost', title: 'ToDo-Einstellungen', 'aria-label': 'ToDo-Einstellungen', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, '⚙️')),
+          openBox, doneBox,
+          h('button', { class: 'btn btn-primary fab', onclick: () => openCreate(ctx), disabled: ctx.readOnly }, '＋ Neues ToDo'));
 
         let doneOpen = false;
 
         const row = (t, now) => {
           const u = t.deadline && !t.done ? urgency(t.deadline, now) : null;
-          return h('li', { class: 'todo' + (t.done ? ' done' : '') + (u === 'red' ? ' overdue' : u === 'orange' ? ' soon' : ''), 'data-id': t.id },
+          return h('li', { class: 'todo' + (t.done ? ' done' : '') + (u === 'red' ? ' overdue' : u === 'orange' ? ' soon' : '') + (t.id === highlightId ? ' flash' : ''), 'data-id': t.id },
             h('button', { class: 'check', 'aria-label': t.done ? 'Wieder öffnen' : 'Abhaken', title: t.done ? 'Wieder öffnen' : 'Abhaken', disabled: ctx.readOnly, onclick: async () => {
               if (t.done) { await reopen(ctx, t.id); toast('Wieder geöffnet – Erinnerungen laufen weiter'); }
               else { await complete(ctx, t.id); toast(`„${t.title}“ erledigt 🎉`, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) }); }
             } }, h('span')),
-            h('div', { class: 't-body', onclick: () => ctx.router.navigate(`todos/${t.id}`) },
+            h('div', { class: 't-body', onclick: () => openEdit(ctx, t.id) },
               h('div', { class: 't-title' }, t.title),
               t.note ? h('div', { class: 't-note' }, t.note) : null,
               metaLine(ctx, t, now)),
@@ -2428,42 +2495,26 @@
             } }, '🗑️')) : null);
         };
 
-        const snoozeMenu = async t => {
-          const opt = await ctx.ui.choose('Später erinnern', ctx.reminders.snoozeOptions().map(o => ({ label: `${o.label} (${U.formatDate(o.until)})`, value: o.until })));
-          if (!opt) return;
-          await ctx.reminders.snoozeUntil(t.id, opt);
-          await col.update(t.id, { seenAt: Date.now() });
-          toast(`Erinnere dich ${U.relTime(opt)}`);
-        };
-
         const render = async () => {
           const now = Date.now();
           const all = await loadAll(ctx);
           const open = all.filter(t => !t.done).sort(sortOpen(now));
           const done = all.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-          const fired = open.filter(t => t._r && t._r.unseen).sort((a, b) => (b._r.lastSentAt || 0) - (a._r.lastSentAt || 0));
-
-          firedBox.replaceChildren(...(fired.length ? [
-            h('div', { class: 'section-title' }, `🔔 Erinnert (${fired.length})`),
-            ...fired.map(t => h('div', { class: 'fired' },
-              h('div', { class: 't-title' }, t.title),
-              h('div', { class: 'small muted' }, `Erinnert ${U.relTime(t._r.lastSentAt, now)} · ${t._r.sentCount}. Erinnerung`),
-              metaLine(ctx, t, now),
-              h('div', { class: 'row' },
-                h('button', { class: 'btn btn-sm btn-primary', disabled: ctx.readOnly, onclick: async () => { await complete(ctx, t.id); toast(`„${t.title}“ erledigt 🎉`, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) }); } }, '✓ Erledigt'),
-                h('button', { class: 'btn btn-sm', disabled: ctx.readOnly, onclick: () => snoozeMenu(t) }, '⏰ Später'),
-                h('button', { class: 'btn btn-sm', disabled: ctx.readOnly, onclick: () => markSeen(ctx, t.id) }, '👁 Gesehen'))))] : []));
-
           openBox.replaceChildren(
-            h('div', { class: 'section-title' }, `Offen (${open.length})`),
-            open.length ? h('ul', { class: 'todo-list' }, open.map(t => row(t, now))) : h('div', { class: 'card empty' }, 'Nichts offen. 🎉'));
-
+            h('div', { class: 'section-title' }, `Aktiv (${open.length})`),
+            open.length ? h('ul', { class: 'todo-list' }, open.map(t => row(t, now))) : h('div', { class: 'card empty' }, 'Nichts offen. 🎉 Neues ToDo über den Knopf unten.'));
           if (done.length) {
             const det = h('details', { class: 'fold', open: doneOpen, ontoggle: () => { doneOpen = det.open; } },
               h('summary', {}, `Erledigt (${done.length})`),
               h('ul', { class: 'todo-list' }, done.slice(0, 200).map(t => row(t, now))));
             doneBox.replaceChildren(det);
           } else doneBox.replaceChildren();
+          if (highlightId) {
+            const li = openBox.querySelector(`li[data-id="${CSS.escape(highlightId)}"]`) || doneBox.querySelector(`li[data-id="${CSS.escape(highlightId)}"]`);
+            if (li) li.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            highlightId = null;
+          }
+          if (all.some(t => t._r && t._r.unseen)) markAllSeen(ctx);
         };
 
         const re = U.debounce(render, 150);
@@ -2471,18 +2522,21 @@
         ctx.events.on('reminders:changed', re);
         ctx.events.on('reminder:fired', re);
         ctx.events.on('app:visible', re);
-        ctx.every(30000, () => { render(); updPreview(); });
-        await render();
-        if (!('ontouchstart' in window)) titleIn.focus();
-        if (route.parts[0]) this.onRoute(route, ctx);
+        ctx.every(30000, render);
+        this._render = render;
+        if (route.parts[0]) await this.onRoute(route, ctx); else await render();
       },
 
+      /** #/todos/<id> (z. B. aus der Startseiten-Kachel) markiert das ToDo in der Liste – kein Bearbeiten-Fenster */
       async onRoute(route, ctx) {
         const id = route.parts[0];
         if (!id) return;
-        await openEdit(ctx, id);
+        highlightId = id;
         ctx.router.navigate('todos', { replace: true });
+        if (this._render) await this._render();
       },
+
+      unmount() { this._render = null; },
 
       async widget(el, ctx) {
         const { h } = ctx.ui; const U = ctx.util;
@@ -2490,27 +2544,13 @@
         const all = (await loadAll(ctx)).filter(t => !t.done).sort(sortOpen(now));
         const overdue = all.filter(t => t.deadline && t.deadline <= now).length;
         const next = all.map(t => t._r?.nextAt).filter(Boolean).sort((a, b) => a - b)[0];
-        const fired = all.filter(t => t._r?.unseen).length;
         el.replaceChildren(...[
           h('div', { class: 'row', style: { gap: '6px' } },
             h('span', { class: 'pill blue' }, `${all.length} offen`),
-            overdue ? h('span', { class: 'pill red' }, `${overdue} überfällig`) : null,
-            fired ? h('span', { class: 'pill orange' }, `🔔 ${fired} erinnert`) : null),
+            overdue ? h('span', { class: 'pill red' }, `${overdue} überfällig`) : null),
           next ? h('div', { class: 'small muted', style: { marginTop: '6px' } }, `Nächste Erinnerung ${U.relTime(next, now)}`) : null,
           all.length ? h('ul', { class: 'small', style: { margin: '8px 0 0', paddingLeft: '18px' } }, all.slice(0, 3).map(t =>
             h('li', {}, h('a', { href: ctx.router.link(`todos/${t.id}`) }, t.title), t.deadline ? h('span', { class: 'muted' }, ` · ${t.deadline <= now ? 'überfällig' : U.relTime(t.deadline, now)}`) : null))) : h('div', { class: 'small muted', style: { marginTop: '6px' } }, 'Alles erledigt.')].filter(Boolean));
-      },
-
-      async settings(el, ctx) {
-        const { h, toast } = ctx.ui;
-        const c = await cfg(ctx);
-        el.append(
-          h('label', { class: 'field', style: { marginTop: '8px' } }, h('span', {}, 'Standard-Stufe für neue ToDos'),
-            h('select', { onchange: async e => { await ctx.settings.set('defaultStage', e.target.value); toast('Gespeichert'); } },
-              ctx.reminders.STAGES.map(s => h('option', { value: s.id, selected: s.id === c.defaultStage }, s.label)))),
-          h('label', { class: 'field', style: { marginTop: '8px' } }, h('span', {}, 'Erinnern nach Ablauf der Abgabe (Standard)'),
-            h('select', { onchange: async e => { await ctx.settings.set('overdueMin', Number(e.target.value)); toast('Gespeichert'); } },
-              OVERDUE_OPTS.map(m => h('option', { value: m, selected: m === c.overdueMin }, `alle ${m} Minuten`)))));
       },
 
       async onReminderAction(itemId, action, ctx) {

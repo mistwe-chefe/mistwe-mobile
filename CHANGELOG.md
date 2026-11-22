@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0 – 2026-11-22
+
+Bedienung des ToDo-Moduls überarbeitet.
+
+- Modul `todos`: Aktive ToDos stehen oben, Erledigte eingeklappt darunter. Neues ToDo über den Knopf „＋ Neues ToDo“ unten; das Fenster liegt über dem Modul.
+- Modul `todos`: Bereich „Erinnert“ entfernt. Das Öffnen des Moduls gilt als gesehen (Zähler in der Navigation geht zurück).
+- Modul `todos`: Eigene Einstellungen (Standard-Stufe, Abstand bei Überfälligkeit) direkt im Modul über ⚙️. Der Tab „Einstellungen“ enthält nur noch modulübergreifende Einstellungen.
+- Antippen einer Benachrichtigung öffnet das ToDo-Modul (nicht mehr das Bearbeiten-Fenster). Links `#/todos/<id>` markieren das ToDo in der Liste.
+- Kern: lokaler Namensindex (`meta.notifyTitles`, bleibt auf dem Gerät), damit Mitteilungen den ToDo-Namen zuverlässig zeigen. Bis zu 5 Einzelmitteilungen, darüber Sammelmitteilung mit Namen im Titel.
+- `sw.js` (SW_VERSION 1.2.0): nutzt den Namensindex, Antippen öffnet das Modul.
+
+Geänderte Dateien: `index.html`, `sw.js`. Keine Schema-Änderung, Worker unverändert.
+
 ## 1.1.3 – 2026-11-22
 
 - `sw.js` (SW_VERSION 1.1.3): protokolliert jeden empfangenen Push lokal und beim Server (`POST /v1/push-received`); Mitteilung erscheint spätestens nach 1,5 s, auch wenn der Schlüssel nicht schnell lesbar ist.

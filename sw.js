@@ -2,7 +2,7 @@
  * Bewusst klein und ohne Fachlogik. Kennt keine Module.
  * Liest nur `meta`, schreibt nur `outbox` (Architektur 4.2).
  */
-const SW_VERSION = '1.1.3';
+const SW_VERSION = '1.2.0';
 const CACHE = 'pa-shell-' + SW_VERSION;
 const DB_NAME = 'persoenliche-app';
 const DB_VERSION = 1;
@@ -177,7 +177,7 @@ self.addEventListener('notificationclick', event => {
       await notifyClients({ type: 'outbox' });
       return;
     }
-    const hash = data.m ? (data.id ? `#/${data.m}/${data.id}` : `#/${data.m}`) : '#/';
+    const hash = data.m ? `#/${data.m}` : '#/';  // Antippen öffnet das Modul (nicht das Bearbeiten-Fenster)
     await focusOrOpen(hash);
   })());
 });
@@ -191,13 +191,18 @@ async function handlePush(p) {
   }
   const items = Array.isArray(p.items) ? p.items : [];
   const total = items.length + (p.more || 0);
-  let key = null;
-  // Schlüssel höchstens 1,5 s suchen – iOS verlangt, dass die Mitteilung sofort erscheint
-  try { key = await Promise.race([metaGet('cryptoKey'), new Promise(r => setTimeout(() => r(null), 1500))]); } catch (_) {}
-  const titled = await Promise.all(items.map(async it => ({ ...it, title: await decryptTitle(key, it.t, it.m, it.id) })));
+  let key = null, names = null;
+  // Namen und Schlüssel höchstens 1,5 s suchen – iOS verlangt, dass die Mitteilung sofort erscheint
+  try {
+    [names, key] = await Promise.race([
+      Promise.all([metaGet('notifyTitles').catch(() => null), metaGet('cryptoKey').catch(() => null)]),
+      new Promise(r => setTimeout(() => r([null, null]), 1500)),
+    ]);
+  } catch (_) {}
+  const titled = await Promise.all(items.map(async it => ({ ...it, title: (names && names[`${it.m}/${it.id}`]) || await decryptTitle(key, it.t, it.m, it.id) })));
   notifyClients({ type: 'sync' }).catch(() => {});
   if (!total) return self.registration.showNotification('🔔 Erinnerung', { ...opts, body: 'Öffne die App für Details.', tag: 'pa-push' });
-  if (total <= 3) {
+  if (total <= 5) {
     // Jeder Push MUSS eine Benachrichtigung zeigen (Safari entzieht sonst das Abo).
     await Promise.all(titled.map(it => self.registration.showNotification('🔔 ' + (it.title || 'ToDo fällig'), {
       ...opts, body: describe(it, now), tag: `${it.m}-${it.id}`, renotify: true,
@@ -206,9 +211,10 @@ async function handlePush(p) {
     })));
     return;
   }
-  const names = titled.slice(0, 6).map(it => '• ' + (it.title || 'ToDo')).join('\n');
-  return self.registration.showNotification(`🔔 ${total} Erinnerungen fällig`, {
-    ...opts, body: names + (total > 6 ? `\n… und ${total - 6} weitere` : ''), tag: 'pa-summary', renotify: true,
+  const list = titled.slice(0, 6).map(it => '• ' + (it.title || 'ToDo')).join('\n');
+  const first = titled.find(it => it.title);
+  return self.registration.showNotification(first ? `🔔 ${first.title} + ${total - 1} weitere` : `🔔 ${total} Erinnerungen fällig`, {
+    ...opts, body: list + (total > 6 ? `\n… und ${total - 6} weitere` : ''), tag: 'pa-summary', renotify: true,
     data: { m: titled[0] ? titled[0].m : undefined },
   });
 }
