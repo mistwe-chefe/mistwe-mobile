@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.8.0 – 2026-11-23
+
+- Neues Modul **Tägliche Ziele** (`ziele`): Tagesziele und Wochenziele anlegen, abhaken, umbenennen, löschen.
+- Abfrage mit Benachrichtigung: Tagesziele jeden Abend um 20:30, Wochenziele am Sonntag um 20:00 (Uhrzeiten und An/Aus über das Einstellungs-Symbol im Modul). Läuft über den Erinnerungsdienst, kommt also mit eingerichtetem Push auch bei geschlossener App. Sind schon alle Ziele abgehakt, entfällt die Abfrage für diesen Tag bzw. diese Woche.
+- Serie „Tage in Folge“ (und „Wochen in Folge“), Rekord, Punkte als Währung für spätere Funktionen: alle Tagesziele erledigt +1, je Wochenziel +3 Extra-Punkte, alle Wochenziele +5 Bonus.
+- Verlauf der letzten 14 Tage und 6 Wochen; die letzten 7 Tage und 2 Wochen lassen sich nachtragen.
+- Kern: neue Symbole (Ziel, Flamme, Stern).
+- Daten: neue synchronisierte Collections `ziele/goals`, `ziele/checkins`, `ziele/ledger` (Schema 1). Bestehende Daten unverändert, keine Migration.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert.
+
 ## 1.7.2 – 2026-11-22
 
 - Modul Wecker: Die App übergibt jede Weckzeit als vollständiges Datum („TT.MM.JJJJ HH:MM“, Datum des tatsächlichen Klingelns).

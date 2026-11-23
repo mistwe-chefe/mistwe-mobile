@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.7.2">
+  <meta name="app-version" content="1.8.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -288,6 +288,47 @@
   [data-module="wecker"] .sc-name { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   [data-module="wecker"] .sc-name code { flex: 1; background: var(--surface-2); padding: 6px 10px; border-radius: var(--radius-sm); font-size: .95rem; font-weight: 600; }
   /* ==== ENDE MODUL-CSS: wecker ==== */
+
+  /* ==== MODUL-CSS: ziele ==== */
+  [data-module="ziele"] .head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  [data-module="ziele"] .head h2 { flex: 1; margin: 0; }
+  [data-module="ziele"] .hint { display: flex; gap: 10px; align-items: center; }
+  [data-module="ziele"] .hint > svg.icon { width: 20px; height: 20px; color: var(--muted); }
+  [data-module="ziele"] .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  [data-module="ziele"] .stat { background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px; }
+  [data-module="ziele"] .stat .v { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; }
+  [data-module="ziele"] .stat .v svg.icon { color: var(--warn); width: 20px; height: 20px; }
+  [data-module="ziele"] .stat .l { font-size: .78rem; color: var(--muted); }
+  [data-module="ziele"] .rules { margin-top: 8px; }
+  [data-module="ziele"] .card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  [data-module="ziele"] .card-head h3 { margin: 0; }
+  [data-module="ziele"] .card.period.asking { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-bg), var(--shadow); }
+  [data-module="ziele"] .ask { background: var(--primary-bg); color: var(--text); border-radius: var(--radius-sm); padding: 8px 10px; font-size: .92rem; margin-bottom: 8px; }
+  [data-module="ziele"] .ask svg.icon { color: var(--primary); }
+  [data-module="ziele"] ul.goal-list, [data-module="ziele"] ul.hist { list-style: none; margin: 0; padding: 0; }
+  [data-module="ziele"] li.goal { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--border); }
+  [data-module="ziele"] li.goal:last-child { border-bottom: 0; }
+  [data-module="ziele"] .check { flex: 0 0 44px; height: 44px; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; color: transparent; }
+  [data-module="ziele"] .check span { width: 26px; height: 26px; border-radius: 7px; border: 2px solid var(--muted); display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  [data-module="ziele"] .check span svg.icon { width: 16px; height: 16px; }
+  [data-module="ziele"] .check:hover span { border-color: var(--ok); background: var(--ok-bg); }
+  [data-module="ziele"] li.goal.done .check { color: #fff; }
+  [data-module="ziele"] li.goal.done .check span { background: var(--ok); border-color: var(--ok); }
+  [data-module="ziele"] li.goal.done .g-title { color: var(--muted); text-decoration: line-through; }
+  [data-module="ziele"] .g-body { flex: 1; min-width: 0; padding: 10px 0; cursor: pointer; }
+  [data-module="ziele"] .g-title { word-break: break-word; }
+  [data-module="ziele"] .card-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  [data-module="ziele"] .t-meta { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+  [data-module="ziele"] .section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 4px 0 4px; }
+  [data-module="ziele"] ul.hist + .section-title { margin-top: 14px; }
+  [data-module="ziele"] li.hist-row { display: flex; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid var(--border); font-size: .93rem; }
+  [data-module="ziele"] li.hist-row:last-child { border-bottom: 0; }
+  [data-module="ziele"] li.hist-row.clickable { cursor: pointer; }
+  [data-module="ziele"] li.hist-row.clickable:hover { background: var(--surface-2); }
+  [data-module="ziele"] li.hist-row .pts { min-width: 2.2em; text-align: right; font-variant-numeric: tabular-nums; color: var(--ok); font-weight: 600; }
+  [data-module="ziele"] li.hist-row .chev-sp { width: 1.15em; }
+  @media (max-width: 380px) { [data-module="ziele"] .stat .v { font-size: 1.15rem; } }
+  /* ==== ENDE MODUL-CSS: ziele ==== */
   </style>
 </head>
 <body>
@@ -310,7 +351,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.7.2',
+    APP_VERSION: '1.8.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -326,6 +367,12 @@
   };
 
   const CHANGELOG = [
+    { version: '1.8.0', date: '2026-11-23', items: [
+      'Neues Modul ziele („Tägliche Ziele“): Tagesziele und Wochenziele anlegen, abhaken, bearbeiten, löschen',
+      'Modul ziele: Abfrage mit Benachrichtigung jeden Abend um 20:30 (Tagesziele) und am Sonntag um 20:00 (Wochenziele), Uhrzeiten einstellbar; auch bei geschlossener App über den Push-Dienst',
+      'Modul ziele: Serie „Tage in Folge“ und „Wochen in Folge“, Punkte als Währung (Tag komplett +1, je Wochenziel +3, alle Wochenziele +5 Bonus), Verlauf und Nachtragen der letzten 7 Tage / 2 Wochen',
+      'Kern: neue Symbole (Ziel, Flamme, Stern)',
+    ] },
     { version: '1.7.2', date: '2026-11-22', items: [
       'Modul wecker: Uhrzeiten gehen als vollständiges Datum („TT.MM.JJJJ HH:MM“) an den Kurzbefehl; Anleitung um „Datumsangaben aus Eingabe abrufen“ ergänzt (behebt „Keine Konvertierung von Text in Datum“)',
     ] },
@@ -852,6 +899,9 @@
     scale: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7.5 11a6 6 0 0 1 9 0"/><path d="m12 11 1.8-2.6"/>',
     external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
     alarm: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 3 2 6M19 3l3 3"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    flame: '<path d="M12 3c.5 3.5 5 5.5 5 10.5a5 5 0 0 1-10 0c0-2.4 1.2-4 2.4-5 .2 1.6.9 2.6 1.9 3.1.6-2.9-.6-5.6.7-8.6z"/>',
+    star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
   };
   const ICON_CACHE = new Map();
 
@@ -3401,6 +3451,445 @@
     });
   })();
   /* ==== ENDE MODUL: wecker ==== */
+  </script>
+
+  <script>
+  /* ==== MODUL: ziele ==== */
+  (() => {
+    /* Punkte-Regeln – Punkte werden beim Speichern im Datensatz festgehalten, spätere Regeländerungen ändern die Vergangenheit nicht. */
+    const DAY_POINTS = 1;          // Tag mit allen Tageszielen erledigt
+    const WEEK_GOAL_POINTS = 3;    // je erledigtem Wochenziel (Extra-Punkte)
+    const WEEK_ALL_BONUS = 5;      // alle Wochenziele erledigt
+    const EDIT_DAYS = 7;           // so viele Tage zurück lässt sich nachtragen
+    const EDIT_WEEKS = 2;          // so viele Wochen zurück lässt sich nachtragen
+    const REM = { daily: 'abfrage-tag', weekly: 'abfrage-woche' };
+    const REM_TITLE = { daily: 'Tägliche Ziele: Hast du heute alles geschafft?', weekly: 'Wochenziele: Wie lief deine Woche?' };
+    const REM_IV = { daily: 1440, weekly: 10080 };
+    const DEFAULTS = { dailyOn: true, dailyTime: 20 * 60 + 30, weeklyOn: true, weeklyTime: 20 * 60 };
+    const KIND_LABEL = { daily: 'Tagesziel', weekly: 'Wochenziel' };
+
+    let goals, checkins, ledger;
+    let mounted = false, bgCtx = null, bgSubsLive = false;
+
+    /* ---------- Datum ---------- */
+    const pad = n => String(n).padStart(2, '0');
+    const dayStart = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+    const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+    const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const weekStart = d => { const x = dayStart(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }; // Montag
+    function isoWeek(d) {
+      const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+      const y0 = Date.UTC(t.getUTCFullYear(), 0, 1);
+      return { year: t.getUTCFullYear(), week: Math.ceil(((t - y0) / 86400000 + 1) / 7) };
+    }
+    const atTime = (d, min) => { const x = new Date(d); x.setHours(Math.floor(min / 60), min % 60, 0, 0); return x.getTime(); };
+    const dm = d => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.`;
+    /** Zeitraum (Tag oder ISO-Woche Mo–So) */
+    function period(kind, date) {
+      if (kind === 'daily') { const s = dayStart(date); return { kind, key: dayKey(s), start: s.getTime(), end: addDays(s, 1).getTime(), date: s }; }
+      const s = weekStart(date), w = isoWeek(s);
+      return { kind, key: `${w.year}-W${pad(w.week)}`, week: w.week, start: s.getTime(), end: addDays(s, 7).getTime(), date: s };
+    }
+    const prevPeriod = p => period(p.kind, addDays(p.date, p.kind === 'daily' ? -1 : -7));
+    const recId = (kind, key) => (kind === 'daily' ? 'd-' : 'w-') + key;
+    const periodLabel = p => {
+      if (p.kind === 'weekly') return `KW ${p.week} · ${dm(p.date)}–${dm(addDays(p.date, 6))}`;
+      const today = dayStart(new Date());
+      if (p.start === today.getTime()) return 'Heute';
+      if (p.start === addDays(today, -1).getTime()) return 'Gestern';
+      return p.date.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    };
+
+    async function cfg(ctx) { const o = {}; for (const [k, v] of Object.entries(DEFAULTS)) o[k] = await ctx.settings.get(k, v); return o; }
+
+    /* ---------- Auswertung ---------- */
+    function pointsFor(kind, items) {
+      if (!items.length) return 0;
+      const n = items.filter(i => i.done).length;
+      if (kind === 'daily') return n === items.length ? DAY_POINTS : 0;
+      return n * WEEK_GOAL_POINTS + (n === items.length ? WEEK_ALL_BONUS : 0);
+    }
+    const byOrder = (a, b) => (a.order ?? a.createdAt ?? 0) - (b.order ?? b.createdAt ?? 0);
+
+    /** Ziele eines Zeitraums mit Erledigt-Status. Laufender Zeitraum: aktuelle Ziele; vergangener: gespeicherter Stand oder die Ziele, die es damals gab. */
+    async function view(kind, p, rawGoals) {
+      const now = Date.now();
+      const rec = await checkins.get(recId(kind, p.key));
+      const current = now >= p.start && now < p.end;
+      let list;
+      if (!current && rec && Array.isArray(rec.goals)) list = rec.goals;
+      else {
+        const raw = rawGoals || await goals.raw();
+        list = raw.filter(g => g.type === kind && (current ? !g.deletedAt : ((g.createdAt || 0) < p.end && (!g.deletedAt || g.deletedAt >= p.end)))).sort(byOrder);
+      }
+      const done = (rec && rec.done) || {};
+      const items = list.map(g => ({ id: g.id, title: g.title, done: !!done[g.id] }));
+      const nDone = items.filter(i => i.done).length;
+      return { kind, p, rec, items, nDone, complete: items.length > 0 && nDone === items.length, points: pointsFor(kind, items), current };
+    }
+
+    async function save(kind, p, items, extra = {}) {
+      const id = recId(kind, p.key);
+      const data = {
+        kind, key: p.key, start: p.start,
+        goals: items.map(i => ({ id: i.id, title: i.title })),
+        done: Object.fromEntries(items.filter(i => i.done).map(i => [i.id, true])),
+        complete: items.length > 0 && items.every(i => i.done),
+        points: pointsFor(kind, items),
+        answeredAt: Date.now(), ...extra,
+      };
+      return (await checkins.get(id)) ? checkins.update(id, data) : checkins.add({ ...data, id });
+    }
+
+    /** Nach Änderungen an den Zielen: gespeicherten Stand von heute und dieser Woche nachziehen */
+    async function refreshCurrent() {
+      const raw = await goals.raw();
+      for (const kind of ['daily', 'weekly']) {
+        const v = await view(kind, period(kind, new Date()), raw);
+        if (!v.rec) continue;
+        const sig = a => JSON.stringify((a || []).map(g => g.id + '|' + g.title));
+        if (sig(v.rec.goals) !== sig(v.items) || v.rec.points !== v.points || !!v.rec.complete !== v.complete) await save(kind, v.p, v.items, { answeredAt: v.rec.answeredAt });
+      }
+    }
+
+    function streakOf(kind, cur, map) {
+      let n = cur.complete ? 1 : 0, p = prevPeriod(cur.p);
+      for (let i = 0; i < 10000; i++) { const r = map.get(recId(kind, p.key)); if (!r || !r.complete) break; n++; p = prevPeriod(p); }
+      return n;
+    }
+    function bestOf(kind, recs, cur) {
+      const keys = new Set(recs.filter(r => r.kind === kind && r.complete && r.key !== cur.p.key).map(r => r.key));
+      if (cur.complete) keys.add(cur.p.key);
+      let best = 0;
+      for (const r of recs.filter(x => x.kind === kind && keys.has(x.key) && x.start)) {
+        // nur am Anfang einer Serie zählen
+        const p = period(kind, new Date(r.start));
+        if (keys.has(prevPeriod(p).key)) continue;
+        let n = 0, q = p;
+        while (keys.has(q.key) && n < 10000) { n++; q = period(kind, addDays(q.date, kind === 'daily' ? 1 : 7)); }
+        best = Math.max(best, n);
+      }
+      return Math.max(best, cur.complete ? 1 : 0);
+    }
+
+    async function stats() {
+      const now = new Date();
+      const raw = await goals.raw();
+      const [d, w, recs, led] = await Promise.all([view('daily', period('daily', now), raw), view('weekly', period('weekly', now), raw), checkins.all(), ledger.all()]);
+      const map = new Map(recs.map(r => [r.id, r]));
+      const curIds = new Set([recId('daily', d.p.key), recId('weekly', w.p.key)]);
+      let points = d.points + w.points;
+      for (const r of recs) if (!curIds.has(r.id)) points += Number(r.points) || 0;
+      points += led.reduce((a, e) => a + (Number(e.amount) || 0), 0);  // künftige Ausgaben/Gutschriften anderer Funktionen
+      return { d, w, points, streakD: streakOf('daily', d, map), streakW: streakOf('weekly', w, map), bestD: bestOf('daily', recs, d), map };
+    }
+
+    /* ---------- Abfrage-Erinnerungen ---------- */
+    /* Je Art eine Erinnerung im Kern-Erinnerungsdienst (Intervall 1 Tag bzw. 1 Woche), ausgerichtet auf die Abfragezeit.
+       Der Server löst sie auch bei geschlossener App aus; die App richtet sie bei jedem Öffnen wieder genau aus
+       (z. B. nach „1 Std später“, Zeitumstellung oder „Erledigt“ in der Mitteilung). */
+    async function arm(ctx, kind) {
+      const c = await cfg(ctx);
+      const on = kind === 'daily' ? c.dailyOn : c.weeklyOn;
+      const time = kind === 'daily' ? c.dailyTime : c.weeklyTime;
+      const id = REM[kind];
+      const r = await ctx.reminders.get(id);
+      const has = (await goals.all()).some(g => g.type === kind);
+      if (!on || !has) { if (r) await ctx.reminders.remove(id); return; }
+      const now = Date.now();
+      const p = period(kind, new Date(now));
+      const askDay = kind === 'daily' ? p.date : addDays(p.date, 6);   // Wochenziele: Sonntag
+      const cur = atTime(askDay, time);
+      const next = atTime(addDays(askDay, kind === 'daily' ? 1 : 7), time);
+      const v = await view(kind, p);
+      const target = v.complete || now >= cur ? next : cur;           // schon alles erledigt → heute/diese Woche nicht mehr fragen
+      const snoozed = !v.complete && now >= cur && r && !r.done && r.nextAt && r.nextAt > now && r.nextAt < next;
+      if (!r || r.done || (r.lastSentAt && r.lastSentAt < p.start)) {
+        // neu anlegen (Zähler der Mitteilung beginnt je Zeitraum wieder bei 1)
+        if (r) await ctx.reminders.remove(id);
+        await ctx.reminders.set(id, { intervalMin: REM_IV[kind], title: REM_TITLE[kind] });
+        await ctx.reminders.snoozeUntil(id, target);
+      } else if (!snoozed && (r.nextAt || 0) !== target) {   // auch kleine Verschiebungen (Takt des Servers) korrigieren, damit nichts wandert
+        await ctx.reminders.snoozeUntil(id, target);
+      }
+    }
+    let arming = false, armAgain = false;
+    async function armAll(ctx) {
+      if (ctx.readOnly) return;
+      if (arming) { armAgain = true; return; }
+      arming = true;
+      try { do { armAgain = false; await arm(ctx, 'daily'); await arm(ctx, 'weekly'); } while (armAgain); }
+      catch (e) { ctx.log.warn('Abfrage planen: ' + e.message); }
+      finally { arming = false; }
+    }
+    function subscribeBg(ctx) {
+      const re = ctx.util.debounce(() => armAll(ctx), 700);
+      ctx.events.on('reminders:changed', e => { if (!e || !e.moduleId || e.moduleId === 'ziele') re(); });
+      ctx.events.on('store:changed', e => { if (e && e.moduleId === 'ziele') re(); });
+      ctx.events.on('app:visible', re);
+      // Abos, die während der Anzeige des Moduls entstehen, löst der Kern beim Verlassen – dann in unmount() neu anlegen
+      bgSubsLive = !mounted;
+    }
+
+    /* ---------- Aktionen ---------- */
+    async function toggle(ctx, kind, p, goalId) {
+      const before = await view(kind, p);
+      const items = before.items.map(i => i.id === goalId ? { ...i, done: !i.done } : i);
+      await save(kind, p, items);
+      const gained = pointsFor(kind, items) - before.points;
+      if (gained > 0) {
+        const s = await stats();
+        if (kind === 'daily' && items.every(i => i.done)) ctx.ui.toast(`Alle Tagesziele geschafft · +${gained} ${gained === 1 ? 'Punkt' : 'Punkte'} · ${s.streakD} ${s.streakD === 1 ? 'Tag' : 'Tage'} in Folge`);
+        else if (kind === 'weekly') ctx.ui.toast(items.every(i => i.done) ? `Alle Wochenziele geschafft · +${gained} Extra-Punkte` : `+${gained} Extra-Punkte`);
+      }
+    }
+
+    function kindChips(ctx, kind, onChange) {
+      const { h } = ctx.ui;
+      const box = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': 'Art des Ziels' });
+      const draw = () => box.replaceChildren(...['daily', 'weekly'].map(k => h('button', { type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(k === kind), onclick: () => { kind = k; onChange(k); draw(); } }, k === 'daily' ? 'Jeden Tag' : 'Jede Woche')));
+      draw();
+      return box;
+    }
+
+    async function openAdd(ctx, kind) {
+      const { h, dialog, toast } = ctx.ui;
+      const titleIn = h('input', { type: 'text', placeholder: kind === 'daily' ? 'z. B. 10 Minuten lesen' : 'z. B. 3× Sport', autofocus: true, enterkeyhint: 'done', autocomplete: 'off', 'aria-label': 'Ziel' });
+      const ok = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); if (titleIn.value.trim()) close(true); else titleIn.focus(); } },
+        h('h3', {}, 'Neues Ziel'),
+        h('div', { class: 'stack' }, titleIn, kindChips(ctx, kind, k => { kind = k; }),
+          h('p', { class: 'small muted', style: { margin: 0 } }, 'Tagesziele werden jeden Abend abgefragt, Wochenziele am Sonntagabend.')),
+        h('div', { class: 'dlg-actions' },
+          h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
+          h('button', { type: 'submit', class: 'btn btn-primary' }, 'Hinzufügen'))), { label: 'Neues Ziel' });
+      if (!ok) return;
+      await goals.add({ title: titleIn.value.trim().slice(0, 200), type: kind, order: Date.now() });
+      await refreshCurrent();
+      if (ctx.notify.permission() === 'default') toast('Damit ich dich abfragen kann, erlaube Benachrichtigungen.', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
+      else toast(`${KIND_LABEL[kind]} hinzugefügt`);
+    }
+
+    async function openEdit(ctx, id) {
+      const { h, dialog, confirm, toast } = ctx.ui;
+      const g = await goals.get(id);
+      if (!g) { toast('Ziel nicht gefunden'); return; }
+      let kind = g.type;
+      const titleIn = h('input', { type: 'text', value: g.title, autofocus: true, 'aria-label': 'Ziel' });
+      const res = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close('save'); } },
+        h('h3', {}, 'Ziel bearbeiten'),
+        h('div', { class: 'stack' }, titleIn, kindChips(ctx, kind, k => { kind = k; }),
+          h('p', { class: 'small muted', style: { margin: 0 } }, `Angelegt ${ctx.util.formatDate(g.createdAt, false)}. Bereits abgefragte Tage und Wochen bleiben unverändert.`)),
+        h('div', { class: 'dlg-actions' },
+          h('button', { type: 'button', class: 'btn btn-ghost', style: { marginRight: 'auto', color: 'var(--danger)' }, onclick: () => close('delete') }, 'Löschen'),
+          h('button', { type: 'button', class: 'btn', onclick: () => close() }, 'Abbrechen'),
+          h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'Ziel bearbeiten' });
+      if (res === 'save') {
+        const title = titleIn.value.trim();
+        if (!title) { toast('Ziel darf nicht leer sein'); return; }
+        await goals.update(id, { title: title.slice(0, 200), type: kind });
+        await refreshCurrent();
+        toast('Gespeichert');
+      } else if (res === 'delete') {
+        if (!(await confirm(`„${g.title}“ löschen? Punkte und Verlauf bleiben erhalten.`, { ok: 'Löschen', danger: true }))) return;
+        await goals.remove(id);
+        await refreshCurrent();
+        toast('Gelöscht', { action: 'Rückgängig', onAction: async () => { await goals.update(id, { deletedAt: null }); await refreshCurrent(); } });
+      }
+    }
+
+    /** Vergangenen Tag / vergangene Woche nachtragen */
+    async function openPast(ctx, kind, p) {
+      const { h, dialog, toast } = ctx.ui;
+      const v = await view(kind, p);
+      if (!v.items.length) { toast('Für diesen Zeitraum gab es keine Ziele.'); return; }
+      const boxes = v.items.map(i => ({ i, el: h('input', { type: 'checkbox', checked: i.done }) }));
+      const ok = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close(true); } },
+        h('h3', {}, kind === 'daily' ? `Nachtragen: ${p.date.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}` : `Nachtragen: ${periodLabel(p)}`),
+        h('div', {}, boxes.map(b => h('label', { class: 'switch' }, b.el, h('span', {}, b.i.title)))),
+        h('div', { class: 'dlg-actions' },
+          h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
+          h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'Nachtragen' });
+      if (!ok) return;
+      const items = boxes.map(b => ({ ...b.i, done: b.el.checked }));
+      await save(kind, p, items);
+      const pts = pointsFor(kind, items);
+      toast(pts ? `Gespeichert · ${pts} ${pts === 1 ? 'Punkt' : 'Punkte'}` : 'Gespeichert');
+    }
+
+    async function openSettings(ctx) {
+      const { h, dialog, toast } = ctx.ui; const U = ctx.util;
+      const c = await cfg(ctx);
+      const dOn = h('input', { type: 'checkbox', checked: c.dailyOn });
+      const dTime = h('input', { type: 'time', value: U.minToTime(c.dailyTime), 'aria-label': 'Uhrzeit der täglichen Abfrage' });
+      const wOn = h('input', { type: 'checkbox', checked: c.weeklyOn });
+      const wTime = h('input', { type: 'time', value: U.minToTime(c.weeklyTime), 'aria-label': 'Uhrzeit der Abfrage am Sonntag' });
+      const ok = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close(true); } },
+        h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'Ziele – Einstellungen'),
+        h('div', { class: 'stack' },
+          h('label', { class: 'switch' }, dOn, h('span', {}, 'Tagesziele jeden Abend abfragen')),
+          h('label', { class: 'field' }, h('span', {}, 'Uhrzeit (täglich)'), dTime),
+          h('label', { class: 'switch' }, wOn, h('span', {}, 'Wochenziele am Sonntag abfragen')),
+          h('label', { class: 'field' }, h('span', {}, 'Uhrzeit (Sonntag)'), wTime),
+          h('p', { class: 'small muted', style: { margin: 0 } }, 'Liegt eine Uhrzeit in der Ruhezeit (Tab „Einstellungen“), kommt die Abfrage erst nach deren Ende.')),
+        h('div', { class: 'dlg-actions' },
+          h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
+          h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'Ziele – Einstellungen' });
+      if (!ok) return;
+      const dt = U.timeToMin(dTime.value), wt = U.timeToMin(wTime.value);
+      await ctx.settings.set('dailyOn', dOn.checked);
+      await ctx.settings.set('weeklyOn', wOn.checked);
+      if (dt != null) await ctx.settings.set('dailyTime', dt);
+      if (wt != null) await ctx.settings.set('weeklyTime', wt);
+      toast('Gespeichert');
+      armAll(ctx);
+    }
+
+    App.register({
+      id: 'ziele', name: 'Tägliche Ziele', icon: 'target', order: 15,
+      description: 'Tages- und Wochenziele mit Abfrage am Abend, Serie und Punkten', category: 'Alltag',
+      version: '1.0.0', schemaVersion: 1, migrations: {},
+
+      async init(ctx) {
+        goals = ctx.store.collection('goals', { sync: true });        // { title, type: 'daily'|'weekly', order }
+        checkins = ctx.store.collection('checkins', { sync: true });  // id d-JJJJ-MM-TT / w-JJJJ-Www: { kind, key, start, goals, done, complete, points, answeredAt }
+        ledger = ctx.store.collection('ledger', { sync: true });      // für künftige Funktionen: { amount, reason, at } (Ausgaben negativ)
+      },
+
+      async background(ctx) {
+        bgCtx = ctx;
+        subscribeBg(ctx);
+        setInterval(() => armAll(ctx), 5 * 60000);
+        await armAll(ctx);
+      },
+
+      async mount(el, ctx) {
+        mounted = true;
+        const { h } = ctx.ui; const U = ctx.util;
+        const hintBox = h('div'), statsBox = h('div'), dayBox = h('div'), weekBox = h('div'), histBox = h('div');
+        el.append(
+          h('div', { class: 'head' },
+            h('h2', {}, 'Tägliche Ziele'),
+            h('button', { class: 'btn btn-ghost', title: 'Einstellungen', 'aria-label': 'Einstellungen', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, ctx.ui.icon('settings'))),
+          hintBox, statsBox, dayBox, weekBox, histBox);
+        let histOpen = false;
+
+        const stat = (icon, value, label) => h('div', { class: 'stat' }, h('div', { class: 'v' }, ctx.ui.icon(icon), String(value)), h('div', { class: 'l' }, label));
+
+        const goalRow = (kind, p, it) => h('li', { class: 'goal' + (it.done ? ' done' : '') },
+          h('button', { class: 'check', 'aria-label': it.done ? `„${it.title}“ nicht erledigt` : `„${it.title}“ erledigt`, 'aria-pressed': String(it.done), disabled: ctx.readOnly, onclick: () => toggle(ctx, kind, p, it.id) }, h('span', {}, ctx.ui.icon('check'))),
+          h('div', { class: 'g-body', onclick: () => !ctx.readOnly && openEdit(ctx, it.id) }, h('div', { class: 'g-title' }, it.title)));
+
+        const periodCard = (kind, v, c, rem, now) => {
+          const isD = kind === 'daily';
+          const time = isD ? c.dailyTime : c.weeklyTime;
+          const askAt = atTime(isD ? v.p.date : addDays(v.p.date, 6), time);
+          const asking = v.items.length && !v.complete && now >= askAt;
+          const head = h('div', { class: 'card-head' },
+            h('h3', {}, isD ? 'Heute' : 'Diese Woche'),
+            h('span', { class: 'muted small' }, isD ? v.p.date.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }) : periodLabel(v.p)));
+          let status = null;
+          if (v.items.length) {
+            status = v.complete
+              ? h('span', { class: 'pill green' }, ctx.ui.icon('check'), `Geschafft · +${v.points} ${v.points === 1 ? 'Punkt' : 'Punkte'}`)
+              : h('span', { class: 'pill' }, `${v.nDone} von ${v.items.length} erledigt` + (!isD && v.points ? ` · +${v.points} Punkte` : ''));
+          }
+          const on = isD ? c.dailyOn : c.weeklyOn;
+          const next = on && rem && rem.nextAt ? h('span', { class: 'pill', title: U.formatDateTimeFull(rem.nextAt) }, ctx.ui.icon('bell'), 'Abfrage: ' + U.formatDate(rem.nextAt)) : (!on && v.items.length ? h('span', { class: 'pill' }, ctx.ui.icon('bell-off'), 'Abfrage aus') : null);
+          return h('div', { class: 'card period' + (asking ? ' asking' : '') },
+            head,
+            asking ? h('div', { class: 'ask' }, ctx.ui.icon('bell'), isD ? ' Abfrage: Was hast du heute geschafft? Hake ab, was erledigt ist.' : ' Abfrage: Was hast du diese Woche geschafft?') : null,
+            v.items.length
+              ? h('ul', { class: 'goal-list' }, v.items.map(it => goalRow(kind, v.p, it)))
+              : h('div', { class: 'empty small' }, isD ? `Noch keine Tagesziele. Sie werden jeden Abend um ${U.minToTime(c.dailyTime)} abgefragt.` : `Noch keine Wochenziele. Sie werden am Sonntag um ${U.minToTime(c.weeklyTime)} abgefragt.`),
+            h('div', { class: 'card-foot' },
+              h('div', { class: 't-meta grow' }, status, next),
+              h('button', { class: 'btn btn-sm', onclick: () => openAdd(ctx, kind), disabled: ctx.readOnly }, ctx.ui.icon('plus'), isD ? 'Tagesziel' : 'Wochenziel')));
+        };
+
+        const histRow = (kind, v, editable) => {
+          let pill;
+          if (!v.items.length) pill = h('span', { class: 'pill' }, 'keine Ziele');
+          else if (v.complete) pill = h('span', { class: 'pill green' }, ctx.ui.icon('check'), 'geschafft');
+          else if (!v.rec) pill = h('span', { class: 'pill' }, 'nicht beantwortet');
+          else pill = h('span', { class: 'pill ' + (v.nDone ? 'yellow' : 'red') }, `${v.nDone} von ${v.items.length}`);
+          const pts = v.rec ? (Number(v.rec.points) || 0) : 0;
+          const can = editable && v.items.length && !ctx.readOnly;
+          return h('li', { class: 'hist-row' + (can ? ' clickable' : ''), onclick: can ? () => openPast(ctx, kind, v.p) : null },
+            h('span', { class: 'grow' }, periodLabel(v.p)), pill,
+            h('span', { class: 'pts' }, pts ? `+${pts}` : ''),
+            can ? ctx.ui.icon('chevron', 'muted') : h('span', { class: 'chev-sp' }));
+        };
+
+        const render = async () => {
+          const now = Date.now();
+          const [c, s, remD, remW] = await Promise.all([cfg(ctx), stats(), ctx.reminders.get(REM.daily), ctx.reminders.get(REM.weekly)]);
+
+          const perm = ctx.notify.permission();
+          const anyGoals = s.d.items.length || s.w.items.length;
+          hintBox.replaceChildren(...(anyGoals && perm !== 'granted' ? [h('div', { class: 'card hint' },
+            ctx.ui.icon(perm === 'denied' ? 'bell-off' : 'bell'),
+            h('div', { class: 'grow small' }, perm === 'denied' ? 'Benachrichtigungen sind blockiert – die Abfrage kann dich nicht erreichen. Erlaube sie in den System-/Browser-Einstellungen.'
+              : perm === 'unsupported' ? 'Dieser Browser zeigt keine Benachrichtigungen. iPhone: App über „Teilen → Zum Home-Bildschirm“ installieren und von dort öffnen.'
+              : 'Für die Abfrage am Abend brauche ich Benachrichtigungen.'),
+            perm === 'default' ? h('button', { class: 'btn btn-sm btn-primary', onclick: async () => { await ctx.notify.request(); render(); } }, 'Erlauben') : null)] : []));
+
+          statsBox.replaceChildren(h('div', { class: 'card' },
+            h('div', { class: 'stats' },
+              stat('star', s.points.toLocaleString('de-DE'), 'Punkte'),
+              stat('flame', s.streakD, s.streakD === 1 ? 'Tag in Folge' : 'Tage in Folge'),
+              stat('calendar', s.streakW, s.streakW === 1 ? 'Woche in Folge' : 'Wochen in Folge')),
+            h('div', { class: 'small muted rules' },
+              s.bestD > 1 ? `Rekord: ${s.bestD} Tage in Folge · ` : '',
+              `Punkte: alle Tagesziele erledigt +${DAY_POINTS} · je Wochenziel +${WEEK_GOAL_POINTS} · alle Wochenziele +${WEEK_ALL_BONUS} Bonus`)));
+
+          dayBox.replaceChildren(periodCard('daily', s.d, c, remD, now));
+          weekBox.replaceChildren(periodCard('weekly', s.w, c, remW, now));
+
+          // Verlauf & Nachtragen
+          const raw = await goals.raw();
+          const days = []; let p = prevPeriod(s.d.p);
+          for (let i = 0; i < 14; i++) { days.push({ v: await view('daily', p, raw), editable: i < EDIT_DAYS }); p = prevPeriod(p); }
+          const weeks = []; p = prevPeriod(s.w.p);
+          for (let i = 0; i < 6; i++) { weeks.push({ v: await view('weekly', p, raw), editable: i < EDIT_WEEKS }); p = prevPeriod(p); }
+          const firstGoal = raw.reduce((m, g) => Math.min(m, g.createdAt || Infinity), Infinity);
+          const dayRows = days.filter(x => x.v.p.end > firstGoal), weekRows = weeks.filter(x => x.v.p.end > firstGoal);
+          if (!dayRows.length && !weekRows.length) { histBox.replaceChildren(); }
+          else {
+            const det = h('details', { class: 'fold', open: histOpen, ontoggle: () => { histOpen = det.open; } },
+              h('summary', {}, 'Verlauf & nachtragen'),
+              h('div', { class: 'card' },
+                dayRows.length ? [h('div', { class: 'section-title' }, 'Tage'), h('ul', { class: 'hist' }, dayRows.map(x => histRow('daily', x.v, x.editable)))] : null,
+                weekRows.length ? [h('div', { class: 'section-title' }, 'Wochen'), h('ul', { class: 'hist' }, weekRows.map(x => histRow('weekly', x.v, x.editable)))] : null,
+                h('p', { class: 'small muted', style: { margin: '10px 0 0' } }, `Nachtragen geht für die letzten ${EDIT_DAYS} Tage und ${EDIT_WEEKS} Wochen. Ein nicht beantworteter Tag beendet die Serie.`)));
+            histBox.replaceChildren(det);
+          }
+
+          // Modul ist offen → ausgelöste Abfragen gelten als gesehen
+          if (!ctx.readOnly && document.visibilityState === 'visible') for (const r of [remD, remW]) if (r && r.unseen) await ctx.reminders.seen(r.id);
+        };
+
+        const re = U.debounce(render, 150);
+        ctx.events.on('store:changed', e => { if (e.moduleId === 'ziele') re(); });
+        ctx.events.on('reminders:changed', re);
+        ctx.events.on('reminder:fired', re);
+        ctx.events.on('app:visible', re);
+        ctx.events.on('notify:permission', re);
+        ctx.every(60000, render);   // Tageswechsel, Abfragezeit erreicht
+        await render();
+      },
+
+      unmount() {
+        mounted = false;
+        if (bgCtx && !bgSubsLive) setTimeout(() => subscribeBg(bgCtx), 0);
+      },
+
+      /** „Erledigt“ / „1 Std später“ aus der Mitteilung: keine Ziele automatisch abhaken (welche, ist unbekannt).
+          Nach „Erledigt“ beendet der Kern die Erinnerung; armAll() legt sie für den nächsten Abend neu an. */
+      async onReminderAction(itemId, action, ctx) { ctx.log.info(`Abfrage ${itemId}: ${action}`); },
+    });
+  })();
+  /* ==== ENDE MODUL: ziele ==== */
   </script>
 
   <script>/* ==== BOOT ==== */ App.boot();</script>
