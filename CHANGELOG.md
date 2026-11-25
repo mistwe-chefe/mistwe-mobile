@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.1 – 2026-11-25
+
+- Modul Ernährung: Einträge (kcal, Nährstoffe, Gewicht) auch für zukünftige Tage, bis 30 Tage im Voraus. Solche Tage sind als „geplant“ markiert.
+- Geplante Tage erscheinen in der Eintragstabelle; Diagramme und Durchschnitte reichen weiter nur bis heute. Wird ein geplanter Tag zu „heute“, zählt er automatisch normal mit.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert.
+
 ## 1.8.0 – 2026-11-23
 
 - Neues Modul **Tägliche Ziele** (`ziele`): Tagesziele und Wochenziele anlegen, abhaken, umbenennen, löschen.

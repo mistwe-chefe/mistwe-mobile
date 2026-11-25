@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.8.0">
+  <meta name="app-version" content="1.8.1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -351,7 +351,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.8.0',
+    APP_VERSION: '1.8.1',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -367,6 +367,10 @@
   };
 
   const CHANGELOG = [
+    { version: '1.8.1', date: '2026-11-25', items: [
+      'Modul ernaehrung: Einträge auch für zukünftige Tage (bis 30 Tage im Voraus), z. B. vorgekochtes Essen für morgen; solche Tage sind als „geplant“ markiert',
+      'Modul ernaehrung: geplante Tage stehen in der Eintragstabelle, Diagramme und Durchschnitte reichen weiter nur bis heute',
+    ] },
     { version: '1.8.0', date: '2026-11-23', items: [
       'Neues Modul ziele („Tägliche Ziele“): Tagesziele und Wochenziele anlegen, abhaken, bearbeiten, löschen',
       'Modul ziele: Abfrage mit Benachrichtigung jeden Abend um 20:30 (Tagesziele) und am Sonntag um 20:00 (Wochenziele), Uhrzeiten einstellbar; auch bei geschlossener App über den Push-Dienst',
@@ -2807,10 +2811,11 @@
     const fmtKcal = n => n == null ? '–' : Math.round(n).toLocaleString('de-DE');
     const fmtG = n => n == null ? '–' : (n < 10 ? r1(n) : Math.round(n)).toLocaleString('de-DE');
     const fmtGIn = n => n == null ? '' : String(r1(n)).replace('.', ',');
+    const MAX_AHEAD = 30;   // so viele Tage im Voraus lassen sich Einträge planen
     const fmtShort = k => dateOf(k).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
     const fmtLong = k => {
       const t = todayKey(), d = dateOf(k);
-      const pre = k === t ? 'Heute, ' : k === addDays(t, -1) ? 'Gestern, ' : '';
+      const pre = k === t ? 'Heute, ' : k === addDays(t, -1) ? 'Gestern, ' : k === addDays(t, 1) ? 'Morgen, ' : '';
       return pre + d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
     };
     const fmtTime = ts => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -3051,7 +3056,7 @@
     App.register({
       id: 'ernaehrung', name: 'Ernährung', icon: 'scale', order: 20,
       description: 'Gewicht, Kalorien und Nährstoffe pro Tag mit Verlauf', category: 'Gesundheit',
-      version: '1.2.0', schemaVersion: 1, migrations: {},
+      version: '1.3.0', schemaVersion: 1, migrations: {},
 
       /* Datensatz (ernaehrung/tage, synchronisiert): id = Datum „JJJJ-MM-TT“ (ein Eintrag pro Tag)
          { id, createdAt, updatedAt, deletedAt, date: 'JJJJ-MM-TT',
@@ -3106,7 +3111,8 @@
           const kIn = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': 'Kilokalorien', value: rec && rec.kcal != null ? String(Math.round(rec.kcal)) : '' });
           const nIn = Object.fromEntries(NUTS.map(n => [n.k, h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': `${n.label} in Gramm`, value: fmtGIn(rec ? rec[n.k] ?? null : null) })]));
           const addIn = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: 'kcal dazurechnen, z. B. 450', 'aria-label': 'kcal zum Tageswert dazurechnen' });
-          const dateIn = h('input', { type: 'date', value: day, max: today, 'aria-label': 'Tag wählen', onchange: () => { if (isKey(dateIn.value) && dateIn.value <= todayKey()) { day = dateIn.value; renderEdit(); } } });
+          const maxDay = addDays(today, MAX_AHEAD);
+          const dateIn = h('input', { type: 'date', value: day, max: maxDay, 'aria-label': 'Tag wählen', onchange: () => { if (isKey(dateIn.value) && dateIn.value <= maxDay) { day = dateIn.value; renderEdit(); } } });
 
           const save = async () => {
             const w = parseNum(wIn.value), k = parseNum(kIn.value, true);
@@ -3133,8 +3139,8 @@
           editBox.replaceChildren(h('form', { class: 'card', onsubmit: e => { e.preventDefault(); save(); } },
             h('div', { class: 'daynav' },
               h('button', { type: 'button', class: 'btn btn-ghost', 'aria-label': 'Vorheriger Tag', onclick: () => { day = addDays(day, -1); renderEdit(); } }, ctx.ui.icon('chevron-left')),
-              h('label', { class: 'day-label' }, h('span', {}, fmtLong(day)), ctx.ui.icon('calendar', 'muted'), dateIn),
-              h('button', { type: 'button', class: 'btn btn-ghost', 'aria-label': 'Nächster Tag', disabled: day >= today, onclick: () => { day = addDays(day, 1); renderEdit(); } }, ctx.ui.icon('chevron'))),
+              h('label', { class: 'day-label' }, h('span', {}, fmtLong(day)), day > today ? h('span', { class: 'pill blue' }, 'geplant') : null, ctx.ui.icon('calendar', 'muted'), dateIn),
+              h('button', { type: 'button', class: 'btn btn-ghost', 'aria-label': 'Nächster Tag', disabled: day >= maxDay, onclick: () => { day = addDays(day, 1); renderEdit(); } }, ctx.ui.icon('chevron'))),
             h('div', { class: 'fields' },
               h('label', { class: 'field' }, h('span', {}, 'Gewicht'), h('div', { class: 'unit-in' }, wIn, h('span', {}, 'kg'))),
               h('label', { class: 'field' }, h('span', {}, 'Kalorien'), h('div', { class: 'unit-in' }, kIn, h('span', {}, 'kcal')))),
@@ -3246,7 +3252,7 @@
           const mapOf = f => new Map(inRange.filter(r => r[f] != null).map(r => [r.id, r[f]]));
           const avgOf = f => { const v = inRange.filter(r => r[f] != null); return v.length ? { avg: v.reduce((a, r) => a + r[f], 0) / v.length, n: v.length } : null; };
 
-          const lastW = [...all].reverse().find(r => r.weightKg != null);
+          const lastW = [...all].reverse().find(r => r.weightKg != null && r.id <= end);
           const wIn = inRange.filter(r => r.weightKg != null);
           const delta = wIn.length >= 2 ? wIn[wIn.length - 1].weightKg - wIn[0].weightKg : null;
           const avgK = avgOf('kcal');
@@ -3269,13 +3275,14 @@
             h('div', { class: 'chips scroll', role: 'radiogroup', 'aria-label': 'Nährstoff', style: { marginTop: '6px' } }, NUTS.map(n => h('button', { type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(n.k === nut.k), onclick: async () => { nutSel = n.k; renderCharts(); await ctx.settings.set('nutChart', nutSel); } }, n.label))),
             chart(ctx, { title: nut.label, keys, values: mapOf(nut.k), type: 'bar', goal: nutGoals[nut.k] ?? null, fmt: v => fmtG(v), unit: 'g', zero: true, width: cw })));
 
-          const rows = [...inRange].reverse().slice(0, 120);
+          const planned = all.filter(r => r.id > end);
+          const rows = [...inRange, ...planned].reverse().slice(0, 120);
           histBox.replaceChildren(...(rows.length ? [h('details', { class: 'fold' },
-            h('summary', {}, `Einträge (${inRange.length})`),
+            h('summary', {}, `Einträge (${inRange.length})${planned.length ? ` + ${planned.length} geplant` : ''}`),
             h('div', { class: 'card' }, h('div', { class: 'table-scroll' }, h('table', { class: 'simple hist' },
               h('thead', {}, h('tr', {}, h('th', {}, 'Tag'), h('th', { class: 'num' }, 'kg'), h('th', { class: 'num' }, 'kcal'), NUTS.map(n => h('th', { class: 'num', title: n.label }, n.short)))),
               h('tbody', {}, rows.map(r => h('tr', { title: 'Bearbeiten', onclick: () => { day = r.id; renderEdit(); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
-                h('td', {}, fmtLong(r.id)),
+                h('td', {}, fmtLong(r.id), r.id > end ? h('span', { class: 'pill blue', style: { marginLeft: '6px' } }, 'geplant') : null),
                 h('td', { class: 'num' }, r.weightKg != null ? fmtKg(r.weightKg) : '–'),
                 h('td', { class: 'num' }, r.kcal != null ? fmtKcal(r.kcal) : '–'),
                 NUTS.map(n => h('td', { class: 'num' }, fmtG(r[n.k] ?? null)))))))),
@@ -3290,7 +3297,7 @@
           // Änderung von einem anderen Gerät/Tab – nicht neu zeichnen, während hier getippt wird
           if (e.remote && !editBox.contains(document.activeElement)) renderEdit();
         });
-        ctx.events.on('app:visible', () => { if (day > todayKey()) day = todayKey(); re(); });
+        ctx.events.on('app:visible', () => re());
         await renderEdit();
         await renderCharts();
       },
