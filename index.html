@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.8.3">
+  <meta name="app-version" content="1.8.4">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -353,7 +353,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.8.3',
+    APP_VERSION: '1.8.4',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -369,6 +369,10 @@
   };
 
   const CHANGELOG = [
+    { version: '1.8.4', date: '2026-11-28', items: [
+      'Modul ziele: Endlosschleife behoben – nach Mitternacht wurde die Abfrage vom Vortag ständig gelöscht, neu angelegt und synchronisiert (Tab-Leiste flackerte etwa jede Sekunde, viele Server-Aufrufe)',
+      'Kern: Erinnerungen, die über einer gelöschten neu angelegt werden, übernehmen „zuletzt gesendet“ – verhindert dieselbe Schleife auch an anderer Stelle',
+    ] },
     { version: '1.8.3', date: '2026-11-28', items: [
       'Modul ziele: Die In-App-Leiste „Tägliche Ziele … Ansehen“ am unteren Bildschirmrand entfällt komplett; die Abfrage kommt nur noch als Mitteilung des Systems',
       'Kern: Module können mit reminderToast: false den In-App-Hinweis für ihre Erinnerungen abschalten',
@@ -1799,7 +1803,8 @@
           const t = String(title || '').slice(0, 120);
           deadline = deadline || null;
           if (!r || r.deletedAt) {
-            r = { id, stage, stageMin, deadline, overdueMin, title: t, nextAt: null, lastSentAt: null, sentCount: 0, done: false, unseen: false, createdAt: now, deletedAt: null };
+            // lastSentAt/sentCount einer gelöschten Vorgängerin übernehmen – der Server führt sie per MAX zusammen
+            r = { id, stage, stageMin, deadline, overdueMin, title: t, nextAt: null, lastSentAt: (r && r.lastSentAt) || null, sentCount: (r && r.sentCount) || 0, done: false, unseen: false, createdAt: now, deletedAt: null };
             r.nextAt = Schedule.nextAt(r, now);   // erste Erinnerung nach einem Intervall, nicht sofort
           } else {
             const changed = r.stage !== stage || r.stageMin !== stageMin || (r.deadline || null) !== deadline || r.overdueMin !== overdueMin;
@@ -3673,11 +3678,16 @@
       const v = await view(kind, p);
       const target = v.complete || now >= cur ? next : cur;           // schon alles erledigt → heute/diese Woche nicht mehr fragen
       const snoozed = !v.complete && now >= cur && r && !r.done && r.nextAt && r.nextAt > now && r.nextAt < next;
-      if (!r || r.done || (r.lastSentAt && r.lastSentAt < p.start)) {
-        // neu anlegen (Zähler der Mitteilung beginnt je Zeitraum wieder bei 1)
-        if (r) await ctx.reminders.remove(id);
+      // Nie löschen und neu anlegen: Der Server behält „zuletzt gesendet“, das Gerät hielte die Abfrage sonst
+      // bei jedem Abgleich für neu ausgelöst → Endlosschleife (Tab-Leiste flackert, Hinweis „Ansehen“ kehrt zurück).
+      if (!r) {
         await ctx.reminders.set(id, { intervalMin: REM_IV[kind], title: REM_TITLE[kind] });
         await ctx.reminders.snoozeUntil(id, target);
+      } else if (r.done) {
+        await ctx.reminders.reopen(id);
+        await ctx.reminders.snoozeUntil(id, target);
+      } else if (r.unseen && (r.lastSentAt || 0) < p.start) {
+        await ctx.reminders.snoozeUntil(id, target);      // Abfrage aus dem vorigen Zeitraum: als erledigt abräumen
       } else if (!snoozed && (r.nextAt || 0) !== target) {   // auch kleine Verschiebungen (Takt des Servers) korrigieren, damit nichts wandert
         // moveTo lässt „ungesehen“ stehen – sonst verschwände die gerade gezeigte Abfrage sofort wieder (bzw. bliebe als Leiche stehen)
         if (ctx.reminders.moveTo) await ctx.reminders.moveTo(id, target); else await ctx.reminders.snoozeUntil(id, target);
@@ -3817,7 +3827,7 @@
     App.register({
       id: 'ziele', name: 'Tägliche Ziele', icon: 'target', order: 15,
       description: 'Tages- und Wochenziele mit Abfrage am Abend, Serie und Punkten', category: 'Alltag',
-      version: '1.0.1', schemaVersion: 1, migrations: {},
+      version: '1.0.2', schemaVersion: 1, migrations: {},
       reminderToast: false,   // keine In-App-Leiste „… Ansehen“ für die Abfrage; nur die Mitteilung des Systems
 
       async init(ctx) {

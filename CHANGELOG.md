@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.4 – 2026-11-28
+
+- Modul Tägliche Ziele: **Endlosschleife behoben.** Nach Mitternacht hat die App die Abfrage vom Vortag ständig gelöscht, neu angelegt und mit dem Server abgeglichen. Der Server behielt dabei „zuletzt gesendet“, sodass das Gerät die Abfrage bei jedem Abgleich für neu ausgelöst hielt. Folge: Die Tab-Leiste flackerte etwa jede Sekunde, die App rief den Server rund 20-mal pro Minute auf, und der Hinweis „Ansehen“ kehrte immer wieder.
+- Die Abfrage wird jetzt nur noch verschoben bzw. wieder geöffnet, nie gelöscht und neu angelegt.
+- Kern: Wird eine Erinnerung über einer gelöschten neu angelegt, übernimmt sie „zuletzt gesendet“ und den Zähler. Das verhindert dieselbe Schleife an anderer Stelle.
+- Geprüft mit einem nachgebauten Push-Dienst: vorher ca. 40 Neuzeichnungen und 20 Uploads pro Minute, danach keine; ein Gerät in der Schleife beruhigt sich nach dem Update von selbst.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.8.3 – 2026-11-28
 
 - Modul Tägliche Ziele: Die In-App-Leiste „Tägliche Ziele … Ansehen“ am unteren Bildschirmrand entfällt komplett. Die Abfrage kommt nur noch als Mitteilung des Systems (und als Zähler in der Navigation).
