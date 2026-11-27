@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.8.2 – 2026-11-28
+
+- Kern: **Einmal-Benachrichtigung.** Je ToDo bzw. Abfrage ist immer nur eine Mitteilung sichtbar. Kommt die nächste Erinnerung, wird die alte geschlossen, statt dass sich die Mitteilungen in der Mitteilungszentrale stauen (iOS ersetzt Mitteilungen mit gleichem Tag nicht zuverlässig).
+- Kern: Mitteilungen verschwinden automatisch, sobald die Erinnerung gesehen (Modul geöffnet), erledigt, verschoben oder gelöscht ist.
+- Kern: neue Funktion `ctx.reminders.moveTo(id, ts)` – verschiebt nur den Zeitpunkt, der Status „ungesehen“ bleibt.
+- Modul Tägliche Ziele: Der Abfrage-Hinweis im Modul erscheint nur noch einmal pro Tag bzw. Woche – er verschwindet nach dem ersten Abhaken oder mit „OK“. Die Abfrage-Mitteilung vom Abend bleibt nicht mehr dauerhaft stehen.
+- Service Worker 1.4.0: schließt bei jedem Push ältere Mitteilungen derselben Einträge.
+
+Geänderte Dateien: `index.html`, `sw.js`. Worker und Manifest unverändert. Keine Datenänderung, keine Migration.
+
 ## 1.8.1 – 2026-11-25
 
 - Modul Ernährung: Einträge (kcal, Nährstoffe, Gewicht) auch für zukünftige Tage, bis 30 Tage im Voraus. Solche Tage sind als „geplant“ markiert.

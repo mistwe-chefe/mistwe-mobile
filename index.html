@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.8.1">
+  <meta name="app-version" content="1.8.2">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -303,7 +303,9 @@
   [data-module="ziele"] .card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
   [data-module="ziele"] .card-head h3 { margin: 0; }
   [data-module="ziele"] .card.period.asking { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-bg), var(--shadow); }
-  [data-module="ziele"] .ask { background: var(--primary-bg); color: var(--text); border-radius: var(--radius-sm); padding: 8px 10px; font-size: .92rem; margin-bottom: 8px; }
+  [data-module="ziele"] .ask { display: flex; align-items: center; gap: 6px; background: var(--primary-bg); color: var(--text); border-radius: var(--radius-sm); padding: 4px 4px 4px 10px; font-size: .92rem; margin-bottom: 8px; }
+  [data-module="ziele"] .ask .grow { flex: 1; }
+  [data-module="ziele"] .ask .btn { min-height: 36px; padding: 4px 10px; }
   [data-module="ziele"] .ask svg.icon { color: var(--primary); }
   [data-module="ziele"] ul.goal-list, [data-module="ziele"] ul.hist { list-style: none; margin: 0; padding: 0; }
   [data-module="ziele"] li.goal { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--border); }
@@ -351,7 +353,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.8.1',
+    APP_VERSION: '1.8.2',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -367,6 +369,11 @@
   };
 
   const CHANGELOG = [
+    { version: '1.8.2', date: '2026-11-28', items: [
+      'Kern: Einmal-Benachrichtigung – je ToDo bzw. Abfrage ist immer nur eine Mitteilung sichtbar, ältere werden ersetzt statt sich zu stauen',
+      'Kern: Mitteilungen verschwinden automatisch, sobald die Erinnerung gesehen (Modul geöffnet), erledigt, verschoben oder gelöscht ist',
+      'Modul ziele: Abfrage-Hinweis erscheint nur noch einmal – weg nach dem ersten Abhaken oder mit „OK“; die Mitteilung vom Abend bleibt nicht mehr stehen',
+    ] },
     { version: '1.8.1', date: '2026-11-25', items: [
       'Modul ernaehrung: Einträge auch für zukünftige Tage (bis 30 Tage im Voraus), z. B. vorgekochtes Essen für morgen; solche Tage sind als „geplant“ markiert',
       'Modul ernaehrung: geplante Tage stehen in der Eintragstabelle, Diagramme und Durchschnitte reichen weiter nur bis heute',
@@ -1709,13 +1716,29 @@
       } catch (_) {}
     },
     vibrate() { if (Settings.data.vibrate && navigator.vibrate) try { navigator.vibrate([200, 100, 200]); } catch (_) {} },
+    async getReg() {
+      try { return this.reg || (navigator.serviceWorker && await Promise.race([navigator.serviceWorker.getRegistration(), new Promise(r => setTimeout(r, 2000))])) || null; } catch (_) { return null; }
+    },
+    /** Bereits angezeigte Mitteilungen schließen (filter: Notification → true = schließen) */
+    async close(filter) {
+      const reg = await this.getReg();
+      if (!reg || !reg.getNotifications) return 0;
+      let n = 0;
+      try { for (const x of await reg.getNotifications()) { if (filter(x)) { x.close(); n++; } } } catch (_) {}
+      return n;
+    },
     async show({ title, body, tag, data, actions, silent }) {
       if (!silent) { this.beep(); this.vibrate(); }
       if (this.permission() !== 'granted') return false;
+      data = { ...(data || {}), at: Date.now() };
       const opts = { body, tag, data, renotify: !!tag, icon: 'icons/icon-192-v2.png', badge: 'icons/icon-192-v2.png', requireInteraction: false };
       try {
-        const reg = this.reg || (navigator.serviceWorker && await navigator.serviceWorker.getRegistration());
-        if (reg && reg.showNotification) { await reg.showNotification(title, { ...opts, actions: actions || [] }); return true; }
+        const reg = await this.getReg();
+        if (reg && reg.showNotification) {
+          // Einmal-Benachrichtigung: ältere Mitteilung desselben Eintrags vorher schließen (iOS ersetzt gleiche Tags nicht zuverlässig)
+          if (tag) { const ids = new Set(data.ids || []); await this.close(x => x.tag === tag || (ids.size && x.data && ids.has(`${x.data.m}/${x.data.id}`))); }
+          await reg.showNotification(title, { ...opts, actions: actions || [] }); return true;
+        }
       } catch (e) { Log.warn('showNotification: ' + e.message); }
       try { const n = new Notification(title, opts); n.onclick = () => { window.focus(); if (data && data.m) Router.navigate(data.m); n.close(); }; return true; }
       catch (e) { Log.warn('Notification: ' + e.message); return false; }
@@ -1783,6 +1806,8 @@
         async list() { return (await Store.kvByCollection(m, R.C)).map(x => x.v).filter(r => !r.deletedAt).map(r => R.info(r)); },
         snooze(id, minutes) { return mutate(id, (r, now) => { r.nextAt = now + minutes * 60000; r.unseen = false; }); },
         snoozeUntil(id, ts) { return mutate(id, r => { r.nextAt = ts; r.unseen = false; }); },
+        /** Nur den nächsten Zeitpunkt verschieben (z. B. Ausrichten auf eine Uhrzeit), „gesehen“-Status bleibt */
+        moveTo(id, ts) { return mutate(id, r => { r.nextAt = ts; }); },
         done(id) { return mutate(id, r => { r.done = true; r.nextAt = null; r.unseen = false; }); },
         reopen(id) { return mutate(id, (r, now) => { r.done = false; r.unseen = false; r.nextAt = Schedule.nextAt(r, now); }); },
         seen(id) { return mutate(id, r => { r.unseen = false; }); },
@@ -1840,7 +1865,7 @@
         const first = fired[0].r.title || fired[0].def.name;
         const title = `${first} + ${fired.length - 1} weitere${catchUp ? ' (verpasst)' : ''}`;
         const body = fired.slice(0, 6).map(f => '• ' + (f.r.title || f.def.name)).join('\n') + (fired.length > 6 ? `\n… und ${fired.length - 6} weitere` : '');
-        await Notify.show({ title, body, tag: 'pa-summary', data: { m: fired[0].def.id } });
+        await Notify.show({ title, body, tag: 'pa-summary', data: { m: fired[0].def.id, ids: fired.map(f => `${f.def.id}/${f.r.id}`) } });
         if (document.visibilityState === 'visible') UI.toast(title, { action: 'Ansehen', onAction: () => Router.navigate(fired[0].def.id) });
       }
     },
@@ -1859,6 +1884,31 @@
         Notify.setBadge(Object.values(c).reduce((a, b) => a + b, 0));
         Shell.setCounts(c);
       } catch (_) {}
+    },
+    /** Angezeigte Mitteilungen aufräumen: Eine Mitteilung bleibt nur, solange ihre Erinnerung offen und ungesehen ist.
+        Gesehen (Modul geöffnet), erledigt, geschlummert oder gelöscht → Mitteilung verschwindet aus der Mitteilungszentrale. */
+    async prune() {
+      const stale = async (m, id, at) => {
+        const r = await this.getRec(m, id);
+        if (!r || r.deletedAt || r.done) return true;
+        return !r.unseen && (r.updatedAt || 0) >= (at || 0);   // nach dem Anzeigen als gesehen markiert
+      };
+      const reg = await Notify.getReg();
+      if (!reg || !reg.getNotifications) return;
+      try {
+        for (const n of await reg.getNotifications()) {
+          const d = n.data || {};
+          const at = d.at || n.timestamp || 0;
+          if (d.m && d.id) { if (await stale(d.m, d.id, at)) n.close(); }
+          else if (Array.isArray(d.ids) && d.ids.length) {
+            let all = true;
+            for (const k of d.ids) { const i = k.indexOf('/'); if (!(await stale(k.slice(0, i), k.slice(i + 1), at))) { all = false; break; } }
+            if (all) n.close();
+          } else if (n.tag === 'pa-summary' || n.tag === 'pa-push') {
+            if (!Object.keys(await this.counts()).length) n.close();
+          }
+        }
+      } catch (e) { Log.warn('Mitteilungen aufräumen: ' + e.message); }
     },
     /** Aktion aus einer Benachrichtigung (über Service Worker/Outbox) */
     async handleAction(m, id, action) {
@@ -1883,8 +1933,11 @@
     },
     start() {
       const titles = U.debounce(() => this.syncTitles(), 800);
+      const prune = U.debounce(() => this.prune(), 1500);
       this.syncTitles();
-      Events.on('reminders:changed', titles);
+      prune();
+      Events.on('reminders:changed', () => { titles(); prune(); });
+      Events.on('app:visible', prune);
       Events.on('store:changed', e => { if (e && e.collection === this.C) titles(); });
       this.tick({ catchUp: true });
       setInterval(() => this.tick(), CONFIG.TICK_MS);
@@ -3618,7 +3671,8 @@
         await ctx.reminders.set(id, { intervalMin: REM_IV[kind], title: REM_TITLE[kind] });
         await ctx.reminders.snoozeUntil(id, target);
       } else if (!snoozed && (r.nextAt || 0) !== target) {   // auch kleine Verschiebungen (Takt des Servers) korrigieren, damit nichts wandert
-        await ctx.reminders.snoozeUntil(id, target);
+        // moveTo lässt „ungesehen“ stehen – sonst verschwände die gerade gezeigte Abfrage sofort wieder (bzw. bliebe als Leiche stehen)
+        if (ctx.reminders.moveTo) await ctx.reminders.moveTo(id, target); else await ctx.reminders.snoozeUntil(id, target);
       }
     }
     let arming = false, armAgain = false;
@@ -3779,7 +3833,7 @@
             h('h2', {}, 'Tägliche Ziele'),
             h('button', { class: 'btn btn-ghost', title: 'Einstellungen', 'aria-label': 'Einstellungen', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, ctx.ui.icon('settings'))),
           hintBox, statsBox, dayBox, weekBox, histBox);
-        let histOpen = false;
+        let histOpen = false, dismissed = {};
 
         const stat = (icon, value, label) => h('div', { class: 'stat' }, h('div', { class: 'v' }, ctx.ui.icon(icon), String(value)), h('div', { class: 'l' }, label));
 
@@ -3791,7 +3845,9 @@
           const isD = kind === 'daily';
           const time = isD ? c.dailyTime : c.weeklyTime;
           const askAt = atTime(isD ? v.p.date : addDays(v.p.date, 6), time);
-          const asking = v.items.length && !v.complete && now >= askAt;
+          // Hinweis nur einmal: weg, sobald nach der Abfragezeit etwas abgehakt oder er weggeklickt wurde
+          const answered = v.rec && (v.rec.answeredAt || 0) >= askAt;
+          const asking = v.items.length && !v.complete && now >= askAt && !answered && dismissed[kind] !== v.p.key;
           const head = h('div', { class: 'card-head' },
             h('h3', {}, isD ? 'Heute' : 'Diese Woche'),
             h('span', { class: 'muted small' }, isD ? v.p.date.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }) : periodLabel(v.p)));
@@ -3805,7 +3861,9 @@
           const next = on && rem && rem.nextAt ? h('span', { class: 'pill', title: U.formatDateTimeFull(rem.nextAt) }, ctx.ui.icon('bell'), 'Abfrage: ' + U.formatDate(rem.nextAt)) : (!on && v.items.length ? h('span', { class: 'pill' }, ctx.ui.icon('bell-off'), 'Abfrage aus') : null);
           return h('div', { class: 'card period' + (asking ? ' asking' : '') },
             head,
-            asking ? h('div', { class: 'ask' }, ctx.ui.icon('bell'), isD ? ' Abfrage: Was hast du heute geschafft? Hake ab, was erledigt ist.' : ' Abfrage: Was hast du diese Woche geschafft?') : null,
+            asking ? h('div', { class: 'ask' }, ctx.ui.icon('bell'),
+              h('span', { class: 'grow' }, isD ? 'Was hast du heute geschafft? Hake ab, was erledigt ist.' : 'Was hast du diese Woche geschafft?'),
+              h('button', { class: 'btn btn-ghost btn-sm', 'aria-label': 'Hinweis ausblenden', onclick: async () => { dismissed = { ...dismissed, [kind]: v.p.key }; await ctx.settings.set('askDismissed', dismissed); render(); } }, 'OK')) : null,
             v.items.length
               ? h('ul', { class: 'goal-list' }, v.items.map(it => goalRow(kind, v.p, it)))
               : h('div', { class: 'empty small' }, isD ? `Noch keine Tagesziele. Sie werden jeden Abend um ${U.minToTime(c.dailyTime)} abgefragt.` : `Noch keine Wochenziele. Sie werden am Sonntag um ${U.minToTime(c.weeklyTime)} abgefragt.`),
@@ -3831,6 +3889,7 @@
         const render = async () => {
           const now = Date.now();
           const [c, s, remD, remW] = await Promise.all([cfg(ctx), stats(), ctx.reminders.get(REM.daily), ctx.reminders.get(REM.weekly)]);
+          dismissed = (await ctx.settings.get('askDismissed', {})) || {};
 
           const perm = ctx.notify.permission();
           const anyGoals = s.d.items.length || s.w.items.length;

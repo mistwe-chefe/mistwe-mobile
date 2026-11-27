@@ -2,7 +2,7 @@
  * Bewusst klein und ohne Fachlogik. Kennt keine Module.
  * Liest nur `meta`, schreibt nur `outbox` (Architektur 4.2).
  */
-const SW_VERSION = '1.3.1';
+const SW_VERSION = '1.4.0';
 const CACHE = 'pa-shell-' + SW_VERSION;
 const DB_NAME = 'persoenliche-app';
 const DB_VERSION = 1;
@@ -183,6 +183,18 @@ self.addEventListener('notificationclick', event => {
 });
 
 /* ---------- Push vom Push-Dienst (Architektur 8.4) ---------- */
+/** Einmal-Benachrichtigung: ältere Mitteilungen derselben Einträge schließen, bevor die neue erscheint
+    (iOS ersetzt Mitteilungen mit gleichem Tag nicht zuverlässig – sonst stauen sie sich). */
+async function closeOld(tags, ids) {
+  try {
+    const t = new Set(tags), k = new Set(ids || []);
+    for (const n of await self.registration.getNotifications()) {
+      const d = n.data || {};
+      if (t.has(n.tag) || (d.m && d.id && k.has(`${d.m}/${d.id}`))) n.close();
+    }
+  } catch (_) {}
+}
+
 async function handlePush(p) {
   const now = Date.now();
   const opts = { icon: 'icons/icon-192-v2.png', badge: 'icons/icon-192-v2.png' };
@@ -201,21 +213,24 @@ async function handlePush(p) {
   } catch (_) {}
   const titled = await Promise.all(items.map(async it => ({ ...it, title: (names && names[`${it.m}/${it.id}`]) || await decryptTitle(key, it.t, it.m, it.id) })));
   notifyClients({ type: 'sync' }).catch(() => {});
-  if (!total) return self.registration.showNotification('Erinnerung', { ...opts, body: 'Öffne die App für Details.', tag: 'pa-push' });
+  if (!total) { await closeOld(['pa-push']); return self.registration.showNotification('Erinnerung', { ...opts, body: 'Öffne die App für Details.', tag: 'pa-push' }); }
+  const ids = titled.map(it => `${it.m}/${it.id}`);
   if (total <= 5) {
     // Jeder Push MUSS eine Benachrichtigung zeigen (Safari entzieht sonst das Abo).
+    await closeOld(titled.map(it => `${it.m}-${it.id}`).concat('pa-push'), ids);
     await Promise.all(titled.map(it => self.registration.showNotification('' + (it.title || 'ToDo fällig'), {
       ...opts, body: describe(it, now), tag: `${it.m}-${it.id}`, renotify: true,
-      data: { m: it.m, id: it.id },
+      data: { m: it.m, id: it.id, at: now },
       actions: [{ action: 'done', title: 'Erledigt' }, { action: 'snooze', title: '1 Std später' }],
     })));
     return;
   }
   const list = titled.slice(0, 6).map(it => '• ' + (it.title || 'ToDo')).join('\n');
   const first = titled.find(it => it.title);
+  await closeOld(['pa-summary', 'pa-push'], ids);
   return self.registration.showNotification(first ? `${first.title} + ${total - 1} weitere` : `${total} Erinnerungen fällig`, {
     ...opts, body: list + (total > 6 ? `\n… und ${total - 6} weitere` : ''), tag: 'pa-summary', renotify: true,
-    data: { m: titled[0] ? titled[0].m : undefined },
+    data: { m: titled[0] ? titled[0].m : undefined, ids, at: now },
   });
 }
 
