@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.8.2">
+  <meta name="app-version" content="1.8.3">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -353,7 +353,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.8.2',
+    APP_VERSION: '1.8.3',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -369,6 +369,10 @@
   };
 
   const CHANGELOG = [
+    { version: '1.8.3', date: '2026-11-28', items: [
+      'Modul ziele: Die In-App-Leiste „Tägliche Ziele … Ansehen“ am unteren Bildschirmrand entfällt komplett; die Abfrage kommt nur noch als Mitteilung des Systems',
+      'Kern: Module können mit reminderToast: false den In-App-Hinweis für ihre Erinnerungen abschalten',
+    ] },
     { version: '1.8.2', date: '2026-11-28', items: [
       'Kern: Einmal-Benachrichtigung – je ToDo bzw. Abfrage ist immer nur eine Mitteilung sichtbar, ältere werden ersetzt statt sich zu stauen',
       'Kern: Mitteilungen verschwinden automatisch, sobald die Erinnerung gesehen (Modul geöffnet), erledigt, verschoben oder gelöscht ist',
@@ -1500,7 +1504,10 @@
         const list = fired.map(f => ({ def: Registry.modules.get(f.m), r: f.r, atDeadline: f.atDeadline })).filter(f => f.def && Registry.isActive(f.def.id));
         // Mit Push zeigt der Service Worker die Benachrichtigung; die offene App zeigt dann nur einen Hinweis.
         if (list.length && !Push.subscribedHere) await Reminders.announce(list, Date.now(), false);
-        else if (list.length && document.visibilityState === 'visible') UI.toast(`${list.length === 1 ? (list[0].r.title || list[0].def.name) : list.length + ' Erinnerungen'}`, { action: 'Ansehen', onAction: () => Router.navigate(list[0].def.id) });
+        else {
+          const tl = list.filter(f => f.def.reminderToast !== false);   // Module können den In-App-Hinweis abschalten
+          if (tl.length && document.visibilityState === 'visible') UI.toast(`${tl.length === 1 ? (tl[0].r.title || tl[0].def.name) : tl.length + ' Erinnerungen'}`, { action: 'Ansehen', onAction: () => Router.navigate(tl[0].def.id) });
+        }
         list.forEach(f => Events.emit('reminder:fired', { moduleId: f.def.id, itemId: f.r.id }));
       }
       await Reminders.updateBadge();
@@ -1859,14 +1866,15 @@
         for (const { def, r, atDeadline } of fired) {
           const body = this.describe(r, now, atDeadline);
           await Notify.show({ title: `${r.title || def.name}`, body, tag: `${def.id}-${r.id}`, data: { m: def.id, id: r.id }, actions: [{ action: 'done', title: 'Erledigt' }, { action: 'snooze', title: '1 Std später' }] });
-          if (document.visibilityState === 'visible') UI.toast(`${r.title || def.name} – ${body}`, { action: 'Öffnen', onAction: () => Router.navigate(def.id) });
+          if (def.reminderToast !== false && document.visibilityState === 'visible') UI.toast(`${r.title || def.name} – ${body}`, { action: 'Öffnen', onAction: () => Router.navigate(def.id) });
         }
       } else {
         const first = fired[0].r.title || fired[0].def.name;
         const title = `${first} + ${fired.length - 1} weitere${catchUp ? ' (verpasst)' : ''}`;
         const body = fired.slice(0, 6).map(f => '• ' + (f.r.title || f.def.name)).join('\n') + (fired.length > 6 ? `\n… und ${fired.length - 6} weitere` : '');
         await Notify.show({ title, body, tag: 'pa-summary', data: { m: fired[0].def.id, ids: fired.map(f => `${f.def.id}/${f.r.id}`) } });
-        if (document.visibilityState === 'visible') UI.toast(title, { action: 'Ansehen', onAction: () => Router.navigate(fired[0].def.id) });
+        const tf = fired.filter(f => f.def.reminderToast !== false);
+        if (tf.length && document.visibilityState === 'visible') UI.toast(tf.length === fired.length ? title : `${tf[0].r.title || tf[0].def.name}${tf.length > 1 ? ` + ${tf.length - 1} weitere` : ''}`, { action: 'Ansehen', onAction: () => Router.navigate(tf[0].def.id) });
       }
     },
     async counts() {
@@ -3809,7 +3817,8 @@
     App.register({
       id: 'ziele', name: 'Tägliche Ziele', icon: 'target', order: 15,
       description: 'Tages- und Wochenziele mit Abfrage am Abend, Serie und Punkten', category: 'Alltag',
-      version: '1.0.0', schemaVersion: 1, migrations: {},
+      version: '1.0.1', schemaVersion: 1, migrations: {},
+      reminderToast: false,   // keine In-App-Leiste „… Ansehen“ für die Abfrage; nur die Mitteilung des Systems
 
       async init(ctx) {
         goals = ctx.store.collection('goals', { sync: true });        // { title, type: 'daily'|'weekly', order }

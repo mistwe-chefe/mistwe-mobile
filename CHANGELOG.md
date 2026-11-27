@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.3 – 2026-11-28
+
+- Modul Tägliche Ziele: Die In-App-Leiste „Tägliche Ziele … Ansehen“ am unteren Bildschirmrand entfällt komplett. Die Abfrage kommt nur noch als Mitteilung des Systems (und als Zähler in der Navigation).
+- Kern: Module können mit `reminderToast: false` den In-App-Hinweis für ihre Erinnerungen abschalten. ToDos zeigen ihn weiterhin.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.8.2 – 2026-11-28
 
 - Kern: **Einmal-Benachrichtigung.** Je ToDo bzw. Abfrage ist immer nur eine Mitteilung sichtbar. Kommt die nächste Erinnerung, wird die alte geschlossen, statt dass sich die Mitteilungen in der Mitteilungszentrale stauen (iOS ersetzt Mitteilungen mit gleichem Tag nicht zuverlässig).
