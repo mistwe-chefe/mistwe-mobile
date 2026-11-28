@@ -2,7 +2,7 @@
  * Bewusst klein und ohne Fachlogik. Kennt keine Module.
  * Liest nur `meta`, schreibt nur `outbox` (Architektur 4.2).
  */
-const SW_VERSION = '1.4.0';
+const SW_VERSION = '1.5.0';
 const CACHE = 'pa-shell-' + SW_VERSION;
 const DB_NAME = 'persoenliche-app';
 const DB_VERSION = 1;
@@ -10,10 +10,10 @@ const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './icons/icon-192-v2.png',
-  './icons/icon-512-v2.png',
-  './icons/icon-maskable-512-v2.png',
-  './icons/apple-touch-icon-v2.png',
+  './icons/icon-192-v3.png',
+  './icons/icon-512-v3.png',
+  './icons/icon-maskable-512-v3.png',
+  './icons/apple-touch-icon-v3.png',
 ];
 
 /* ---------- Installation / Aktivierung ---------- */
@@ -197,7 +197,7 @@ async function closeOld(tags, ids) {
 
 async function handlePush(p) {
   const now = Date.now();
-  const opts = { icon: 'icons/icon-192-v2.png', badge: 'icons/icon-192-v2.png' };
+  const opts = { icon: 'icons/icon-192-v3.png', badge: 'icons/icon-192-v3.png' };
   if (p.type === 'test') {
     return self.registration.showNotification('Test-Push', { ...opts, body: 'Push funktioniert' + (p.from ? ` (ausgelöst von ${p.from})` : '') + '.', tag: 'pa-test' });
   }
@@ -238,7 +238,7 @@ self.addEventListener('push', event => {
   let p = {};
   try { p = event.data ? event.data.json() : {}; } catch (_) {}
   event.waitUntil(Promise.all([
-    handlePush(p).catch(() => self.registration.showNotification('Erinnerung', { body: 'Öffne die App für Details.', tag: 'pa-push', icon: 'icons/icon-192-v2.png' })),
+    handlePush(p).catch(() => self.registration.showNotification('Erinnerung', { body: 'Öffne die App für Details.', tag: 'pa-push', icon: 'icons/icon-192-v3.png' })),
     logReceipt(p),
   ]));
 });

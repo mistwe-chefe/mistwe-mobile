@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.9.2 – 2026-11-28
+
+- Neues App-Logo: Taschenmesser zugeklappt (keine ausgefahrene Klinge), waagerecht statt schräg, kräftiger gezeichnet – dicke dunkle Konturen, großer roter Griff, weißes Kreuz, eingeklappte Werkzeuge und Schlüsselring.
+- Neue Icon-Dateien `icons/*-v3.png` (neue Namen, damit Browser- und Service-Worker-Caches sie sicher neu laden). Quelle: `icons/logo.svg`, erzeugt mit `icons/logo-quelle.py`. Die alten v2-Dateien bleiben vorerst liegen.
+- Service Worker 1.5.0 (neue Icon-Pfade im Offline-Cache).
+
+Geänderte Dateien: `index.html`, `sw.js`, `manifest.webmanifest`, `icons/` (neu: `icon-192-v3.png`, `icon-512-v3.png`, `icon-maskable-512-v3.png`, `apple-touch-icon-v3.png`, `logo.svg`, `logo-quelle.py`). Worker unverändert. Keine Datenänderung.
+
+Hinweis iPhone: Das Symbol auf dem Home-Bildschirm aktualisiert iOS erst, wenn die App vom Home-Bildschirm entfernt und neu hinzugefügt wird. Vorher unbedingt prüfen, dass Push & Sync eingerichtet ist (Daten liegen sonst nur im Speicher dieser Home-Screen-App) oder einen Export machen.
+
 ## 1.9.1 – 2026-11-28
 
 - Modul ToDos: Der Hinweis „… × erinnert“ ist farbig nach der Zeit, die das ToDo schon offen ist: bis 2 Tage grün, danach stufenlos über Gelb und Orange bis 5 Tage rot (ab 5 Tagen bleibt es rot). Gilt in der Liste und im Ausschnitt auf der Startseite; erledigte ToDos bleiben grau. Der Tooltip zeigt „offen seit …“.
