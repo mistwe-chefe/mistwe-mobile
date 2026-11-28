@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.13.0">
+  <meta name="app-version" content="1.13.1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v5.png">
@@ -104,6 +104,11 @@
   input[type=text], input[type=search], input[type=password], input[type=datetime-local], input[type=time], input[type=number], select, textarea {
     font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); min-height: 44px; padding: 8px 12px; width: 100%; }
   textarea { min-height: 90px; resize: vertical; }
+  /* iOS/Safari: Datums-/Zeitfelder haben eine eigene Mindestbreite und -höhe und ragen sonst aus Spalten heraus */
+  input[type=time], input[type=date], input[type=datetime-local] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; height: 44px; line-height: 26px; text-align: left; }
+  input[type=time]::-webkit-date-and-time-value, input[type=date]::-webkit-date-and-time-value, input[type=datetime-local]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+  label.field { min-width: 0; }
+  label.field.grow { flex: 1 1 0; }
   input:focus, select:focus, textarea:focus, .btn:focus-visible, .chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
   label.field { display: block; }
   label.field > span { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
@@ -307,8 +312,8 @@
   /* ==== MODUL-CSS: wecker ==== */
   [data-module="wecker"] .head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
   [data-module="wecker"] .head h2 { flex: 1; margin: 0; }
-  [data-module="wecker"] .fields { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; }
-  [data-module="wecker"] .fields input { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 0; }
+  [data-module="wecker"] .fields { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  [data-module="wecker"] .fields input { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 0; width: 100%; height: 52px; line-height: 34px; }
   [data-module="wecker"] .fields label.field > span { white-space: nowrap; }
   [data-module="wecker"] .chips { margin-top: 10px; }
   [data-module="wecker"] .preview { margin-top: 12px; }
@@ -567,7 +572,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.13.0',
+    APP_VERSION: '1.13.1',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -583,6 +588,9 @@
   };
 
   const CHANGELOG = [
+    { version: '1.13.1', date: '2026-11-28', items: [
+      'Kern: Uhrzeit- und Datumsfelder ragen auf dem iPhone nicht mehr aus ihrer Spalte und haben dieselbe Höhe wie andere Felder (Wecker „Ab“, Ruhezeiten „Von/Bis“, Ziele-Abfragezeiten)',
+    ] },
     { version: '1.13.0', date: '2026-11-28', items: [
       'Startseite: Mini-Übersicht Ernährung unter dem ToDo-Fenster – heute Gewicht, kcal (mit Ziel, falls gesetzt) und Eiweiß; Antippen öffnet das Modul',
       'Startseite: keine Schaltflächen mehr für ToDos, Tägliche Ziele, Ernährung und Einkaufen (erreichbar über Tab-Leiste, Fenster und Kennzahlen)',
@@ -3881,7 +3889,7 @@
     App.register({
       id: 'wecker', name: 'Wecker', icon: 'alarm', order: 30,
       description: 'Viele Wecker auf einmal stellen und alle Wecker löschen (über iOS-Kurzbefehle)', category: 'Alltag',
-      version: '1.2.0', schemaVersion: 1, migrations: {},
+      version: '1.2.1', schemaVersion: 1, migrations: {},
       /* Daten (lokal, nicht synchronisiert): Einstellung „cfg“ { start: 'HH:MM', count, gapMin },
          Wert „letzte“ { at, kind: 'set'|'test'|'delete', times: ['HH:MM', …] } */
 

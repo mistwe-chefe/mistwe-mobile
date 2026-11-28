@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.13.1 – 2026-11-28
+
+- Kern: Schönheitsfehler bei Uhrzeit-/Datumsfeldern auf dem iPhone behoben. Safari gibt diesen Feldern eine eigene Mindestbreite und Höhe; dadurch ragte im Wecker das Feld „Ab“ unter „Anzahl“ und war höher als die Nachbarfelder, in den Einstellungen ragte „Bis“ der Ruhezeiten aus der Karte. Jetzt: `appearance: none`, `min-width: 0`, feste Höhe, Text linksbündig; Spalten mit `minmax(0, …)` bzw. `flex: 1 1 0`.
+- Wecker 1.2.1: alle drei Felder gleich hoch.
+
+Geänderte Dateien: `index.html`, `CHANGELOG.md`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.13.0 – 2026-11-28
 
 - **Startseite: Mini-Übersicht Ernährung** direkt unter dem ToDo-Fenster: heutiges Gewicht, heute zugeführte kcal (bei gesetztem kcal-Ziel als „x / Ziel“) und Eiweiß. Antippen öffnet das Modul Ernährung. Aktualisiert sich bei jeder Änderung und beim Tageswechsel.
