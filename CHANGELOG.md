@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.11.0 – 2026-11-28
+
+- **Neues Modul Taschenrechner** (`rechner`, Symbol `calculator`) nach dem Vorbild Casio ClassWiz CW (fx-87DE CW): gleiches Tastenfeld mit SHIFT- (gold) und ALPHA-Belegung (pink), Display darüber. Natural Display (Bruch, Wurzel, Potenz, log zur Basis, Abs, ×10ˣ), exakte Ergebnisse (Bruch, Wurzelterm, π) mit S⇔D, Variablen A–F/x/y/M mit STO/RECALL/M+/M−/CALC, Verlauf, DEL/INS/UNDO, °′″, ENG, ÷R, Pol/Rec, nPr/nCr, FACT, Rnd/RndFix, Ran#/RanInt, periodische Dezimalzahlen; OPTN mit Hyperbelfunktionen, Winkeleinheiten, technischen Symbolen, ∫, d/dx, Σ, GCD/LCM. MENU: Berechnungen, Tabelle, Gleichungen (LGS 2–4, Polynom Grad 2–4 inkl. komplexer Lösungen). SETUP, RESET, OFF/ON. Tastaturbedienung am Computer. Daten nur lokal (nicht synchronisiert).
+- Kern: untere Tab-Leiste waagerecht scrollbar ohne Scrollbalken (Scroll-Snap, min. 56 px je Symbol), aktives Symbol wird eingeblendet.
+- Einstellungen → Dokumentation → Taschenrechner.
+
+Geänderte Dateien: `index.html`, `CHANGELOG.md`, `CLAUDE.md`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung bestehender Module.
+
 ## 1.10.1 – 2026-11-28
 
 - Modul Wecker: Einrichtungsanleitung samt „Name kopieren“ und Test-Knopf aus dem Modul entfernt. Die Anleitung für die beiden Kurzbefehle steht in Kurzform unter Einstellungen → Dokumentation → Wecker.
