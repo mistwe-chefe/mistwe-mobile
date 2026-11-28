@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.14.0 – 2026-11-28
+
+- **Einstellungen als Menü:** Statt einer langen Seite eine Liste mit sieben Punkten, jeweils mit kurzem Status: Push & Sync (aus/an, Push), Benachrichtigungen (Status, Ruhezeit), Darstellung, Daten & Speicher (letzter Export), Module (x von y aktiv), Dokumentation, Über & Diagnose (Version). Jeder Punkt öffnet eine eigene Unterseite (`#/einstellungen/<bereich>`) mit Zurück-Pfeil; Daten & Speicher sowie Über & Diagnose fassen je zwei Bereiche zusammen. Der doppelte Kartentitel entfällt auf Unterseiten mit nur einem Bereich.
+- Hinweise „Sync einrichten/verbinden“ (Startseite, Banner) öffnen direkt Push & Sync.
+- Einstellungen 1.2.0 (Hook `onRoute`), neues Symbol `chevron-right`.
+
+Geänderte Dateien: `index.html`, `CHANGELOG.md`, `CLAUDE.md`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.13.1 – 2026-11-28
 
 - Kern: Schönheitsfehler bei Uhrzeit-/Datumsfeldern auf dem iPhone behoben. Safari gibt diesen Feldern eine eigene Mindestbreite und Höhe; dadurch ragte im Wecker das Feld „Ab“ unter „Anzahl“ und war höher als die Nachbarfelder, in den Einstellungen ragte „Bis“ der Ruhezeiten aus der Karte. Jetzt: `appearance: none`, `min-width: 0`, feste Höhe, Text linksbündig; Spalten mit `minmax(0, …)` bzw. `flex: 1 1 0`.

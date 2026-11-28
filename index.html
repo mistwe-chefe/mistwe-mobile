@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.13.1">
+  <meta name="app-version" content="1.14.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v5.png">
@@ -310,6 +310,18 @@
   /* ==== ENDE MODUL-CSS: ernaehrung ==== */
 
   /* ==== MODUL-CSS: wecker ==== */
+  [data-module="einstellungen"] .head { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+  [data-module="einstellungen"] .head h2 { margin: 0; }
+  [data-module="einstellungen"] .set-back { margin-left: -10px; padding: 0 8px; }
+  [data-module="einstellungen"] .set-menu { padding: 4px 0; }
+  [data-module="einstellungen"] .set-body.single > div > .card:first-child > h3:first-child { display: none; }
+  [data-module="einstellungen"] .set-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 56px; color: var(--text); text-decoration: none; }
+  [data-module="einstellungen"] .set-item + .set-item { border-top: 1px solid var(--border); }
+  [data-module="einstellungen"] .set-item:active { background: var(--surface-2, rgba(127,127,127,.08)); }
+  [data-module="einstellungen"] .set-ic { width: 22px; height: 22px; color: var(--primary); flex: 0 0 auto; }
+  [data-module="einstellungen"] .set-name { font-weight: 600; }
+  [data-module="einstellungen"] .set-sub { font-size: .82rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  [data-module="einstellungen"] .set-chev { width: 18px; height: 18px; color: var(--muted); flex: 0 0 auto; }
   [data-module="wecker"] .head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
   [data-module="wecker"] .head h2 { flex: 1; margin: 0; }
   [data-module="wecker"] .fields { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
@@ -572,7 +584,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.13.1',
+    APP_VERSION: '1.14.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -588,6 +600,10 @@
   };
 
   const CHANGELOG = [
+    { version: '1.14.0', date: '2026-11-28', items: [
+      'Einstellungen als Menü: Push & Sync, Benachrichtigungen, Darstellung, Daten & Speicher, Module, Dokumentation, Über & Diagnose – je mit kurzem Status, Bereiche auf eigenen Unterseiten (#/einstellungen/<bereich>) mit Zurück-Pfeil',
+      'Hinweise „Sync einrichten/verbinden“ führen direkt zu Push & Sync',
+    ] },
     { version: '1.13.1', date: '2026-11-28', items: [
       'Kern: Uhrzeit- und Datumsfelder ragen auf dem iPhone nicht mehr aus ihrer Spalte und haben dieselbe Höhe wie andere Felder (Wecker „Ab“, Ruhezeiten „Von/Bis“, Ziele-Abfragezeiten)',
     ] },
@@ -1192,6 +1208,7 @@
     phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
     chevron: '<path d="m9 6 6 6-6 6"/>',
     'chevron-left': '<path d="m15 6-6 6 6 6"/>',
+    'chevron-right': '<path d="m9 6 6 6-6 6"/>',
     paste: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4.5V3h6v1.5"/><path d="M9 10h6M9 14h6M9 18h3"/>',
     book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21a2 2 0 0 1 2-2h13v2"/><path d="M9 7h6"/>',
     apple: '<path d="M12 7.5c-1.5-1.2-3.8-1.6-5.6-.4C4.3 8.6 4 11.6 4.9 14.3c.9 2.8 2.9 5.7 5 5.7.8 0 1.3-.4 2.1-.4s1.3.4 2.1.4c2.1 0 4.1-2.9 5-5.7.9-2.7.6-5.7-1.5-7.2-1.8-1.2-4.1-.8-5.6.4Z"/><path d="M12 7.5c0-1.8.6-3.3 2-4.5"/><path d="M12.4 5.2c1-.9 2.4-1.1 3.6-.7-.3 1.3-1.4 2.3-2.8 2.4"/>',
@@ -1676,7 +1693,7 @@
       if (e && e.status === 401) {
         await this.saveState({ enabled: false, revoked: true, token: null });
         this.setStatus('auth', 'Dieses Gerät ist beim Push-Dienst nicht mehr angemeldet.');
-        UI.banner('sync', [UI.h('span', { class: 'grow' }, 'Dieses Gerät wurde vom Push-Dienst abgemeldet. Deine Daten bleiben erhalten.'), UI.h('button', { class: 'btn btn-sm', onclick: () => Router.navigate('einstellungen') }, 'Neu verbinden')], 'warn');
+        UI.banner('sync', [UI.h('span', { class: 'grow' }, 'Dieses Gerät wurde vom Push-Dienst abgemeldet. Deine Daten bleiben erhalten.'), UI.h('button', { class: 'btn btn-sm', onclick: () => Router.navigate('einstellungen/sync') }, 'Neu verbinden')], 'warn');
         return;
       }
       Log.warn('Sync: ' + (e && e.message || e));
@@ -2444,7 +2461,7 @@
         const revoked = !!(Sync.state && Sync.state.revoked);
         hints.push({ id: 'push', icon: revoked ? 'alert' : 'cloud', muted: !revoked,
           text: revoked ? 'Sync abgemeldet' : 'Sync aus – Daten nur auf diesem Gerät',
-          action: revoked ? 'Verbinden' : 'Einrichten', run: () => Router.navigate('einstellungen') });
+          action: revoked ? 'Verbinden' : 'Einrichten', run: () => Router.navigate('einstellungen/sync') });
       } else if (Push.supported() && !Push.subscribedHere) {
         hints.push({ id: 'push', icon: 'bell', text: 'Push aus', action: 'Aktivieren',
           run: async () => { try { await Push.enable(); UI.toast('Push aktiviert'); } catch (e) { UI.toast(e.message, { type: 'error', timeout: 8000 }); } } });
@@ -2568,8 +2585,10 @@
   (() => {
     App.register({
       id: 'einstellungen', name: 'Einstellungen', icon: 'settings', order: 1000, system: true,
-      version: '1.1.0', schemaVersion: 1, migrations: {},
-      async mount(el, ctx) {
+      version: '1.2.0', schemaVersion: 1, migrations: {},
+      async onRoute(route) { this._show && this._show(route.parts[0]); },
+      unmount() { this._show = null; },
+      async mount(el, ctx, route) {
         const { h, toast, confirm, choose } = ctx.ui;
         const S = ctx.system, U = ctx.util;
         const card = (title, ...children) => { const [ic, ...rest] = String(title).split(' '); return h('div', { class: 'card' }, h('h3', {}, ctx.ui.icon(ic), rest.join(' ')), ...children); };
@@ -2578,7 +2597,52 @@
         const parts = {};
         const sections = ['darstellung', 'sync', 'benachrichtigungen', 'sicherung', 'speicher', 'module', 'doku', 'ueber', 'diagnose'];
         sections.forEach(s => parts[s] = h('div'));
-        el.append(h('h2', {}, 'Einstellungen'), ...sections.map(s => parts[s]));
+
+        // Menü: jeder Punkt öffnet eine Unterseite #/einstellungen/<id> mit seinen Bereichen
+        const MENU = [
+          { id: 'sync', icon: 'cloud', name: 'Push & Sync', parts: ['sync'],
+            sub: () => !S.Sync.enabled() ? 'aus' : S.Sync.status === 'auth' ? 'abgemeldet' : S.Push.subscribedHere ? 'an · Push an' : 'an · Push aus' },
+          { id: 'benachrichtigungen', icon: 'bell', name: 'Benachrichtigungen', parts: ['benachrichtigungen'],
+            sub: () => { const q = S.Settings.get('quiet'); const p = { granted: 'erlaubt', denied: 'blockiert', default: 'nicht gefragt', unsupported: '–' }[S.Notify.permission()]; return q.enabled ? `${p} · Ruhe ${U.minToTime(q.start)}–${U.minToTime(q.end)}` : p; } },
+          { id: 'darstellung', icon: 'sun', name: 'Darstellung', parts: ['darstellung'],
+            sub: () => ({ system: 'System', light: 'Hell', dark: 'Dunkel' })[S.Theme.get()] },
+          { id: 'daten', icon: 'save', name: 'Daten & Speicher', parts: ['sicherung', 'speicher'],
+            sub: async () => { const t = S.lastExportAt ? await S.lastExportAt() : null; return t ? `Export ${U.formatDate(t)}` : 'kein Export'; } },
+          { id: 'module', icon: 'grid', name: 'Module', parts: ['module'],
+            sub: () => { const all = S.Registry.list({ includeHidden: true }).filter(m => !m.system); const on = S.Registry.list().filter(m => !m.system); return `${on.length} von ${all.length} aktiv`; } },
+          { id: 'doku', icon: 'book', name: 'Dokumentation', parts: ['doku'], sub: () => '' },
+          { id: 'ueber', icon: 'info', name: 'Über & Diagnose', parts: ['ueber', 'diagnose'], sub: () => 'v' + S.CONFIG.APP_VERSION },
+        ];
+        const menuBox = h('div', { class: 'set-menu card' });
+        const head = h('div', { class: 'head' });
+        const body = h('div', { class: 'set-body' });
+        el.append(head, menuBox, body);
+        const renderMenu = async () => {
+          const subs = await Promise.all(MENU.map(async m => { try { return (await m.sub()) || ''; } catch (_) { return ''; } }));
+          menuBox.replaceChildren(...MENU.map((m, i) => {
+            const sub = subs[i];
+            return h('a', { class: 'set-item', href: ctx.router.link('einstellungen/' + m.id) },
+              ctx.ui.icon(m.icon, 'set-ic'),
+              h('div', { class: 'grow' }, h('div', { class: 'set-name' }, m.name), sub ? h('div', { class: 'set-sub' }, sub) : null),
+              ctx.ui.icon('chevron-right', 'set-chev'));
+          }));
+        };
+        const show = id => {
+          const m = MENU.find(x => x.id === id);
+          sections.forEach(s => { parts[s].hidden = true; });
+          if (!m) {
+            head.replaceChildren(h('h2', {}, 'Einstellungen'));
+            renderMenu(); menuBox.hidden = false; body.replaceChildren(); return;
+          }
+          menuBox.hidden = true;
+          head.replaceChildren(
+            h('a', { class: 'btn btn-ghost set-back', href: ctx.router.link('einstellungen'), 'aria-label': 'Zurück' }, ctx.ui.icon('chevron-left')),
+            h('h2', {}, m.name));
+          body.classList.toggle('single', m.parts.length === 1);   // eine Karte: deren Titel steht schon oben
+          body.replaceChildren(...m.parts.map(s => { parts[s].hidden = false; return parts[s]; }));
+          window.scrollTo(0, 0);
+        };
+        this._show = show;
 
         /* Darstellung */
         const themeSel = h('select', { onchange: e => S.Theme.set(e.target.value) },
@@ -2941,7 +3005,10 @@
         ctx.events.on('push:changed', () => renderSync());
         let lastSyncState = S.Sync.status;
         ctx.events.on('sync:status', ({ state }) => { if (state !== 'syncing' && state !== lastSyncState) { lastSyncState = state; renderSync(); } });
-        ctx.events.on('settings:changed', ({ key }) => { if (key === 'hiddenModules') renderModules(); });
+        ctx.events.on('settings:changed', ({ key }) => { if (key === 'hiddenModules') renderModules(); if (!menuBox.hidden) renderMenu(); });
+        ctx.events.on('sync:status', () => { if (!menuBox.hidden) renderMenu(); });
+        ctx.events.on('push:changed', () => { if (!menuBox.hidden) renderMenu(); });
+        show(route && route.parts ? route.parts[0] : null);
       },
     });
   })();
