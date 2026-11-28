@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.9.2">
+  <meta name="app-version" content="1.9.3">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon-192-v3.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-v3.png">
+  <link rel="icon" href="icons/icon-192-v4.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-v4.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Meine App">
@@ -369,7 +369,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.9.2',
+    APP_VERSION: '1.9.3',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -385,6 +385,9 @@
   };
 
   const CHANGELOG = [
+    { version: '1.9.3', date: '2026-11-28', items: [
+      'App-Logo überarbeitet: waagerechter, etwas kleinerer Griff; Korkenzieher, Flaschenöffner und Schere stehen heraus (keine Klinge)',
+    ] },
     { version: '1.9.2', date: '2026-11-28', items: [
       'Neues App-Logo: Taschenmesser zugeklappt, waagerecht, kräftiger (dicke Konturen, großes weißes Kreuz)',
     ] },
@@ -1790,7 +1793,7 @@
       if (!silent) { this.beep(); this.vibrate(); }
       if (this.permission() !== 'granted') return false;
       data = { ...(data || {}), at: Date.now() };
-      const opts = { body, tag, data, renotify: !!tag, icon: 'icons/icon-192-v3.png', badge: 'icons/icon-192-v3.png', requireInteraction: false };
+      const opts = { body, tag, data, renotify: !!tag, icon: 'icons/icon-192-v4.png', badge: 'icons/icon-192-v4.png', requireInteraction: false };
       try {
         const reg = await this.getReg();
         if (reg && reg.showNotification) {

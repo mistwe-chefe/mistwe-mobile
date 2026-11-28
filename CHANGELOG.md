@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.3 – 2026-11-28
+
+- App-Logo überarbeitet: Griff weiter waagerecht, etwas kleiner; dafür stehen Korkenzieher, Flaschenöffner und Schere heraus (keine Klinge). Gleicher kräftiger Stil mit dicken Konturen.
+- Icon-Dateien `icons/*-v4.png` (neue Namen gegen Caches); die erst kurz verwendeten v3-Dateien sind entfernt. Quelle weiter `icons/logo.svg` / `icons/logo-quelle.py`.
+- Service Worker 1.6.0 (neue Icon-Pfade).
+
+Geänderte Dateien: `index.html`, `sw.js`, `manifest.webmanifest`, `icons/` (neu: `*-v4.png`, geändert: `logo.svg`, `logo-quelle.py`, entfernt: `*-v3.png`). Worker unverändert. Keine Datenänderung.
+
 ## 1.9.2 – 2026-11-28
 
 - Neues App-Logo: Taschenmesser zugeklappt (keine ausgefahrene Klinge), waagerecht statt schräg, kräftiger gezeichnet – dicke dunkle Konturen, großer roter Griff, weißes Kreuz, eingeklappte Werkzeuge und Schlüsselring.
