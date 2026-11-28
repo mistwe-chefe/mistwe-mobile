@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.13.0 – 2026-11-28
+
+- **Startseite: Mini-Übersicht Ernährung** direkt unter dem ToDo-Fenster: heutiges Gewicht, heute zugeführte kcal (bei gesetztem kcal-Ziel als „x / Ziel“) und Eiweiß. Antippen öffnet das Modul Ernährung. Aktualisiert sich bei jeder Änderung und beim Tageswechsel.
+- **Startseite: weniger Schaltflächen.** ToDos, Tägliche Ziele, Ernährung und Einkaufen haben keine Schaltfläche mehr (erreichbar über Tab-Leiste, ToDo-Fenster, Mini-Übersicht bzw. Kennzahlen oben rechts). Wecker und Taschenrechner bleiben.
+- Kern/Start 1.3.0: Moduloption `homeTile: false`. Modulversionen: Ernährung 1.5.0 (Widget), ToDos 1.6.1, Tägliche Ziele 1.1.1, Einkaufen 1.0.1. Dokumentation → Ernährung ergänzt.
+
+Geänderte Dateien: `index.html`, `CHANGELOG.md`, `CLAUDE.md`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.12.2 – 2026-11-28
 
 - **Updates zuverlässig erkennen und laden:** Die Update-Prüfung holt `index.html?u=<Zeit>` mit `cache: 'no-store'` und stößt `registration.update()` an. Bisher konnte auf dem iPhone bzw. über das GitHub-Pages-CDN noch die alte Datei zurückkommen, sodass keine neue Version erkannt wurde.

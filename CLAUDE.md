@@ -22,7 +22,7 @@ Verbindliche Architektur: `ARCHITEKTUR.md` im Claude-Projekt „Persönliche App
 - Symbol des Moduls Ernährung: Apfel (`apple`). Taschenrechner: `calculator`. Einkaufen: Einkaufswagen (`cart`).
 - Tab-Leiste scrollt waagerecht, wenn nicht alle Symbole passen (kein Scrollbalken); das aktive Symbol wird eingeblendet.
 - **Cleanes Layout:** knappe Beschriftungen, Abkürzungen, wo möglich nur Symbole (mit `aria-label`/`title`). Keine Erklär- oder Einrichtungstexte in Modulen und Einstellungen – Erklärungen gehören in **Einstellungen → Dokumentation** (bei neuen Funktionen dort ergänzen). Hinweise nur, wenn sie wirklich nötig sind (z. B. Datenverlust droht), dann einzeilig.
-- Startseite: Datum + Kennzahlen (`homeStats`) oben, Hinweise, Widgets (`widget`), darunter Modul-Schaltflächen.
+- Startseite: Datum + Kennzahlen (`homeStats`) oben, Hinweise, Widgets (`widget`: ToDo-Fenster, darunter Mini-Übersicht Ernährung), darunter Modul-Schaltflächen nur für Module ohne `homeTile: false` (ausgeblendet: ToDos, Tägliche Ziele, Ernährung, Einkaufen).
 
 ## Erinnerungen (Lehren aus 1.8.2–1.8.4)
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.12.2">
+  <meta name="app-version" content="1.13.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v5.png">
@@ -164,6 +164,12 @@
   [data-module="start"] .hint { padding: 8px 10px 8px 12px; font-size: .9rem; }
   [data-module="start"] .widgets { display: flex; flex-direction: column; gap: var(--gap); margin-bottom: var(--gap); }
   [data-module="start"] .widget { padding: 0; overflow: hidden; }
+  .widget[data-module="ernaehrung"] .w-mini { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: var(--text); text-decoration: none; }
+  .widget[data-module="ernaehrung"] .w-ic { width: 20px; height: 20px; color: var(--primary); flex: 0 0 auto; }
+  .widget[data-module="ernaehrung"] .w-cell { flex: 1; min-width: 0; }
+  .widget[data-module="ernaehrung"] .w-val { font-weight: 700; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .widget[data-module="ernaehrung"] .w-unit { font-weight: 500; font-size: .8rem; color: var(--muted); }
+  .widget[data-module="ernaehrung"] .w-lbl { font-size: .75rem; color: var(--muted); }
   [data-module="start"] .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--gap); }
   [data-module="start"] .module-btn { min-height: 64px; font-size: 1.05rem; font-weight: 600; background: var(--surface); box-shadow: var(--shadow); gap: 10px; }
   [data-module="start"] .module-btn svg.icon { width: 22px; height: 22px; color: var(--primary); }
@@ -561,7 +567,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.12.2',
+    APP_VERSION: '1.13.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -577,6 +583,11 @@
   };
 
   const CHANGELOG = [
+    { version: '1.13.0', date: '2026-11-28', items: [
+      'Startseite: Mini-Übersicht Ernährung unter dem ToDo-Fenster – heute Gewicht, kcal (mit Ziel, falls gesetzt) und Eiweiß; Antippen öffnet das Modul',
+      'Startseite: keine Schaltflächen mehr für ToDos, Tägliche Ziele, Ernährung und Einkaufen (erreichbar über Tab-Leiste, Fenster und Kennzahlen)',
+      'Kern: Moduloption homeTile: false blendet die Schaltfläche auf der Startseite aus',
+    ] },
     { version: '1.12.2', date: '2026-11-28', items: [
       'Kern: Update-Prüfung und „Neu laden“ umgehen alle Caches (Browser, Service Worker, GitHub-Pages-CDN) – neue Versionen werden zuverlässig erkannt und geladen, auch in der Home-Bildschirm-App',
       'Einstellungen → Über: „Updates prüfen“ meldet das Ergebnis (neue Version / aktuell / fehlgeschlagen), neuer Knopf „Neu laden“',
@@ -2485,7 +2496,7 @@
   (() => {
     App.register({
       id: 'start', name: 'Start', icon: 'home', order: 0, system: true,
-      version: '1.2.0', schemaVersion: 1, migrations: {},
+      version: '1.3.0', schemaVersion: 1, migrations: {},
       async mount(el, ctx) {
         const { h } = ctx.ui;
         const S = ctx.system;
@@ -2526,10 +2537,9 @@
             x.action ? h('button', { class: 'btn btn-sm btn-primary', onclick: async () => { await x.run(); renderHints(); } }, x.action) : null)));
         };
         const renderTiles = () => {
-          const mods = S.Registry.list().filter(m => !m.system);
-          tiles.replaceChildren(...(mods.length
-            ? mods.map(m => h('a', { class: 'btn module-btn', href: ctx.router.link(m.id) }, ctx.ui.icon(m.icon), h('span', {}, m.name)))
-            : [h('div', { class: 'empty' }, 'Keine Module aktiv.')]));
+          // Module mit homeTile: false (über Tab-Leiste, Widget oder Kennzahl erreichbar) bekommen keine Schaltfläche
+          const mods = S.Registry.list().filter(m => !m.system && m.homeTile !== false);
+          tiles.replaceChildren(...mods.map(m => h('a', { class: 'btn module-btn', href: ctx.router.link(m.id) }, ctx.ui.icon(m.icon), h('span', {}, m.name))));
         };
         renderTiles();
         await renderWidgets();
@@ -2843,6 +2853,7 @@
           doc('Ernährung',
             ['Felder leeren und speichern löscht die Werte des Tages. + kcal rechnet zum Tageswert dazu.',
              'Claude fragen: öffnet einen neuen temporären Chat mit deinem Text – dort nur abschicken. Claude schätzt kcal, Eiweiß, Kohlenhydrate, Ballaststoffe und Fett und antwortet mit einem Codeblock („KCAL v2“). Den ganzen Codeblock kopieren und bei „Antwort“ einfügen, dann dazurechnen oder ersetzen.',
+             'Startseite: Mini-Übersicht mit heutigem Gewicht, kcal (bei gesetztem Ziel „x / Ziel“) und Eiweiß; Antippen öffnet das Modul.',
              'Einträge bis 30 Tage im Voraus sind möglich (geplant); Diagramme reichen nur bis heute.',
              'Ziele (kcal, Gewicht) über das Einstellungs-Symbol im Modul; sie erscheinen als gestrichelte Linie.']),
           doc('Wecker',
@@ -3173,9 +3184,9 @@
     let highlightId = null;
 
     App.register({
-      id: 'todos', name: 'ToDos', icon: 'todos', order: 10,
+      id: 'todos', name: 'ToDos', icon: 'todos', order: 10, homeTile: false,
       description: 'Aufgaben mit hartnäckigen Erinnerungen', category: 'Alltag',
-      version: '1.6.0', schemaVersion: 1, migrations: {},
+      version: '1.6.1', schemaVersion: 1, migrations: {},
 
       async init(ctx) { col = ctx.store.collection('todos', { sync: true }); },
 
@@ -3566,9 +3577,9 @@
     }
 
     App.register({
-      id: 'ernaehrung', name: 'Ernährung', icon: 'apple', order: 20,
+      id: 'ernaehrung', name: 'Ernährung', icon: 'apple', order: 20, homeTile: false,
       description: 'Gewicht, Kalorien und Nährstoffe pro Tag mit Verlauf', category: 'Gesundheit',
-      version: '1.4.0', schemaVersion: 1, migrations: {},
+      version: '1.5.0', schemaVersion: 1, migrations: {},
 
       /* Datensatz (ernaehrung/tage, synchronisiert): id = Datum „JJJJ-MM-TT“ (ein Eintrag pro Tag)
          { id, createdAt, updatedAt, deletedAt, date: 'JJJJ-MM-TT',
@@ -3578,6 +3589,28 @@
                     items: [ { name, amount, kcal, proteinG, carbsG, fiberG, fatG } ] } ]   (ab 1.6.0, optional) }
          Die Tageswerte sind maßgeblich; das Protokoll hält fest, woher sie kommen. */
       async init(ctx) { col = ctx.store.collection('tage', { sync: true }); },
+
+      /** Mini-Übersicht für die Startseite: heute Gewicht, kcal, Eiweiß. Antippen öffnet das Modul. */
+      async widget(el, ctx) {
+        const { h } = ctx.ui;
+        const box = h('a', { class: 'w-mini', href: ctx.router.link('ernaehrung'), 'aria-label': 'Ernährung heute' });
+        el.append(box);
+        const cell = (val, unit, lbl) => h('div', { class: 'w-cell' }, h('div', { class: 'w-val' }, val, h('span', { class: 'w-unit' }, unit)), h('div', { class: 'w-lbl' }, lbl));
+        const render = async () => {
+          const r = await col.get(todayKey());
+          const goal = await ctx.settings.get('kcalGoal', null);
+          box.replaceChildren(
+            ctx.ui.icon('apple', 'w-ic'),
+            cell(fmtKg(r && r.weightKg), ' kg', 'Gewicht'),
+            cell(fmtKcal(r && r.kcal), goal ? ` / ${fmtKcal(goal)}` : ' kcal', goal ? 'kcal' : 'Kalorien'),
+            cell(fmtG(r && r.proteinG), ' g', 'Eiweiß'));
+        };
+        const re = ctx.util.debounce(render, 150);
+        ctx.events.on('store:changed', e => { if (e.moduleId === 'ernaehrung') re(); });
+        ctx.events.on('app:visible', re);
+        ctx.every(60000, render);   // Tageswechsel
+        await render();
+      },
 
       async mount(el, ctx) {
         const { h, toast } = ctx.ui;
@@ -4242,9 +4275,9 @@
     }
 
     App.register({
-      id: 'ziele', name: 'Tägliche Ziele', icon: 'target', order: 15,
+      id: 'ziele', name: 'Tägliche Ziele', icon: 'target', order: 15, homeTile: false,
       description: 'Tages- und Wochenziele mit Abfrage am Abend, Serie und Punkten', category: 'Alltag',
-      version: '1.1.0', schemaVersion: 1, migrations: {},
+      version: '1.1.1', schemaVersion: 1, migrations: {},
       reminderToast: false,   // keine In-App-Leiste „… Ansehen“ für die Abfrage; nur die Mitteilung des Systems
 
       async init(ctx) {
@@ -5928,9 +5961,9 @@
     const RENDER = { food: renderFood, drug: renderDrug, online: renderOnline, big: renderBig };
 
     App.register({
-      id: 'einkaufen', name: 'Einkaufen', icon: 'cart', order: 25,
+      id: 'einkaufen', name: 'Einkaufen', icon: 'cart', order: 25, homeTile: false,
       description: 'Lebensmittel mit Gerne-Liste, Drogerie, Online-Einkäufe, größere Anschaffungen', category: 'Alltag',
-      version: '1.0.0', schemaVersion: 1, migrations: {},
+      version: '1.0.1', schemaVersion: 1, migrations: {},
       /* Daten (synchronisiert):
            listen  { kind: 'food', title, done, doneAt }
            posten  { area: 'food'|'drug', listId|null, name, qty, done, doneAt }
