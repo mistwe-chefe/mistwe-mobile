@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.10.0 – 2026-11-28
+
+- **Aufgeräumtes Layout:** knappe Beschriftungen und Abkürzungen, mehr Symbole (z. B. „+“ statt „Neues ToDo“, „Tagesziel“, „Dazu“), Erklär- und Einrichtungstexte aus Modulen und Einstellungen entfernt. Hinweise auf der Startseite sind einzeilig und kurz.
+- **Einstellungen → Dokumentation:** alle Erklärungen gesammelt, aufklappbar: Daten & iPhone (was beim Entfernen der Home-Bildschirm-App verloren geht und was Sync zurückholt), Erinnerungen, ToDos, Tägliche Ziele, Ernährung, Wecker, Push & Sync, Datensicherung.
+- **Startseite:** ToDo-Ausschnitt jetzt ca. 1/4 der Höhe (min. 130 px), Hinweise je ToDo immer einzeilig unter dem Titel. Oben rechts neben dem Datum klein Flamme (Tage in Folge) und Stern (Punkte) aus „Tägliche Ziele“.
+- **ToDos:** Farbskala für „×“ an den Standard-Turnus gebunden: bei 2 Std bis 2 Tage grün, ab 5 Tagen rot; andere Intervalle verschieben die Grenzen im selben Verhältnis (30 Min → 12/30 Std, 1 Tag → 24/60 Tage). Pillen kürzer („2 Std“, „18×“).
+- **Ernährung:** Eingabe- und Antwortfeld bei „Mit Claude schätzen“ einzeilig (wachsen beim Tippen), Knopf „Claude fragen“, „+ kcal“, kürzere Kennzahlen.
+- **Tägliche Ziele, Wecker:** kürzere Texte; Ziele-Abfragehinweis „Geschafft? Abhaken.“
+- Kern: Modul-Hook `homeStats()` für kleine Kennzahlen auf der Startseite; neue Symbole `paste`, `book`.
+
+Geänderte Dateien: `index.html`, `CLAUDE.md`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.9.4 – 2026-11-28
 
 - App-Logo: Fehler beim Erzeugen der kleinen Größen behoben. Beim Apple-Touch-Icon (180 px) und beim 192-px-Icon war der dunkle Hintergrund nur oben links ein Viertel groß, der Rest weiß. Ursache: Das Render-Skript hat die Größenangabe auch im Hintergrund-Rechteck ersetzt. Skript jetzt als `icons/logo-render.py` im Repo.

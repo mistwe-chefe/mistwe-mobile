@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.9.4">
+  <meta name="app-version" content="1.10.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v5.png">
@@ -151,7 +151,16 @@
   /* ==== ENDE CORE: KOMPONENTEN ==== */
 
   /* ==== MODUL-CSS: start ==== */
-  [data-module="start"] .date { margin: 0 4px 10px; font-size: .9rem; }
+  [data-module="start"] .topline { display: flex; align-items: center; gap: 10px; margin: 0 4px 10px; min-height: 22px; }
+  [data-module="start"] .date { flex: 1; font-size: .9rem; }
+  [data-module="start"] .hstats { display: flex; gap: 10px; }
+  [data-module="start"] .hstat { display: inline-flex; align-items: center; gap: 3px; font-size: .9rem; font-weight: 700; color: var(--text); text-decoration: none; }
+  [data-module="start"] .hstat svg.icon { width: 15px; height: 15px; color: var(--warn); }
+  [data-module="einstellungen"] .doc p, [data-module="einstellungen"] .doc ul { margin: 6px 0; }
+  [data-module="einstellungen"] .doc ul { padding-left: 18px; }
+  [data-module="einstellungen"] .doc li { margin: 4px 0; }
+  textarea.autogrow { resize: none; overflow-y: auto; min-height: 44px; }
+  [data-module="start"] .hint { padding: 8px 10px 8px 12px; font-size: .9rem; }
   [data-module="start"] .widgets { display: flex; flex-direction: column; gap: var(--gap); margin-bottom: var(--gap); }
   [data-module="start"] .widget { padding: 0; overflow: hidden; }
   [data-module="start"] .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--gap); }
@@ -193,7 +202,8 @@
   [data-module="todos"] .done-actions { display: flex; gap: 4px; align-items: center; padding-top: 4px; }
   [data-module="todos"] .head { display: flex; align-items: center; gap: 8px; }
   [data-module="todos"] .head h2 { flex: 1; margin: 0; }
-  [data-module="todos"] .fab { position: fixed; z-index: 25; right: 16px; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); border-radius: 999px; min-height: 52px; padding: 0 22px; font-weight: 600; box-shadow: 0 6px 18px rgba(37,99,235,.35); }
+  [data-module="todos"] .fab { position: fixed; z-index: 25; right: 16px; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); border-radius: 999px; width: 56px; min-height: 56px; padding: 0; box-shadow: 0 6px 18px rgba(37,99,235,.35); }
+  [data-module="todos"] .fab svg.icon { width: 26px; height: 26px; }
   @media (min-width: 900px) { [data-module="todos"] .fab { bottom: 28px; right: 32px; } }
   body:has([data-module="todos"] .fab) .toasts { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 84px); }
   @media (min-width: 900px) { body:has([data-module="todos"] .fab) .toasts { bottom: 96px; } }
@@ -212,8 +222,13 @@
   .widget[data-module="todos"] .w-title { flex: 1; display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--text); text-decoration: none; min-height: 40px; }
   .widget[data-module="todos"] .w-title svg.icon { width: 20px; height: 20px; color: var(--primary); }
   .widget[data-module="todos"] .w-count { background: var(--primary-bg); color: var(--primary); border-radius: 999px; font-size: .78rem; padding: 1px 8px; font-weight: 700; }
-  .widget[data-module="todos"] .w-scroll { height: max(160px, calc((100dvh - 57px - var(--nav-h) - env(safe-area-inset-bottom)) / 3)); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .widget[data-module="todos"] .w-scroll { height: max(130px, calc((100dvh - 57px - var(--nav-h) - env(safe-area-inset-bottom)) / 4)); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .widget[data-module="todos"] ul.todo-list { border: 0; border-radius: 0; box-shadow: none; }
+  .widget[data-module="todos"] li.todo { align-items: center; padding-top: 2px; padding-bottom: 2px; }
+  .widget[data-module="todos"] .t-body { padding: 6px 0; }
+  .widget[data-module="todos"] .t-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .widget[data-module="todos"] .t-meta { flex-wrap: nowrap; overflow: hidden; margin-top: 3px; mask-image: linear-gradient(90deg, #000 88%, transparent); -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); }
+  .widget[data-module="todos"] .t-meta .pill { flex: 0 0 auto; }
   .widget[data-module="todos"] .empty { padding: 28px 8px; }
   [data-module="todos"].widget { padding-bottom: 0; }
   /* ==== ENDE MODUL-CSS: todos ==== */
@@ -237,6 +252,7 @@
   [data-module="ernaehrung"] .claude-card .step { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: .92rem; margin: 14px 0 6px; min-height: 36px; }
   [data-module="ernaehrung"] .claude-card .step .n { flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%; background: var(--primary-bg); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; }
   [data-module="ernaehrung"] .claude-card textarea { min-height: 76px; }
+  [data-module="ernaehrung"] .claude-card textarea.autogrow { min-height: 44px; }
   [data-module="ernaehrung"] .parse-box { margin-top: 10px; background: var(--surface-2); border-radius: var(--radius-sm); padding: 8px 10px; }
   [data-module="ernaehrung"] .parse-box .sum td, [data-module="ernaehrung"] .parse-box div.sum { font-weight: 700; border-bottom: 0; }
   [data-module="ernaehrung"] .parse-err { color: var(--danger); font-size: .9rem; }
@@ -369,7 +385,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.9.4',
+    APP_VERSION: '1.10.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -385,6 +401,14 @@
   };
 
   const CHANGELOG = [
+    { version: '1.10.0', date: '2026-11-28', items: [
+      'Aufgeräumt: knappe Beschriftungen, mehr Symbole, Erklär- und Einrichtungstexte entfernt',
+      'Einstellungen: neuer Punkt „Dokumentation“ mit allen Erklärungen (u. a. Daten & iPhone, Erinnerungen, je Modul)',
+      'Startseite: ToDo-Ausschnitt 1/4 der Höhe, Hinweise je ToDo einzeilig; oben rechts Flamme (Tage in Folge) und Stern (Punkte)',
+      'Modul todos: Farbskala „×“ bezogen auf den 2-Std-Turnus (2 Tage grün → 5 Tage rot), andere Intervalle im selben Verhältnis; Knopf „Neues ToDo“ nur noch als +',
+      'Modul ernaehrung: Claude-Felder einzeilig, „Claude fragen“, „+ kcal“',
+      'Kern: Modul-Hook homeStats für Kennzahlen auf der Startseite',
+    ] },
     { version: '1.9.4', date: '2026-11-28', items: [
       'App-Logo: Fehler in den kleinen Größen behoben (Home-Bildschirm-Symbol 180 px und 192 px zeigten nur ein Viertel des Hintergrunds, Rest weiß)',
     ] },
@@ -953,6 +977,8 @@
     phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
     chevron: '<path d="m9 6 6 6-6 6"/>',
     'chevron-left': '<path d="m15 6-6 6 6 6"/>',
+    paste: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4.5V3h6v1.5"/><path d="M9 10h6M9 14h6M9 18h3"/>',
+    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21a2 2 0 0 1 2-2h13v2"/><path d="M9 7h6"/>',
     apple: '<path d="M12 7.5c-1.5-1.2-3.8-1.6-5.6-.4C4.3 8.6 4 11.6 4.9 14.3c.9 2.8 2.9 5.7 5 5.7.8 0 1.3-.4 2.1-.4s1.3.4 2.1.4c2.1 0 4.1-2.9 5-5.7.9-2.7.6-5.7-1.5-7.2-1.8-1.2-4.1-.8-5.6.4Z"/><path d="M12 7.5c0-1.8.6-3.3 2-4.5"/><path d="M12.4 5.2c1-.9 2.4-1.1 3.6-.7-.3 1.3-1.4 2.3-2.8 2.4"/>',
     scale: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7.5 11a6 6 0 0 1 9 0"/><path d="m12 11 1.8-2.6"/>',
     external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
@@ -2167,18 +2193,18 @@
       const since = lastExport || app.installedAt || Date.now();
       const days = Sync.enabled() ? 30 : st.persisted === false ? 7 : 14;
       const hasData = (await Store.kvAll()).some(r => r.c && r.c !== '__reminders');
-      if (hasData && Date.now() - since > days * 86400000) hints.push({ id: 'export', icon: 'save', text: lastExport ? `Letzte Sicherung vor ${U.formatDuration((Date.now() - lastExport) / 60000)}. Zeit für einen Export.` : 'Noch keine Sicherungsdatei exportiert.', action: 'Exportieren', run: () => Backup.exportFile() });
+      if (hasData && Date.now() - since > days * 86400000) hints.push({ id: 'export', icon: 'save', text: lastExport ? `Letzter Export vor ${U.formatDuration((Date.now() - lastExport) / 60000)}` : 'Noch kein Export', action: 'Export', run: () => Backup.exportFile() });
       const p = Notify.permission();
-      if (p === 'default') hints.push({ id: 'notify', icon: 'bell', text: 'Benachrichtigungen sind noch nicht erlaubt – sonst kann dich die App nicht erinnern.', action: 'Erlauben', run: () => Notify.request() });
-      else if (p === 'denied') hints.push({ id: 'notify', icon: 'bell-off', text: 'Benachrichtigungen sind blockiert. Erlaube sie in den Browser-Einstellungen für diese Seite.' });
-      else if (p === 'unsupported' && U.isIOS() && !U.isStandalone()) hints.push({ id: 'ios', icon: 'phone', text: 'iPhone: Für Benachrichtigungen die App über „Teilen → Zum Home-Bildschirm“ installieren und von dort öffnen.' });
+      if (p === 'default') hints.push({ id: 'notify', icon: 'bell', text: 'Benachrichtigungen aus', action: 'Erlauben', run: () => Notify.request() });
+      else if (p === 'denied') hints.push({ id: 'notify', icon: 'bell-off', text: 'Benachrichtigungen blockiert' });
+      else if (p === 'unsupported' && U.isIOS() && !U.isStandalone()) hints.push({ id: 'ios', icon: 'phone', text: 'Für Push: zum Home-Bildschirm hinzufügen' });
       if (!Sync.enabled()) {
         const revoked = !!(Sync.state && Sync.state.revoked);
         hints.push({ id: 'push', icon: revoked ? 'alert' : 'cloud', muted: !revoked,
-          text: revoked ? 'Dieses Gerät wurde vom Push-Dienst abgemeldet. Bitte neu verbinden – deine Daten sind noch da.' : 'Push ist noch nicht eingerichtet: Erinnerungen kommen nur, solange die App geöffnet ist (verpasste werden beim Öffnen nachgeholt).',
-          action: revoked ? 'Neu verbinden' : 'Einrichten', run: () => Router.navigate('einstellungen') });
+          text: revoked ? 'Sync abgemeldet' : 'Sync aus – Daten nur auf diesem Gerät',
+          action: revoked ? 'Verbinden' : 'Einrichten', run: () => Router.navigate('einstellungen') });
       } else if (Push.supported() && !Push.subscribedHere) {
-        hints.push({ id: 'push', icon: 'bell', text: 'Push ist auf diesem Gerät noch nicht aktiv. Ohne Push erinnert dieses Gerät nur, solange die App geöffnet ist.', action: 'Push aktivieren',
+        hints.push({ id: 'push', icon: 'bell', text: 'Push aus', action: 'Aktivieren',
           run: async () => { try { await Push.enable(); UI.toast('Push aktiviert'); } catch (e) { UI.toast(e.message, { type: 'error', timeout: 8000 }); } } });
       }
       return hints;
@@ -2235,7 +2261,7 @@
   (() => {
     App.register({
       id: 'start', name: 'Start', icon: 'home', order: 0, system: true,
-      version: '1.1.0', schemaVersion: 1, migrations: {},
+      version: '1.2.0', schemaVersion: 1, migrations: {},
       async mount(el, ctx) {
         const { h } = ctx.ui;
         const S = ctx.system;
@@ -2243,7 +2269,20 @@
         const hintsBox = h('div');
         const widgetsBox = h('div', { class: 'widgets' });
         const tiles = h('div', { class: 'tiles' });
-        el.append(h('p', { class: 'muted date' }, d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })), hintsBox, widgetsBox, tiles);
+        const statsBox = h('div', { class: 'hstats' });
+        el.append(h('div', { class: 'topline' }, h('span', { class: 'muted date' }, d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long' })), statsBox), hintsBox, widgetsBox, tiles);
+
+        // Kennzahlen der Module (Hook homeStats, z. B. Serie und Punkte aus „Tägliche Ziele“) – klein oben rechts
+        const statMods = () => S.Registry.list().filter(m => !m.system && typeof m.homeStats === 'function');
+        const renderStats = async () => {
+          const items = [];
+          for (const m of statMods()) { try { items.push(...((await S.Registry.call(m.id, 'homeStats')) || [])); } catch (_) {} }
+          statsBox.replaceChildren(...items.map(x => h('a', { class: 'hstat', href: ctx.router.link(x.route || ''), title: x.title || '' }, ctx.ui.icon(x.icon), String(x.value))));
+        };
+        const reStats = ctx.util.debounce(renderStats, 300);
+        ctx.events.on('store:changed', e => { if (e && statMods().some(m => m.id === e.moduleId)) reStats(); });
+        ctx.events.on('app:visible', reStats);
+        renderStats();
 
         // Ausschnitte der Module (Hook widget), z. B. aktive ToDos – über den Kern, nie direkt
         const renderWidgets = async () => {
@@ -2258,7 +2297,7 @@
 
         const renderHints = async () => {
           const hints = await S.hints();
-          hintsBox.replaceChildren(...hints.map(x => h('div', { class: 'card hint' + (x.muted ? ' small muted' : '') },
+          hintsBox.replaceChildren(...hints.map(x => h('div', { class: 'card hint' },
             ctx.ui.icon(x.icon, 'hint-ic'), h('div', { class: 'grow' }, x.text),
             x.action ? h('button', { class: 'btn btn-sm btn-primary', onclick: async () => { await x.run(); renderHints(); } }, x.action) : null)));
         };
@@ -2287,7 +2326,7 @@
   (() => {
     App.register({
       id: 'einstellungen', name: 'Einstellungen', icon: 'settings', order: 1000, system: true,
-      version: '1.0.0', schemaVersion: 1, migrations: {},
+      version: '1.1.0', schemaVersion: 1, migrations: {},
       async mount(el, ctx) {
         const { h, toast, confirm, choose } = ctx.ui;
         const S = ctx.system, U = ctx.util;
@@ -2295,37 +2334,34 @@
         const sw = (label, checked, onchange) => h('label', { class: 'switch' }, h('input', { type: 'checkbox', checked, onchange: e => onchange(e.target.checked) }), h('span', {}, label));
 
         const parts = {};
-        const sections = ['darstellung', 'sync', 'benachrichtigungen', 'sicherung', 'speicher', 'module', 'ueber', 'diagnose'];
+        const sections = ['darstellung', 'sync', 'benachrichtigungen', 'sicherung', 'speicher', 'module', 'doku', 'ueber', 'diagnose'];
         sections.forEach(s => parts[s] = h('div'));
         el.append(h('h2', {}, 'Einstellungen'), ...sections.map(s => parts[s]));
 
         /* Darstellung */
         const themeSel = h('select', { onchange: e => S.Theme.set(e.target.value) },
-          [['system', 'Wie System'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([v, l]) => h('option', { value: v, selected: S.Theme.get() === v }, l)));
-        parts.darstellung.append(card('sun Darstellung', h('label', { class: 'field' }, h('span', {}, 'Farbschema'), themeSel)));
+          [['system', 'System'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([v, l]) => h('option', { value: v, selected: S.Theme.get() === v }, l)));
+        parts.darstellung.append(card('sun Darstellung', themeSel));
 
         /* Benachrichtigungen & Ruhezeiten */
         const renderNotify = () => {
           const p = S.Notify.permission();
           const q = S.Settings.get('quiet');
-          const status = { granted: 'erlaubt', denied: 'blockiert (in den Browser-Einstellungen ändern)', default: 'noch nicht gefragt', unsupported: '– nicht unterstützt' }[p];
+          const status = { granted: 'erlaubt', denied: 'blockiert', default: 'nicht gefragt', unsupported: 'nicht unterstützt' }[p];
           const saveQ = async patch => { await S.Settings.set('quiet', { ...S.Settings.get('quiet'), ...patch }); };
           const startIn = h('input', { type: 'time', value: U.minToTime(q.start), onchange: e => { const v = U.timeToMin(e.target.value); if (v != null) saveQ({ start: v }); } });
           const endIn = h('input', { type: 'time', value: U.minToTime(q.end), onchange: e => { const v = U.timeToMin(e.target.value); if (v != null) saveQ({ end: v }); } });
           parts.benachrichtigungen.replaceChildren(card('bell Benachrichtigungen',
             h('dl', { class: 'kv' }, h('dt', {}, 'Status'), h('dd', {}, status)),
             h('div', { class: 'row', style: { marginTop: '10px' } },
-              p === 'default' ? h('button', { class: 'btn btn-primary', onclick: async () => { await S.Notify.request(); renderNotify(); } }, 'Benachrichtigungen erlauben') : null,
-              h('button', { class: 'btn', onclick: async () => { S.Notify.unlockAudio(); const ok = await S.Notify.show({ title: 'Test', body: 'So sieht eine Erinnerung aus.', tag: 'pa-test', actions: [] }); toast(ok ? 'Test-Benachrichtigung gesendet' : 'Nur Ton/Vibration – Benachrichtigungen nicht erlaubt'); } }, 'Test-Benachrichtigung')),
-            sw('Ton bei Erinnerungen (wenn die App offen ist)', S.Settings.get('sound'), v => S.Settings.set('sound', v)),
-            sw('Vibration (wo unterstützt)', S.Settings.get('vibrate'), v => S.Settings.set('vibrate', v)),
-            U.isIOS() && !U.isStandalone() ? h('p', { class: 'small muted' }, 'iPhone/iPad: Benachrichtigungen gibt es nur, wenn die App über „Teilen → Zum Home-Bildschirm“ installiert und von dort geöffnet wird.') : null,
-            h('p', { class: 'small muted' }, S.Sync.enabled() ? 'Der Push-Dienst erinnert auch bei geschlossener App (sofern Push auf dem Gerät aktiv ist). Ist der Server länger nicht erreichbar, erinnert die App lokal, solange sie geöffnet ist.' : 'Ohne Push-Dienst erinnert die App, solange sie geöffnet ist (auch als Hintergrund-Tab). Verpasste Erinnerungen werden beim Öffnen gesammelt nachgeholt. Für Erinnerungen bei geschlossener App „Push & Sync“ einrichten.'),
+              p === 'default' ? h('button', { class: 'btn btn-primary', onclick: async () => { await S.Notify.request(); renderNotify(); } }, 'Erlauben') : null,
+              h('button', { class: 'btn', onclick: async () => { S.Notify.unlockAudio(); const ok = await S.Notify.show({ title: 'Test', body: 'So sieht eine Erinnerung aus.', tag: 'pa-test', actions: [] }); toast(ok ? 'Gesendet' : 'Nicht erlaubt'); } }, ctx.ui.icon('bell'), 'Test')),
+            sw('Ton', S.Settings.get('sound'), v => S.Settings.set('sound', v)),
+            sw('Vibration', S.Settings.get('vibrate'), v => S.Settings.set('vibrate', v)),
             h('h3', { style: { marginTop: '16px' } }, ctx.ui.icon('moon'), 'Ruhezeiten'),
-            sw('Ruhezeit aktiv', q.enabled, v => { saveQ({ enabled: v }); }),
+            sw('Aktiv', q.enabled, v => { saveQ({ enabled: v }); }),
             h('div', { class: 'row nowrap' }, h('label', { class: 'field grow' }, h('span', {}, 'Von'), startIn), h('label', { class: 'field grow' }, h('span', {}, 'Bis'), endIn)),
-            sw('Abgabe-Erinnerungen dürfen die Ruhezeit durchbrechen', q.breakForDeadline, v => saveQ({ breakForDeadline: v })),
-            h('p', { class: 'small muted' }, 'Erinnerungen in der Ruhezeit werden auf deren Ende verschoben und kommen dann gesammelt.')));
+            sw('Abgaben dürfen stören', q.breakForDeadline, v => saveQ({ breakForDeadline: v }))));
         };
         renderNotify();
 
@@ -2367,14 +2403,14 @@
                 submit.disabled = false; submit.textContent = mode === 'setup' ? 'Einrichten' : 'Verbinden';
               }
             } },
-              h('h3', {}, mode === 'setup' ? 'Push & Sync einrichten' : 'Mit bestehendem Konto verbinden'),
+              h('h3', {}, mode === 'setup' ? 'Einrichten' : 'Verbinden'),
               h('div', { class: 'stack' },
-                field('Server-Adresse', apiIn, 'Adresse deines Cloudflare Workers (siehe worker/README.md).'),
-                mode === 'setup' ? field('Einrichtungs-Code (SETUP_SECRET)', secretIn, 'Nur für die erste Einrichtung nötig.') : null,
-                field('Sync-Passwort', pw1, mode === 'setup' ? 'Mindestens 12 Zeichen. Damit werden deine Daten verschlüsselt – der Server kennt es nicht. Gut merken!' : null),
+                field('Server', apiIn),
+                mode === 'setup' ? field('SETUP_SECRET', secretIn) : null,
+                field('Sync-Passwort', pw1, mode === 'setup' ? 'Min. 12 Zeichen – gut merken!' : null),
                 mode === 'setup' ? field('Sync-Passwort wiederholen', pw2) : null,
-                field('Name dieses Geräts', nameIn),
-                mode === 'setup' ? h('label', { class: 'switch small' }, resetBox, h('span', {}, 'Bestehendes Konto auf dem Server ersetzen (z. B. Passwort vergessen)')) : null,
+                field('Gerätename', nameIn),
+                mode === 'setup' ? h('label', { class: 'switch small' }, resetBox, h('span', {}, 'Bestehendes Konto ersetzen')) : null,
                 msg),
               h('div', { class: 'dlg-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'), submit));
             return form;
@@ -2383,25 +2419,23 @@
           if (!Y.enabled()) {
             const revoked = !!(Y.state && Y.state.revoked);
             parts.sync.replaceChildren(card('cloud Push & Sync',
-              revoked ? h('div', { class: 'ro-banner' }, 'Dieses Gerät wurde abgemeldet (z. B. weil das Sync-Passwort geändert wurde). Bitte neu verbinden. Deine Daten sind noch da.') : null,
-              h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Mit dem eigenen Push-Dienst (Cloudflare Worker) kommen Erinnerungen auch bei geschlossener App, und deine ToDos werden zwischen deinen Geräten abgeglichen – Ende-zu-Ende-verschlüsselt. Ohne Push-Dienst funktioniert alles weiter lokal.'),
+              revoked ? h('div', { class: 'ro-banner' }, 'Abgemeldet – neu verbinden, Daten sind noch da') : h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Aus – Daten nur auf diesem Gerät'),
               h('div', { class: 'row' },
-                h('button', { class: 'btn btn-primary', onclick: async () => { if (await connectDialog('setup')) { toast('Push & Sync eingerichtet'); renderSync(); } } }, 'Neu einrichten'),
-                h('button', { class: 'btn', onclick: async () => { if (await connectDialog('login')) { toast('Verbunden – Daten werden abgeglichen'); renderSync(); } } }, 'Mit bestehendem Konto verbinden')),
-              h('p', { class: 'small muted' }, 'Erstes Gerät: „Neu einrichten“. Jedes weitere Gerät (z. B. das iPhone): „Mit bestehendem Konto verbinden“.')));
+                h('button', { class: 'btn btn-primary', onclick: async () => { if (await connectDialog('setup')) { toast('Push & Sync eingerichtet'); renderSync(); } } }, 'Einrichten'),
+                h('button', { class: 'btn', onclick: async () => { if (await connectDialog('login')) { toast('Verbunden – Daten werden abgeglichen'); renderSync(); } } }, 'Verbinden'))));
             return;
           }
 
           const st = Y.state;
           const pending = await Y.pendingCount();
-          const statusText = { idle: 'bereit', ok: 'synchronisiert', syncing: '⟳ synchronisiere …', offline: 'offline – wird nachgeholt', error: 'Fehler: ' + Y.lastError, auth: 'abgemeldet' }[Y.status] || Y.status;
-          const pushText = !P.supported() ? '– ' + P.unsupportedReason() : P.subscribedHere ? 'aktiv' : S.Notify.permission() === 'denied' ? 'Benachrichtigungen blockiert' : 'nicht aktiv';
+          const statusText = { idle: 'bereit', ok: 'ok', syncing: '⟳ läuft …', offline: 'offline', error: 'Fehler: ' + Y.lastError, auth: 'abgemeldet' }[Y.status] || Y.status;
+          const pushText = !P.supported() ? 'nicht unterstützt' : P.subscribedHere ? 'an' : S.Notify.permission() === 'denied' ? 'blockiert' : 'aus';
           const devBox = h('div');
           const b = {};
-          b.sync = h('button', { class: 'btn btn-primary' }, ctx.ui.icon('refresh'), 'Jetzt synchronisieren');
+          b.sync = h('button', { class: 'btn btn-primary' }, ctx.ui.icon('refresh'), 'Sync');
           b.sync.onclick = busy(b.sync, async () => { await Y.run(); if (Y.status !== 'ok') throw new Error(Y.lastError || 'Synchronisierung fehlgeschlagen'); toast('Synchronisiert'); });
-          b.push = h('button', { class: 'btn' + (P.subscribedHere ? '' : ' btn-primary') }, P.subscribedHere ? 'Push hier deaktivieren' : 'Push auf diesem Gerät aktivieren');
-          b.push.onclick = busy(b.push, async () => { if (P.subscribedHere) { await P.disable(); toast('Push auf diesem Gerät deaktiviert'); } else { await P.enable(); toast('Push aktiviert – jetzt Test-Push probieren'); } });
+          b.push = h('button', { class: 'btn' + (P.subscribedHere ? '' : ' btn-primary') }, P.subscribedHere ? 'Push aus' : 'Push an');
+          b.push.onclick = busy(b.push, async () => { if (P.subscribedHere) { await P.disable(); toast('Push aus'); } else { await P.enable(); toast('Push an'); } });
           b.test = h('button', { class: 'btn' }, 'Test-Push');
           b.test.onclick = busy(b.test, async () => {
             const r = await P.test();
@@ -2431,7 +2465,7 @@
             } catch (err) { diagBox.replaceChildren(h('span', { class: 'muted' }, err.status === 404 ? 'Diagnose braucht Worker-Version 1.1 (Worker neu deployen).' : 'Diagnose nicht verfügbar: ' + err.message)); }
           };
           loadDiag();
-          b.dev = h('button', { class: 'btn btn-sm' }, 'Geräte anzeigen');
+          b.dev = h('button', { class: 'btn btn-sm' }, 'Geräte');
           b.dev.onclick = async () => {
             try {
               const { devices } = await S.Api.req('GET', '/v1/devices');
@@ -2444,7 +2478,7 @@
                 } }, 'Abmelden')))))));
             } catch (err) { toast(err.message, { type: 'error' }); }
           };
-          b.pw = h('button', { class: 'btn btn-sm' }, 'Sync-Passwort ändern');
+          b.pw = h('button', { class: 'btn btn-sm' }, 'Passwort');
           b.pw.onclick = async () => {
             const ok = await ctx.ui.dialog(close => {
               const cur = h('input', { type: 'password', autocomplete: 'current-password' });
@@ -2467,7 +2501,7 @@
             }, { modal: true, label: 'Sync-Passwort ändern' });
             if (ok) { toast('Sync-Passwort geändert'); renderSync(); }
           };
-          b.off = h('button', { class: 'btn btn-sm' }, 'Dieses Gerät abmelden');
+          b.off = h('button', { class: 'btn btn-sm' }, 'Abmelden');
           b.off.onclick = async () => {
             if (!await confirm('Dieses Gerät vom Push-Dienst abmelden? Es bekommt dann keine Pushes mehr und gleicht nicht mehr ab. Alle Daten auf diesem Gerät bleiben erhalten.', { ok: 'Abmelden', danger: true })) return;
             await Y.disconnect(); toast('Abgemeldet – lokale Daten bleiben erhalten'); renderSync();
@@ -2476,14 +2510,12 @@
             h('dl', { class: 'kv' },
               h('dt', {}, 'Status'), h('dd', {}, statusText),
               h('dt', {}, 'Zuletzt'), h('dd', {}, st.lastOkAt ? U.relTime(st.lastOkAt) : '–'),
-              h('dt', {}, 'Ausstehend'), h('dd', {}, pending ? `${pending} Änderung(en)` : 'nichts'),
+              h('dt', {}, 'Offen'), h('dd', {}, String(pending)),
               h('dt', {}, 'Push hier'), h('dd', {}, pushText),
               h('dt', {}, 'Gerät'), h('dd', {}, st.deviceName || '–'),
               h('dt', {}, 'Server'), h('dd', {}, st.api)),
             h('div', { class: 'row', style: { marginTop: '12px' } }, b.sync, P.supported() ? b.push : null, b.test),
-            !P.supported() && U.isIOS() ? h('p', { class: 'small muted' }, '' + P.unsupportedReason()) : null,
-            h('p', { class: 'small muted' }, 'Erinnerungen löst jetzt der Server aus – auch wenn alle Geräte die App geschlossen haben. Die Ruhezeiten unten gelten auch dort. Inhalte (Titel, Notizen) sind Ende-zu-Ende-verschlüsselt.'),
-            h('details', { class: 'fold' }, h('summary', {}, 'Push-Diagnose'), diagBox, h('button', { class: 'btn btn-sm', style: { marginTop: '8px' }, onclick: loadDiag }, 'Aktualisieren')),
+            h('details', { class: 'fold' }, h('summary', {}, 'Diagnose'), diagBox, h('button', { class: 'btn btn-sm', style: { marginTop: '8px' }, onclick: loadDiag }, 'Aktualisieren')),
             h('details', { class: 'fold' }, h('summary', {}, 'Geräte & Konto'),
               h('div', { class: 'row' }, b.dev, b.pw, b.off), devBox)));
         };
@@ -2507,13 +2539,12 @@
           } });
           const lastExport = await S.lastExportAt();
           parts.sicherung.replaceChildren(card('save Datensicherung',
-            h('p', { class: 'small muted', style: { marginTop: 0 } }, S.Sync.enabled() ? 'Deine Daten liegen in diesem Browser und verschlüsselt auf deinem Push-Dienst. Exportiere trotzdem gelegentlich eine Sicherungsdatei (sie ist unverschlüsselt) und lege sie sicher ab.' : 'Deine Daten liegen nur in diesem Browser. Exportiere regelmäßig eine Sicherungsdatei und lege sie sicher ab (sie ist unverschlüsselt).'),
-            h('p', { class: 'small' }, lastExport ? `Letzter Export: ${U.formatDateTimeFull(lastExport)}` : 'Noch kein Export.'),
+            h('p', { class: 'small muted', style: { marginTop: 0 } }, lastExport ? `Export: ${U.formatDateTimeFull(lastExport)}` : 'Kein Export'),
             h('div', { class: 'row' },
-              h('button', { class: 'btn btn-primary', onclick: async () => { await S.Backup.exportFile(); toast('Sicherung exportiert'); } }, ctx.ui.icon('download'), 'Exportieren'),
-              h('button', { class: 'btn', onclick: () => fileIn.click() }, ctx.ui.icon('upload'), 'Importieren'), fileIn,
-              h('button', { class: 'btn', onclick: async () => { await S.Backup.snapshot('manuell'); toast('Schnappschuss angelegt'); renderBackup(); } }, ctx.ui.icon('save'), 'Schnappschuss')),
-            h('details', { class: 'fold' }, h('summary', {}, `Automatische Schnappschüsse (${list.length})`),
+              h('button', { class: 'btn btn-primary', onclick: async () => { await S.Backup.exportFile(); toast('Sicherung exportiert'); } }, ctx.ui.icon('download'), 'Export'),
+              h('button', { class: 'btn', onclick: () => fileIn.click() }, ctx.ui.icon('upload'), 'Import'), fileIn,
+              h('button', { class: 'btn', title: 'Schnappschuss', 'aria-label': 'Schnappschuss', onclick: async () => { await S.Backup.snapshot('manuell'); toast('Schnappschuss angelegt'); renderBackup(); } }, ctx.ui.icon('save'))),
+            h('details', { class: 'fold' }, h('summary', {}, `Schnappschüsse (${list.length})`),
               list.length ? h('table', { class: 'simple' }, h('tbody', {}, list.map(b => h('tr', {},
                 h('td', {}, U.formatDateTimeFull(b.createdAt), h('div', { class: 'small muted' }, `${b.reason} · v${b.appVersion} · ${U.formatBytes(b.size)}`)),
                 h('td', { style: { textAlign: 'right' } },
@@ -2531,10 +2562,10 @@
           const st = await S.storage();
           parts.speicher.replaceChildren(card('database Speicher',
             h('dl', { class: 'kv' },
-              h('dt', {}, 'Dauerhaft'), h('dd', {}, st.persisted == null ? 'unbekannt' : st.persisted ? 'ja – der Browser löscht die Daten nicht automatisch' : 'nein – der Browser könnte Daten bei Speichermangel löschen'),
-              h('dt', {}, 'Belegt'), h('dd', {}, st.usage != null ? `${U.formatBytes(st.usage)} von ${U.formatBytes(st.quota)}` : 'unbekannt'),
-              h('dt', {}, 'Installiert'), h('dd', {}, U.isStandalone() ? 'ja (Home-Bildschirm/App)' : 'nein (Browser-Tab)')),
-            st.persisted === false ? h('button', { class: 'btn', style: { marginTop: '10px' }, onclick: async () => { const ok = await S.requestPersist(); toast(ok ? 'Speicher ist jetzt dauerhaft' : 'Browser hat abgelehnt – Installation als App hilft oft'); renderStorage(); } }, 'Dauerhaften Speicher anfordern') : null));
+              h('dt', {}, 'Dauerhaft'), h('dd', {}, st.persisted == null ? '?' : st.persisted ? 'ja' : 'nein'),
+              h('dt', {}, 'Belegt'), h('dd', {}, st.usage != null ? `${U.formatBytes(st.usage)} / ${U.formatBytes(st.quota)}` : '?'),
+              h('dt', {}, 'Installiert'), h('dd', {}, U.isStandalone() ? 'ja' : 'nein')),
+            st.persisted === false ? h('button', { class: 'btn', style: { marginTop: '10px' }, onclick: async () => { const ok = await S.requestPersist(); toast(ok ? 'Dauerhaft' : 'Abgelehnt'); renderStorage(); } }, 'Dauerhaft anfordern') : null));
         };
         await renderStorage();
 
@@ -2544,29 +2575,72 @@
           const mods = S.Registry.list({ includeHidden: true }).filter(m => !m.system);
           parts.module.replaceChildren(card('grid Module', ...mods.map(m => {
             return h('div', { style: { borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' } },
-              h('div', { class: 'row' }, h('strong', { class: 'grow row', style: { gap: '8px' } }, ctx.ui.icon(m.icon), m.name), h('span', { class: 'pill' }, `v${m.version || '?'} · Schema ${m.schemaVersion}`)),
+              h('div', { class: 'row' }, h('strong', { class: 'grow row', style: { gap: '8px' } }, ctx.ui.icon(m.icon), m.name), h('span', { class: 'pill', title: `Schema ${m.schemaVersion}` }, `v${m.version || '?'}`)),
               S.Registry.isReadOnly(m.id) ? h('div', { class: 'ro-banner' }, '' + S.Registry.st(m.id).lockReason) : null,
               sw('Anzeigen', !hidden.includes(m.id), async v => {
                 const cur = S.Settings.get('hiddenModules').filter(x => x !== m.id);
                 if (!v) cur.push(m.id);
                 await S.Settings.set('hiddenModules', cur);
-                toast(v ? `${m.name} wird angezeigt` : `${m.name} ausgeblendet (Daten bleiben erhalten)`);
+                toast(v ? 'Eingeblendet' : 'Ausgeblendet');
               }),
-              h('details', { class: 'fold' }, h('summary', {}, 'Gefahrenbereich'),
+              h('details', { class: 'fold' }, h('summary', {}, 'Löschen'),
                 h('button', { class: 'btn btn-danger btn-sm', onclick: async () => {
                   if (!await confirm(`Alle Daten von „${m.name}“ löschen?`, { ok: 'Weiter', danger: true })) return;
                   if (!await confirm(`Wirklich? Vorher wird ein Schnappschuss angelegt, über den du die Daten wiederherstellen kannst.`, { ok: 'Endgültig löschen', danger: true })) return;
                   await S.Backup.deleteModuleData(m.id); toast(`Daten von ${m.name} gelöscht`); renderBackup();
-                } }, 'Daten dieses Moduls löschen')));
+                } }, 'Daten löschen')));
           })));
         };
         renderModules();
 
+        /* Dokumentation – die Erklärtexte, die nicht mehr in der Oberfläche stehen */
+        const doc = (title, ...paras) => h('details', { class: 'fold doc' }, h('summary', {}, title), ...paras.map(t => Array.isArray(t) ? h('ul', { class: 'small' }, t.map(x => h('li', {}, x))) : h('p', { class: 'small' }, t)));
+        parts.doku.append(card('book Dokumentation',
+          doc('Wichtig: Daten & iPhone',
+            'Deine Daten liegen im Speicher des Browsers bzw. der Home-Bildschirm-App – nicht in den Dateien der App. Neue Versionen ändern daran nichts.',
+            'iPhone: Die Home-Bildschirm-App hat einen eigenen Speicher, getrennt von Safari. Entfernst du sie vom Home-Bildschirm, ist dieser Speicher weg. Vorher: Push & Sync verbunden und „ok“ – oder Export.',
+            'Nach dem Neu-Hinzufügen: Einstellungen → Push & Sync → Verbinden (Server-Adresse + Sync-Passwort). ToDos, Tägliche Ziele und Ernährung kommen zurück. Nicht synchronisiert werden: Moduleinstellungen (z. B. kcal-Ziel, Abfragezeiten, Standard-Intervall), Wecker, Ruhezeiten, Darstellung, Schnappschüsse.'),
+          doc('Erinnerungen',
+            'Ein offenes ToDo erinnert im gewählten Intervall, bis du es abhakst. Mit Abgabe werden die Abstände kürzer, je näher sie rückt (ca. 4 Erinnerungen je verbleibendem Abschnitt, nie seltener als das Intervall). Pünktlich zur Abgabe: „Jetzt fällig“. Danach im Abstand „Überfällig“ (Standard 15 Min).',
+            'Je ToDo ist immer nur eine Mitteilung sichtbar. Sie verschwindet, sobald du das Modul öffnest, abhakst oder verschiebst.',
+            'Ruhezeit (Standard 22–7 Uhr): Erinnerungen werden auf das Ende verschoben und kommen gesammelt. „Abgaben dürfen stören“: ToDos mit Abgabe in der Ruhezeit oder den nächsten 2 Std erinnern trotzdem.',
+            'Ohne Push & Sync erinnert die App nur, solange sie geöffnet ist; Verpasstes wird beim Öffnen gesammelt nachgeholt.'),
+          doc('ToDos',
+            ['Symbole: ↻ Intervall · Glocke nächste Erinnerung · Kalender Abgabe · Warnung überfällig · „18×“ bisherige Erinnerungen.',
+             'Farbe von „×“: Beim Standard-Intervall 2 Std bis 2 Tage offen grün, dann über Gelb/Orange bis 5 Tage rot. Andere Intervalle verschieben die Grenzen im selben Verhältnis (30 Min: 12 Std / 30 Std; 1 Tag: 24 / 60 Tage).',
+             'Linker Farbbalken: Abgabe in < 24 Std (orange) oder überfällig (rot).',
+             'Startseite: Abhaken direkt dort, Antippen springt zum ToDo, + legt ein neues an.']),
+          doc('Tägliche Ziele',
+            ['Abfrage jeden Abend (Standard 20:30) und sonntags für die Woche (20:00); im Modul über das Einstellungs-Symbol änderbar. Liegt die Uhrzeit in der Ruhezeit, kommt sie danach. Ist schon alles abgehakt, entfällt die Abfrage.',
+             `Punkte: alle Tagesziele erledigt +${1} · je Wochenziel +3 · alle Wochenziele +5 Bonus. Punkte werden beim Speichern festgehalten.`,
+             'Serie (Flamme): Tage in Folge mit allen Tageszielen. Ein nicht beantworteter Tag beendet sie.',
+             'Verlauf: die letzten 7 Tage und 2 Wochen lassen sich nachtragen.',
+             'Startseite oben rechts: Flamme = Tage in Folge, Stern = Punkte.']),
+          doc('Ernährung',
+            ['Felder leeren und speichern löscht die Werte des Tages. + kcal rechnet zum Tageswert dazu.',
+             'Claude fragen: öffnet einen neuen temporären Chat mit deinem Text – dort nur abschicken. Claude schätzt kcal, Eiweiß, Kohlenhydrate, Ballaststoffe und Fett und antwortet mit einem Codeblock („KCAL v2“). Den ganzen Codeblock kopieren und bei „Antwort“ einfügen, dann dazurechnen oder ersetzen.',
+             'Einträge bis 30 Tage im Voraus sind möglich (geplant); Diagramme reichen nur bis heute.',
+             'Ziele (kcal, Gewicht) über das Einstellungs-Symbol im Modul; sie erscheinen als gestrichelte Linie.']),
+          doc('Wecker',
+            ['Nur iPhone/iPad mit der App „Kurzbefehle“: Eine Web-App darf keine Wecker stellen. Zwei Kurzbefehle („PA Wecker stellen“, „PA Wecker löschen“) übernehmen das; Anleitung im Modul unter „Einrichtung“.',
+             '„Heute!“: Die erste Uhrzeit ist heute noch nicht vorbei – die Wecker klingeln schon heute.',
+             '„Alle löschen“ entfernt auch eigene Wecker in der Uhr-App. Ob der Kurzbefehl lief, siehst du in der Uhr-App.']),
+          doc('Push & Sync',
+            ['Eigener Push-Dienst (Cloudflare Worker): Erinnerungen auch bei geschlossener App, Abgleich zwischen Geräten. Inhalte sind Ende-zu-Ende-verschlüsselt; der Server sieht nur Zeiten und Status.',
+             'Erstes Gerät: „Einrichten“ (mit SETUP_SECRET). Jedes weitere: „Verbinden“ mit Server-Adresse und Sync-Passwort.',
+             'Sync-Passwort vergessen = Server-Daten unlesbar. Lokale Daten bleiben; „Einrichten“ mit „Bestehendes Konto ersetzen“ lädt sie neu hoch.',
+             'Push an/aus gilt nur für dieses Gerät. iPhone: Push nur in der Home-Bildschirm-App.']),
+          doc('Datensicherung',
+            ['Export = unverschlüsselte JSON-Datei mit allen Daten, ohne Zugangsdaten. Sicher ablegen.',
+             'Import: Zusammenführen (neuere Einträge gewinnen) oder Ersetzen. Vorher wird automatisch ein Schnappschuss angelegt.',
+             'Schnappschüsse entstehen automatisch vor Updates, Migrationen, Importen und täglich; sie liegen nur auf diesem Gerät.',
+             '„Dauerhaft“: Der Browser löscht die Daten nicht bei Speichermangel. Installation als App hilft.'])));
+
         /* Über */
         parts.ueber.append(card('info Über',
           h('dl', { class: 'kv' }, h('dt', {}, 'Version'), h('dd', {}, S.CONFIG.APP_VERSION), h('dt', {}, 'Datenbank'), h('dd', {}, S.CONFIG.DB_NAME)),
-          h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'btn btn-sm', onclick: async () => { await S.VersionGuard.checkRemote(); toast('Auf Updates geprüft'); } }, 'Auf Updates prüfen')),
-          h('details', { class: 'fold' }, h('summary', {}, 'Änderungsprotokoll'),
+          h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'btn btn-sm', onclick: async () => { await S.VersionGuard.checkRemote(); toast('Auf Updates geprüft'); } }, 'Updates prüfen')),
+          h('details', { class: 'fold' }, h('summary', {}, 'Changelog'),
             ...S.CHANGELOG.map(c => h('div', {}, h('strong', {}, `${c.version} · ${c.date}`), h('ul', { class: 'small' }, c.items.map(i => h('li', {}, i))))))));
 
         /* Diagnose */
@@ -2574,13 +2648,13 @@
           const tests = S.Schedule.selfTest();
           const allOk = tests.every(t => t.ok);
           parts.diagnose.replaceChildren(card('activity Diagnose',
-            h('details', { class: 'fold' }, h('summary', {}, `Eskalationsregel – Testtabelle: ${allOk ? 'alle bestanden' : 'Fehler'}`),
+            h('details', { class: 'fold' }, h('summary', {}, `Eskalation ${allOk ? '✓' : '✗'}`),
               h('table', { class: 'simple' }, h('thead', {}, h('tr', {}, h('th', {}, 'Verbleibend (Stufe 1 Tag)'), h('th', {}, 'Erwartet'), h('th', {}, 'Ergebnis'))),
                 h('tbody', {}, tests.map(t => h('tr', {}, h('td', {}, t.label), h('td', {}, typeof t.expected === 'number' ? `${t.expected} Min` : t.expected), h('td', { class: t.ok ? 'test-ok' : 'test-fail' }, (typeof t.got === 'number' ? `${t.got} Min` : t.got) + (t.ok ? ' ✓' : ' ✗'))))))),
             h('details', { class: 'fold' }, h('summary', {}, `Protokoll (${S.Log.entries.length})`),
               h('div', { class: 'log' }, S.Log.entries.slice().reverse().map(e => `${new Date(e.ts).toLocaleString('de-DE')} [${e.level}] ${e.moduleId}: ${e.msg}\n`)),
               h('div', { class: 'row', style: { marginTop: '8px' } },
-                h('button', { class: 'btn btn-sm', onclick: () => U.download('persoenliche-app-diagnose.json', JSON.stringify({ version: S.CONFIG.APP_VERSION, ua: navigator.userAgent, log: S.Log.entries }, null, 2)) }, 'Protokoll herunterladen'),
+                h('button', { class: 'btn btn-sm', onclick: () => U.download('persoenliche-app-diagnose.json', JSON.stringify({ version: S.CONFIG.APP_VERSION, ua: navigator.userAgent, log: S.Log.entries }, null, 2)) }, ctx.ui.icon('download'), 'Protokoll'),
                 h('button', { class: 'btn btn-sm', onclick: () => { S.Log.entries.length = 0; S.Log.persist(); renderDiag(); } }, 'Leeren')))));
         };
         renderDiag();
@@ -2698,20 +2772,22 @@
     function metaLine(ctx, t, now) {
       const { h } = ctx.ui; const U = ctx.util;
       const r = t._r;
-      const out = [h('span', { class: 'pill', title: 'Erinnerungs-Intervall' }, ctx.ui.icon('repeat'), 'alle ' + U.formatDuration(ivOf(ctx, t)))];
+      const out = [h('span', { class: 'pill', title: 'Intervall' }, ctx.ui.icon('repeat'), U.formatDuration(ivOf(ctx, t)))];
       if (t.deadline) {
         const u = urgency(t.deadline, now);
-        const txt = t.deadline <= now ? `Überfällig seit ${U.formatDuration((now - t.deadline) / 60000)}` : `Abgabe ${U.formatDate(t.deadline)} · ${U.relTime(t.deadline, now)}`;
+        const txt = t.deadline <= now ? `seit ${U.formatDuration((now - t.deadline) / 60000)}` : U.formatDate(t.deadline);
         out.push(h('span', { class: 'pill ' + u }, ctx.ui.icon(t.deadline <= now ? 'alert' : 'calendar'), txt));
       }
       if (!t.done && r && r.nextAt) out.push(h('span', { class: 'pill', title: U.formatDateTimeFull(r.nextAt) }, ctx.ui.icon('bell'), r.nextAt <= now ? 'gleich' : U.relTime(r.nextAt, now)));
       if (r && r.sentCount) {
-        // Farbskala nach offener Zeit: bis 2 Tage grün, dann über Gelb/Orange bis 5 Tage rot
+        // Farbskala nach offener Zeit, bezogen auf den Standard-Turnus 2 Std: dort bis 2 Tage grün, ab 5 Tagen rot.
+        // Andere Intervalle verschieben die Grenzen im selben Verhältnis (30 Min → 12 Std / 30 Std, 1 Tag → 24 / 60 Tage).
         const days = Math.max(0, (now - (t.createdAt || now)) / 86400000);
-        const f = t.done ? null : Math.min(1, Math.max(0, (days - NAG_OK_DAYS) / (NAG_MAX_DAYS - NAG_OK_DAYS)));
+        const k = ivOf(ctx, t) / DEFAULT_INTERVAL, okD = NAG_OK_DAYS * k, maxD = NAG_MAX_DAYS * k;
+        const f = t.done ? null : Math.min(1, Math.max(0, (days - okD) / (maxD - okD)));
         const hue = f == null ? null : Math.round(120 * (1 - f));
         out.push(h('span', { class: 'pill' + (hue == null ? '' : ' nag'), style: hue == null ? null : { '--nag-h': String(hue) },
-          title: `Bisherige Erinnerungen · offen seit ${U.formatDuration(days * 1440)}` }, `${r.sentCount}× erinnert`));
+          title: `${r.sentCount}× erinnert · offen seit ${U.formatDuration(days * 1440)}` }, `${r.sentCount}×`));
       }
       if (t.done && t.doneAt) out.push(h('span', { class: 'pill green' }, ctx.ui.icon('check'), U.formatDate(t.doneAt)));
       return h('div', { class: 't-meta' }, out);
@@ -2727,13 +2803,13 @@
       let iv = ivOf(ctx, t), deadline = t.deadline;
       const titleIn = h('input', { type: 'text', value: t.title, autofocus: true, 'aria-label': 'Titel' });
       const noteIn = h('textarea', { 'aria-label': 'Notiz', placeholder: 'Notiz (optional)' }); noteIn.value = t.note || '';
-      const overdueSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: (t.overdueMin || 15) === m }, `alle ${m} Minuten`)));
+      const overdueSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: (t.overdueMin || 15) === m }, `alle ${m} Min`)));
       const preview = h('div', { class: 'small muted' });
       const upd = () => {
         if (t.done) { preview.textContent = 'Erledigt – keine Erinnerungen.'; return; }
         const changed = iv !== ivOf(ctx, t) || (deadline || null) !== (t.deadline || null) || Number(overdueSel.value) !== (t.overdueMin || 15);
         const n = changed || !r ? ctx.reminders.preview({ intervalMin: iv, deadline, overdueMin: Number(overdueSel.value) }) : r.nextAt;
-        preview.textContent = n ? `${changed ? 'Nach dem Speichern: n' : 'N'}ächste Erinnerung ${U.relTime(n)} (${U.formatDate(n)})` : '';
+        preview.textContent = n ? `Nächste: ${U.formatDate(n)}` : '';
       };
       overdueSel.onchange = upd;
       const dl = deadlineEditor(ctx, deadline, v => { deadline = v; upd(); });
@@ -2742,13 +2818,13 @@
         h('h3', {}, 'ToDo bearbeiten'),
         h('div', { class: 'stack' },
           titleIn, noteIn,
-          h('div', { class: 'small muted' }, 'Intervall – so oft wirst du erinnert, bis es erledigt ist'),
+          h('div', { class: 'small muted' }, 'Intervall'),
           intervalEditor(ctx, iv, v => { iv = v; upd(); }).el,
-          h('div', { class: 'small muted' }, 'Abgabe – je näher, desto öfter wirst du erinnert'),
+          h('div', { class: 'small muted' }, 'Abgabe'),
           dl.el,
-          h('label', { class: 'field' }, h('span', {}, 'Nach Ablauf der Abgabe erinnern'), overdueSel),
+          h('label', { class: 'field' }, h('span', {}, 'Überfällig'), overdueSel),
           preview,
-          r ? h('div', { class: 'small muted' }, `Bisher ${r.sentCount}× erinnert${r.lastSentAt ? ', zuletzt ' + U.relTime(r.lastSentAt) : ''} · angelegt ${U.formatDate(t.createdAt)}`) : null),
+          r ? h('div', { class: 'small muted' }, `${r.sentCount}× · seit ${U.formatDate(t.createdAt)}`) : null),
         h('div', { class: 'dlg-actions' },
           h('button', { type: 'button', class: 'btn btn-ghost', style: { marginRight: 'auto', color: 'var(--danger)' }, onclick: () => close('delete') }, 'Löschen'),
           h('button', { type: 'button', class: 'btn', onclick: () => close() }, 'Abbrechen'),
@@ -2779,7 +2855,7 @@
       const preview = h('div', { class: 'preview' });
       const upd = () => {
         const n = ctx.reminders.preview({ intervalMin: iv, deadline, overdueMin: c.overdueMin });
-        preview.textContent = `Erste Erinnerung ${U.relTime(n)} (${U.formatDate(n)})` + (deadline ? ' – danach immer häufiger bis zur Abgabe.' : `, danach alle ${U.formatDuration(iv)}, bis du es abhakst.`);
+        preview.textContent = `1. Erinnerung ${U.formatDate(n)}`;
       };
       const dl = deadlineEditor(ctx, deadline, v => { deadline = v; upd(); });
       upd();
@@ -2787,9 +2863,9 @@
         const form = h('form', { class: 'composer', onsubmit: e => { e.preventDefault(); if (titleIn.value.trim()) close(true); else titleIn.focus(); } },
           h('h3', {}, 'Neues ToDo'),
           titleIn,
-          h('div', { class: 'lbl' }, 'Intervall – so oft wirst du erinnert, bis es erledigt ist'),
+          h('div', { class: 'lbl' }, 'Intervall'),
           intervalEditor(ctx, iv, v => { iv = v; upd(); }).el,
-          h('div', { class: 'lbl' }, 'Abgabe (optional) – je näher, desto öfter'),
+          h('div', { class: 'lbl' }, 'Abgabe (opt.)'),
           dl.el,
           h('div', { style: { marginTop: '10px' } }, noteIn),
           preview,
@@ -2802,8 +2878,8 @@
       if (!ok) return;
       try {
         await create(ctx, { title: titleIn.value.trim(), note: noteIn.value.trim() ? noteIn.value : '', intervalMin: iv, deadline });
-        if (ctx.notify.permission() === 'default') toast('Damit ich dich erinnern kann, erlaube Benachrichtigungen.', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
-        else toast('ToDo angelegt');
+        if (ctx.notify.permission() === 'default') toast('Benachrichtigungen aus', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
+        else toast('Angelegt');
       } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
     }
 
@@ -2813,13 +2889,12 @@
       const c = await cfg(ctx);
       let iv = c.intervalMin;
       const ivEd = intervalEditor(ctx, iv, v => { iv = v; });
-      const overSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: m === c.overdueMin }, `alle ${m} Minuten`)));
+      const overSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: m === c.overdueMin }, `alle ${m} Min`)));
       const ok = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close(true); } },
-        h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'ToDo-Einstellungen'),
+        h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'ToDos'),
         h('div', { class: 'stack' },
-          h('div', { class: 'field' }, h('span', { class: 'small muted', style: { display: 'block', marginBottom: '4px' } }, 'Standard-Intervall für neue ToDos'), ivEd.el),
-          h('label', { class: 'field' }, h('span', {}, 'Erinnern nach Ablauf der Abgabe (Standard für neue ToDos)'), overSel),
-          h('p', { class: 'small muted', style: { margin: 0 } }, 'Ruhezeiten und Benachrichtigungen gelten für alle Module – sie stehen im Tab „Einstellungen“.')),
+          h('div', { class: 'field' }, h('span', { class: 'small muted', style: { display: 'block', marginBottom: '4px' } }, 'Standard-Intervall'), ivEd.el),
+          h('label', { class: 'field' }, h('span', {}, 'Überfällig'), overSel)),
         h('div', { class: 'dlg-actions' },
           h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
           h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'ToDo-Einstellungen' });
@@ -2841,7 +2916,7 @@
     App.register({
       id: 'todos', name: 'ToDos', icon: 'todos', order: 10,
       description: 'Aufgaben mit hartnäckigen Erinnerungen', category: 'Alltag',
-      version: '1.5.0', schemaVersion: 1, migrations: {},
+      version: '1.6.0', schemaVersion: 1, migrations: {},
 
       async init(ctx) { col = ctx.store.collection('todos', { sync: true }); },
 
@@ -2852,9 +2927,9 @@
         el.append(
           h('div', { class: 'head' },
             h('h2', {}, 'ToDos'),
-            h('button', { class: 'btn btn-ghost', title: 'ToDo-Einstellungen', 'aria-label': 'ToDo-Einstellungen', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, ctx.ui.icon('settings'))),
+            h('button', { class: 'btn btn-ghost', title: 'Einstellungen', 'aria-label': 'ToDo-Einstellungen', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, ctx.ui.icon('settings'))),
           openBox, doneBox,
-          h('button', { class: 'btn btn-primary fab', onclick: () => openCreate(ctx), disabled: ctx.readOnly }, ctx.ui.icon('plus'), 'Neues ToDo'));
+          h('button', { class: 'btn btn-primary fab', title: 'Neues ToDo', 'aria-label': 'Neues ToDo', onclick: () => openCreate(ctx), disabled: ctx.readOnly }, ctx.ui.icon('plus')));
 
         let doneOpen = false;
 
@@ -2862,7 +2937,7 @@
           const u = t.deadline && !t.done ? urgency(t.deadline, now) : null;
           return h('li', { class: 'todo' + (t.done ? ' done' : '') + (u === 'red' ? ' overdue' : u === 'orange' ? ' soon' : '') + (t.id === highlightId ? ' flash' : ''), 'data-id': t.id },
             h('button', { class: 'check', 'aria-label': t.done ? 'Wieder öffnen' : 'Abhaken', title: t.done ? 'Wieder öffnen' : 'Abhaken', disabled: ctx.readOnly, onclick: async () => {
-              if (t.done) { await reopen(ctx, t.id); toast('Wieder geöffnet – Erinnerungen laufen weiter'); }
+              if (t.done) { await reopen(ctx, t.id); toast('Wieder offen'); }
               else { await complete(ctx, t.id); toast(`„${t.title}“ erledigt `, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) }); }
             } }, h('span')),
             h('div', { class: 't-body', onclick: () => openEdit(ctx, t.id) },
@@ -2883,7 +2958,7 @@
           const done = all.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
           openBox.replaceChildren(
             h('div', { class: 'section-title' }, `Aktiv (${open.length})`),
-            open.length ? h('ul', { class: 'todo-list' }, open.map(t => row(t, now))) : h('div', { class: 'card empty' }, 'Nichts offen. Neues ToDo über den Knopf unten.'));
+            open.length ? h('ul', { class: 'todo-list' }, open.map(t => row(t, now))) : h('div', { class: 'card empty' }, 'Nichts offen.'));
           if (done.length) {
             const det = h('details', { class: 'fold', open: doneOpen, ontoggle: () => { doneOpen = det.open; } },
               h('summary', {}, `Erledigt (${done.length})`),
@@ -2926,7 +3001,7 @@
         const count = h('span', { class: 'w-count' });
         el.append(
           h('div', { class: 'w-head' },
-            h('a', { class: 'w-title', href: ctx.router.link('todos') }, ctx.ui.icon('todos'), h('span', {}, 'ToDos'), count),
+            h('a', { class: 'w-title', href: ctx.router.link('todos'), 'aria-label': 'ToDos' }, ctx.ui.icon('todos'), count),
             h('button', { class: 'btn btn-ghost btn-sm', title: 'Neues ToDo', 'aria-label': 'Neues ToDo', disabled: ctx.readOnly, onclick: () => openCreate(ctx) }, ctx.ui.icon('plus'))),
           scroll);
         const wrow = (t, now) => {
@@ -3133,7 +3208,7 @@
       const pw = W - L - R, ph = H - T - B;
       const pts = keys.map((k, i) => ({ k, i, v: values.get(k) })).filter(p => p.v != null);
       const wrap = h('div', { class: 'chart' });
-      if (!pts.length) { wrap.append(h('div', { class: 'empty small' }, 'Keine Einträge in diesem Zeitraum.')); return wrap; }
+      if (!pts.length) { wrap.append(h('div', { class: 'empty small' }, 'Keine Einträge')); return wrap; }
       let vmin = Math.min(...pts.map(p => p.v)), vmax = Math.max(...pts.map(p => p.v));
       if (goal != null) { vmin = Math.min(vmin, goal); vmax = Math.max(vmax, goal); }
       if (zero) vmin = 0;
@@ -3234,7 +3309,7 @@
     App.register({
       id: 'ernaehrung', name: 'Ernährung', icon: 'apple', order: 20,
       description: 'Gewicht, Kalorien und Nährstoffe pro Tag mit Verlauf', category: 'Gesundheit',
-      version: '1.3.0', schemaVersion: 1, migrations: {},
+      version: '1.4.0', schemaVersion: 1, migrations: {},
 
       /* Datensatz (ernaehrung/tage, synchronisiert): id = Datum „JJJJ-MM-TT“ (ein Eintrag pro Tag)
          { id, createdAt, updatedAt, deletedAt, date: 'JJJJ-MM-TT',
@@ -3288,7 +3363,7 @@
           const wIn = h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': 'Gewicht in kg', value: rec && rec.weightKg != null ? fmtKg(rec.weightKg) : '' });
           const kIn = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': 'Kilokalorien', value: rec && rec.kcal != null ? String(Math.round(rec.kcal)) : '' });
           const nIn = Object.fromEntries(NUTS.map(n => [n.k, h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', enterkeyhint: 'done', placeholder: '–', 'aria-label': `${n.label} in Gramm`, value: fmtGIn(rec ? rec[n.k] ?? null : null) })]));
-          const addIn = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: 'kcal dazurechnen, z. B. 450', 'aria-label': 'kcal zum Tageswert dazurechnen' });
+          const addIn = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: '+ kcal', 'aria-label': 'kcal zum Tageswert dazurechnen' });
           const maxDay = addDays(today, MAX_AHEAD);
           const dateIn = h('input', { type: 'date', value: day, max: maxDay, 'aria-label': 'Tag wählen', onchange: () => { if (isKey(dateIn.value) && dateIn.value <= maxDay) { day = dateIn.value; renderEdit(); } } });
 
@@ -3323,9 +3398,9 @@
               h('label', { class: 'field' }, h('span', {}, 'Gewicht'), h('div', { class: 'unit-in' }, wIn, h('span', {}, 'kg'))),
               h('label', { class: 'field' }, h('span', {}, 'Kalorien'), h('div', { class: 'unit-in' }, kIn, h('span', {}, 'kcal')))),
             h('div', { class: 'fields nut-fields' }, NUTS.map(n => h('label', { class: 'field' }, h('span', {}, n.label), h('div', { class: 'unit-in small-in' }, nIn[n.k], h('span', {}, 'g'))))),
-            h('div', { class: 'add-row' }, addIn, h('button', { type: 'button', class: 'btn', onclick: add, disabled: ctx.readOnly }, ctx.ui.icon('plus'), 'Dazu')),
+            h('div', { class: 'add-row' }, addIn, h('button', { type: 'button', class: 'btn', title: 'Dazurechnen', 'aria-label': 'kcal dazurechnen', onclick: add, disabled: ctx.readOnly }, ctx.ui.icon('plus'))),
             h('button', { type: 'submit', class: 'btn btn-primary btn-block', style: { marginTop: '10px' }, disabled: ctx.readOnly }, ctx.ui.icon('save'), 'Speichern'),
-            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Alle Felder leeren und speichern löscht die Werte des Tages.')),
+),
             ...[logCard(rec), await claudeCard(rec)].filter(Boolean));
         };
 
@@ -3351,23 +3426,25 @@
               (e.items || []).length ? h('table', { class: 'simple hist' }, h('tbody', {}, e.items.map(i => h('tr', {},
                 h('td', {}, i.name, i.amount ? h('span', { class: 'muted' }, ` · ${i.amount}`) : null, nutLine(i) ? h('div', { class: 'small muted' }, nutLine(i)) : null),
                 h('td', { class: 'num' }, `${fmtKcal(i.kcal)} kcal`))))) : null,
-              h('div', { class: 'row', style: { marginTop: '6px' } }, h('button', { type: 'button', class: 'btn btn-sm btn-ghost', style: { color: 'var(--danger)' }, disabled: ctx.readOnly, onclick: () => removeEntry(e) }, ctx.ui.icon('trash'), 'Eintrag löschen')))),
+              h('div', { class: 'row', style: { marginTop: '6px' } }, h('button', { type: 'button', class: 'btn btn-sm btn-ghost', style: { color: 'var(--danger)' }, disabled: ctx.readOnly, onclick: () => removeEntry(e) }, ctx.ui.icon('trash'), 'Löschen')))),
             rec.kcal != null && Math.abs(sumLog - rec.kcal) > 1 && !log.some(e => e.mode === 'set')
-              ? h('p', { class: 'small muted', style: { margin: '8px 0 0' } }, `Der Tageswert (${fmtKcal(rec.kcal)} kcal) wurde zusätzlich von Hand geändert.`) : null);
+              ? h('p', { class: 'small muted', style: { margin: '8px 0 0' } }, `Tageswert von Hand geändert (${fmtKcal(rec.kcal)} kcal)`) : null);
         };
 
         /* kcal + Nährwerte mit Claude schätzen: Lebensmittel → Claude → Antwort einfügen → übernehmen */
         const claudeCard = async rec => {
           const draft = await ctx.store.get('entwurf', {});
-          const foodsIn = h('textarea', { rows: 3, 'aria-label': 'Lebensmittel', placeholder: 'Was hast du gegessen und getrunken? z. B.\n2 Brötchen mit Butter und Gouda\n1 Apfel\nCappuccino mit Hafermilch' });
+          const foodsIn = h('textarea', { rows: 1, class: 'autogrow', 'aria-label': 'Lebensmittel', placeholder: 'z. B. 2 Brötchen mit Käse, 1 Apfel' });
           foodsIn.value = draft.foods || '';
-          const link = h('a', { class: 'btn btn-primary btn-block claude-btn', target: '_blank', rel: 'noopener noreferrer' }, ctx.ui.icon('external'), 'Mit Claude schätzen');
+          const grow = ta => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 240) + 'px'; };
+          [foodsIn].forEach(ta => { ta.addEventListener('input', () => grow(ta)); requestAnimationFrame(() => grow(ta)); });
+          const link = h('a', { class: 'btn btn-primary btn-block claude-btn', target: '_blank', rel: 'noopener noreferrer' }, ctx.ui.icon('external'), 'Claude fragen');
           const saveDraft = ctx.util.debounce(() => { if (!ctx.readOnly) ctx.store.set('entwurf', { foods: foodsIn.value }).catch(() => {}); }, 600);
           const updLink = () => { link.href = claudeUrl(foodsIn.value); };
           foodsIn.addEventListener('input', () => { updLink(); saveDraft(); });
           updLink();
 
-          const ansIn = h('textarea', { rows: 3, 'aria-label': 'Antwort von Claude', placeholder: 'Antwort von Claude hier einfügen (Codeblock kopieren)' });
+          const ansIn = h('textarea', { rows: 1, class: 'autogrow', 'aria-label': 'Antwort von Claude', placeholder: 'Antwort (Codeblock) einfügen' });
           const preview = h('div', { class: 'parse-box', hidden: true });
           const apply = async (mode, r) => {
             const cur = await col.get(day);
@@ -3385,7 +3462,7 @@
             const r = parseAnswer(txt);
             preview.hidden = false;
             if (!r.ok) {
-              preview.replaceChildren(h('div', { class: 'parse-err' }, ctx.ui.icon('alert'), ' Keine kcal gefunden. Bitte den ganzen Codeblock aus der Antwort kopieren (beginnt mit „KCAL v2“).'));
+              preview.replaceChildren(h('div', { class: 'parse-err' }, ctx.ui.icon('alert'), ' Keine kcal – ganzen Codeblock kopieren („KCAL v2“).'));
               return;
             }
             const hasDay = rec && rec.kcal != null;
@@ -3394,25 +3471,25 @@
               r.items.length ? h('table', { class: 'simple hist' }, h('tbody', {},
                 r.items.map(i => h('tr', {}, h('td', {}, i.name, i.amount ? h('span', { class: 'muted' }, ` · ${i.amount}`) : null, nutLine(i) ? h('div', { class: 'small muted' }, nutLine(i)) : null), h('td', { class: 'num' }, fmtKcal(i.kcal)))),
                 h('tr', { class: 'sum' }, h('td', {}, 'Summe', nutLine(r.sum) ? h('div', { class: 'small' }, nutLine(r.sum)) : null), h('td', { class: 'num' }, `${fmtKcal(r.sum.kcal)} kcal`)))) : h('div', { class: 'sum' }, `Summe: ${fmtKcal(r.sum.kcal)} kcal`, nutLine(r.sum) ? h('div', { class: 'small' }, nutLine(r.sum)) : null),
-              !r.hasNuts ? h('p', { class: 'small muted' }, 'Keine Nährwerte in der Antwort – es wird nur kcal übernommen.') : null,
-              r.mismatch ? h('p', { class: 'small muted' }, 'Claudes SUMME-Zeile weicht ab – übernommen wird die nachgerechnete Summe der Positionen.') : null,
+              !r.hasNuts ? h('p', { class: 'small muted' }, 'Nur kcal') : null,
+              r.mismatch ? h('p', { class: 'small muted' }, 'SUMME nachgerechnet') : null,
               h('div', { class: 'row', style: { marginTop: '10px' } },
-                hasDay ? h('button', { type: 'button', class: 'btn btn-primary grow', disabled: ctx.readOnly, onclick: () => apply('add', r) }, ctx.ui.icon('plus'), `Dazurechnen (${fmtKcal(after.kcal)} kcal)`) : null,
-                h('button', { type: 'button', class: 'btn grow' + (hasDay ? '' : ' btn-primary'), disabled: ctx.readOnly, onclick: () => apply('set', r) }, ctx.ui.icon('check'), hasDay ? 'Tageswerte ersetzen' : `Übernehmen (${fmtKcal(r.sum.kcal)} kcal)`)),
+                hasDay ? h('button', { type: 'button', class: 'btn btn-primary grow', disabled: ctx.readOnly, onclick: () => apply('add', r) }, ctx.ui.icon('plus'), `→ ${fmtKcal(after.kcal)} kcal`) : null,
+                h('button', { type: 'button', class: 'btn grow' + (hasDay ? '' : ' btn-primary'), disabled: ctx.readOnly, onclick: () => apply('set', r) }, ctx.ui.icon('check'), hasDay ? 'Ersetzen' : `${fmtKcal(r.sum.kcal)} kcal`)),
             ].filter(Boolean));
           };
           ansIn.addEventListener('input', showParse);
+          ansIn.addEventListener('input', () => grow(ansIn));
           const pasteBtn = navigator.clipboard && navigator.clipboard.readText ? h('button', { type: 'button', class: 'btn btn-sm', onclick: async () => {
-            try { const t = await navigator.clipboard.readText(); if (t) { ansIn.value = t; showParse(); } else toast('Zwischenablage ist leer'); }
+            try { const t = await navigator.clipboard.readText(); if (t) { ansIn.value = t; grow(ansIn); showParse(); } else toast('Zwischenablage ist leer'); }
             catch (_) { toast('Kein Zugriff auf die Zwischenablage – bitte ins Feld einfügen'); ansIn.focus(); }
-          } }, 'Aus Zwischenablage einfügen') : null;
+          } }, ctx.ui.icon('paste'), 'Einfügen') : null;
 
           return h('div', { class: 'card claude-card' },
             h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('external'), 'Mit Claude schätzen'),
-            h('div', { class: 'step' }, h('span', { class: 'n' }, '1'), 'Lebensmittel eingeben'),
+            h('div', { class: 'step' }, h('span', { class: 'n' }, '1'), 'Lebensmittel'),
             foodsIn, link,
-            h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Öffnet einen neuen temporären Chat mit deinem Text – dort nur noch abschicken. Claude schätzt kcal, Eiweiß, Kohlenhydrate, Ballaststoffe und Fett.'),
-            h('div', { class: 'step' }, h('span', { class: 'n' }, '2'), 'Antwort von Claude hier einfügen'),
+            h('div', { class: 'step' }, h('span', { class: 'n' }, '2'), 'Antwort'),
             ansIn, pasteBtn ? h('div', { class: 'row', style: { marginTop: '8px' } }, pasteBtn) : null, preview);
         };
 
@@ -3441,9 +3518,9 @@
           chartsBox.replaceChildren(h('div', { class: 'card' },
             h('div', { class: 'chips scroll', role: 'radiogroup', 'aria-label': 'Zeitraum' }, RANGES.map(r => h('button', { type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(r.id === range), onclick: async () => { range = r.id; renderCharts(); await ctx.settings.set('range', range); } }, r.label))),
             h('div', { class: 'stats' },
-              stat(lastW ? `${fmtKg(lastW.weightKg)} kg` : '–', lastW ? `Aktuell (${fmtLong(lastW.id)})` : 'Aktuelles Gewicht'),
-              stat(delta == null ? '–' : `${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${fmtKg(Math.abs(delta))} kg`, 'Veränderung im Zeitraum'),
-              stat(avgK ? `${fmtKcal(avgK.avg)} kcal` : '–', `Ø pro Tag (${avgK ? avgK.n : 0} ${avgK && avgK.n === 1 ? 'Tag' : 'Tage'})${kcalGoal ? ` · Ziel ${fmtKcal(kcalGoal)}` : ''}`)),
+              stat(lastW ? `${fmtKg(lastW.weightKg)} kg` : '–', lastW ? `Gewicht · ${fmtLong(lastW.id)}` : 'Gewicht'),
+              stat(delta == null ? '–' : `${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${fmtKg(Math.abs(delta))} kg`, 'Δ Zeitraum'),
+              stat(avgK ? `${fmtKcal(avgK.avg)} kcal` : '–', `Ø/Tag (${avgK ? avgK.n : 0} T.)${kcalGoal ? ` · Ziel ${fmtKcal(kcalGoal)}` : ''}`)),
             h('div', { class: 'stats nut-stats' }, NUTS.map(n => { const a = avgOf(n.k); return stat(a ? `${fmtG(a.avg)} g` : '–', `Ø ${n.label}${nutGoals[n.k] != null ? ` · Ziel ${fmtG(nutGoals[n.k])}` : ''}`, 'mini'); })),
             h('div', { class: 'chart-title' }, h('span', {}, 'Gewicht'), h('span', { class: 'small muted' }, 'kg')),
             chart(ctx, { title: 'Gewicht', keys, values: mapOf('weightKg'), type: 'line', goal: weightGoal, fmt: v => fmtKg(v), unit: 'kg', zero: false, width: cw }),
@@ -3512,7 +3589,7 @@
     App.register({
       id: 'wecker', name: 'Wecker', icon: 'alarm', order: 30,
       description: 'Viele Wecker auf einmal stellen und alle Wecker löschen (über iOS-Kurzbefehle)', category: 'Alltag',
-      version: '1.0.2', schemaVersion: 1, migrations: {},
+      version: '1.1.0', schemaVersion: 1, migrations: {},
       /* Daten (lokal, nicht synchronisiert): Einstellung „cfg“ { start: 'HH:MM', count, gapMin },
          Wert „letzte“ { at, kind: 'set'|'test'|'delete', times: ['HH:MM', …] } */
 
@@ -3555,8 +3632,8 @@
             onclick: () => { startIn.value = p; update(); } }, p)));
           preview.replaceChildren(
             h('div', { class: 'when' + (today ? ' warn' : '') }, today
-              ? `Achtung: ${list[0]} Uhr ist heute noch nicht vorbei – die Wecker klingeln schon heute.`
-              : `${dayTxt} · ${list[0]} bis ${list[list.length - 1]} Uhr, alle ${cfg.gapMin} Min`),
+              ? `Heute! ${list[0]}–${list[list.length - 1]}`
+              : `${dayTxt} · ${list[0]}–${list[list.length - 1]}`),
             h('div', { class: 'times' }, list.map(t => h('span', { class: 'pill' }, t))));
           save();
         };
@@ -3571,11 +3648,11 @@
 
         const renderDel = (confirming = false) => {
           if (!confirming) {
-            delBox.replaceChildren(h('button', { type: 'button', class: 'btn btn-block big btn-danger-outline', disabled: ctx.readOnly, onclick: () => renderDel(true) }, ctx.ui.icon('trash'), 'Alle Wecker löschen'));
+            delBox.replaceChildren(h('button', { type: 'button', class: 'btn btn-block big btn-danger-outline', disabled: ctx.readOnly, onclick: () => renderDel(true) }, ctx.ui.icon('trash'), 'Alle löschen'));
             return;
           }
           delBox.replaceChildren(h('div', { class: 'confirm' },
-            h('p', { style: { margin: '0 0 10px' } }, 'Löscht alle Wecker in der Uhr-App – auch eigene, wiederkehrende Wecker.'),
+            h('p', { style: { margin: '0 0 10px' } }, 'Auch eigene Wecker in der Uhr-App.'),
             h('div', { class: 'row nowrap' },
               h('button', { type: 'button', class: 'btn grow', onclick: () => renderDel(false) }, 'Abbrechen'),
               h('button', { type: 'button', class: 'btn btn-danger grow', onclick: () => { remember('delete', []); setTimeout(() => renderDel(false), 1500); open(runUrl(SC_DEL)); } }, 'Ja, alle löschen'))));
@@ -3585,7 +3662,7 @@
           const l = await ctx.store.get('letzte', null);
           if (!l) { lastBox.textContent = ''; return; }
           const what = l.kind === 'delete' ? '„Alle löschen“' : l.kind === 'test' ? `Testwecker ${l.times[0]} Uhr` : `${l.times.length} Wecker (${l.times[0]}–${l.times[l.times.length - 1]} Uhr)`;
-          lastBox.textContent = `Zuletzt: ${what} an Kurzbefehle übergeben · ${U.formatDate(l.at)}. Ob der Kurzbefehl gelaufen ist, siehst du in der Uhr-App.`;
+          lastBox.textContent = `Zuletzt: ${what} · ${U.formatDate(l.at)}`;
         };
 
         const copyBtn = name => h('button', { type: 'button', class: 'btn btn-sm', onclick: async () => {
@@ -3593,7 +3670,7 @@
         } }, 'Name kopieren');
         const b = t => h('strong', {}, t);
         const setup = h('details', { class: 'fold' },
-          h('summary', {}, 'Einrichtung (einmalig, ca. 3 Minuten)'),
+          h('summary', {}, 'Einrichtung'),
           h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Eine Web-App darf keine Wecker in der Uhr-App stellen. Das übernehmen zwei Kurzbefehle, die du einmal in der App „Kurzbefehle“ anlegst. Die Namen müssen genau stimmen. Die App legt die Uhrzeiten in die Zwischenablage, der Kurzbefehl liest sie dort. Aktionen findest du über das Suchfeld „Aktion suchen“. Benötigt iOS 17 oder neuer.'),
           h('div', { class: 'sc-name' }, h('code', {}, SC_SET), copyBtn(SC_SET)),
           h('ol', { class: 'steps' },
@@ -3613,16 +3690,16 @@
           h('button', { type: 'button', class: 'btn btn-sm', disabled: ctx.readOnly, onclick: () => {
             const n = new Date(Date.now() + 2 * 60000); const t = fmt(n.getHours() * 60 + n.getMinutes());
             sendTimes('test', [t], [stamp(n)]);
-          } }, ctx.ui.icon('clock'), 'Test: 1 Wecker in 2 Minuten'));
+          } }, ctx.ui.icon('clock'), 'Test (+2 Min)'));
 
         el.append(h('div', {},
           h('div', { class: 'head' }, h('h2', {}, 'Wecker')),
-          U.isIOS() ? null : h('div', { class: 'ro-banner' }, 'Dieses Modul funktioniert nur auf iPhone/iPad mit der App „Kurzbefehle“.'),
+          U.isIOS() ? null : h('div', { class: 'ro-banner' }, 'Nur iPhone/iPad'),
           h('div', { class: 'card' },
             h('div', { class: 'fields' },
-              h('label', { class: 'field' }, h('span', {}, 'Erster Wecker'), startIn),
+              h('label', { class: 'field' }, h('span', {}, 'Ab'), startIn),
               h('label', { class: 'field' }, h('span', {}, 'Anzahl'), countIn),
-              h('label', { class: 'field' }, h('span', {}, 'Abstand (Min)'), gapIn)),
+              h('label', { class: 'field' }, h('span', {}, 'Min'), gapIn)),
             chips, preview, setBtn, lastBox),
           h('div', { class: 'card' }, delBox),
           h('div', { class: 'card' }, setup)));
@@ -3849,16 +3926,15 @@
       const titleIn = h('input', { type: 'text', placeholder: kind === 'daily' ? 'z. B. 10 Minuten lesen' : 'z. B. 3× Sport', autofocus: true, enterkeyhint: 'done', autocomplete: 'off', 'aria-label': 'Ziel' });
       const ok = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); if (titleIn.value.trim()) close(true); else titleIn.focus(); } },
         h('h3', {}, 'Neues Ziel'),
-        h('div', { class: 'stack' }, titleIn, kindChips(ctx, kind, k => { kind = k; }),
-          h('p', { class: 'small muted', style: { margin: 0 } }, 'Tagesziele werden jeden Abend abgefragt, Wochenziele am Sonntagabend.')),
+        h('div', { class: 'stack' }, titleIn, kindChips(ctx, kind, k => { kind = k; })),
         h('div', { class: 'dlg-actions' },
           h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
           h('button', { type: 'submit', class: 'btn btn-primary' }, 'Hinzufügen'))), { label: 'Neues Ziel' });
       if (!ok) return;
       await goals.add({ title: titleIn.value.trim().slice(0, 200), type: kind, order: Date.now() });
       await refreshCurrent();
-      if (ctx.notify.permission() === 'default') toast('Damit ich dich abfragen kann, erlaube Benachrichtigungen.', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
-      else toast(`${KIND_LABEL[kind]} hinzugefügt`);
+      if (ctx.notify.permission() === 'default') toast('Benachrichtigungen aus', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
+      else toast('Hinzugefügt');
     }
 
     async function openEdit(ctx, id) {
@@ -3870,7 +3946,7 @@
       const res = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close('save'); } },
         h('h3', {}, 'Ziel bearbeiten'),
         h('div', { class: 'stack' }, titleIn, kindChips(ctx, kind, k => { kind = k; }),
-          h('p', { class: 'small muted', style: { margin: 0 } }, `Angelegt ${ctx.util.formatDate(g.createdAt, false)}. Bereits abgefragte Tage und Wochen bleiben unverändert.`)),
+          h('p', { class: 'small muted', style: { margin: 0 } }, `Seit ${ctx.util.formatDate(g.createdAt, false)}`)),
         h('div', { class: 'dlg-actions' },
           h('button', { type: 'button', class: 'btn btn-ghost', style: { marginRight: 'auto', color: 'var(--danger)' }, onclick: () => close('delete') }, 'Löschen'),
           h('button', { type: 'button', class: 'btn', onclick: () => close() }, 'Abbrechen'),
@@ -3916,13 +3992,12 @@
       const wOn = h('input', { type: 'checkbox', checked: c.weeklyOn });
       const wTime = h('input', { type: 'time', value: U.minToTime(c.weeklyTime), 'aria-label': 'Uhrzeit der Abfrage am Sonntag' });
       const ok = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close(true); } },
-        h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'Ziele – Einstellungen'),
+        h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'Ziele'),
         h('div', { class: 'stack' },
-          h('label', { class: 'switch' }, dOn, h('span', {}, 'Tagesziele jeden Abend abfragen')),
-          h('label', { class: 'field' }, h('span', {}, 'Uhrzeit (täglich)'), dTime),
-          h('label', { class: 'switch' }, wOn, h('span', {}, 'Wochenziele am Sonntag abfragen')),
-          h('label', { class: 'field' }, h('span', {}, 'Uhrzeit (Sonntag)'), wTime),
-          h('p', { class: 'small muted', style: { margin: 0 } }, 'Liegt eine Uhrzeit in der Ruhezeit (Tab „Einstellungen“), kommt die Abfrage erst nach deren Ende.')),
+          h('label', { class: 'switch' }, dOn, h('span', {}, 'Täglich abfragen')),
+          h('label', { class: 'field' }, h('span', {}, 'Uhrzeit'), dTime),
+          h('label', { class: 'switch' }, wOn, h('span', {}, 'Sonntags abfragen')),
+          h('label', { class: 'field' }, h('span', {}, 'Uhrzeit'), wTime)),
         h('div', { class: 'dlg-actions' },
           h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
           h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'Ziele – Einstellungen' });
@@ -3939,7 +4014,7 @@
     App.register({
       id: 'ziele', name: 'Tägliche Ziele', icon: 'target', order: 15,
       description: 'Tages- und Wochenziele mit Abfrage am Abend, Serie und Punkten', category: 'Alltag',
-      version: '1.0.2', schemaVersion: 1, migrations: {},
+      version: '1.1.0', schemaVersion: 1, migrations: {},
       reminderToast: false,   // keine In-App-Leiste „… Ansehen“ für die Abfrage; nur die Mitteilung des Systems
 
       async init(ctx) {
@@ -3980,27 +4055,27 @@
           const answered = v.rec && (v.rec.answeredAt || 0) >= askAt;
           const asking = v.items.length && !v.complete && now >= askAt && !answered && dismissed[kind] !== v.p.key;
           const head = h('div', { class: 'card-head' },
-            h('h3', {}, isD ? 'Heute' : 'Diese Woche'),
-            h('span', { class: 'muted small' }, isD ? v.p.date.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }) : periodLabel(v.p)));
+            h('h3', {}, isD ? 'Heute' : 'Woche'),
+            h('span', { class: 'muted small' }, isD ? v.p.date.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' }) : periodLabel(v.p)));
           let status = null;
           if (v.items.length) {
             status = v.complete
-              ? h('span', { class: 'pill green' }, ctx.ui.icon('check'), `Geschafft · +${v.points} ${v.points === 1 ? 'Punkt' : 'Punkte'}`)
-              : h('span', { class: 'pill' }, `${v.nDone} von ${v.items.length} erledigt` + (!isD && v.points ? ` · +${v.points} Punkte` : ''));
+              ? h('span', { class: 'pill green' }, ctx.ui.icon('check'), `+${v.points}`)
+              : h('span', { class: 'pill' }, `${v.nDone}/${v.items.length}` + (!isD && v.points ? ` · +${v.points}` : ''));
           }
           const on = isD ? c.dailyOn : c.weeklyOn;
-          const next = on && rem && rem.nextAt ? h('span', { class: 'pill', title: U.formatDateTimeFull(rem.nextAt) }, ctx.ui.icon('bell'), 'Abfrage: ' + U.formatDate(rem.nextAt)) : (!on && v.items.length ? h('span', { class: 'pill' }, ctx.ui.icon('bell-off'), 'Abfrage aus') : null);
+          const next = on && rem && rem.nextAt ? h('span', { class: 'pill', title: U.formatDateTimeFull(rem.nextAt) }, ctx.ui.icon('bell'), U.formatDate(rem.nextAt)) : (!on && v.items.length ? h('span', { class: 'pill' }, ctx.ui.icon('bell-off')) : null);
           return h('div', { class: 'card period' + (asking ? ' asking' : '') },
             head,
             asking ? h('div', { class: 'ask' }, ctx.ui.icon('bell'),
-              h('span', { class: 'grow' }, isD ? 'Was hast du heute geschafft? Hake ab, was erledigt ist.' : 'Was hast du diese Woche geschafft?'),
+              h('span', { class: 'grow' }, 'Geschafft? Abhaken.'),
               h('button', { class: 'btn btn-ghost btn-sm', 'aria-label': 'Hinweis ausblenden', onclick: async () => { dismissed = { ...dismissed, [kind]: v.p.key }; await ctx.settings.set('askDismissed', dismissed); render(); } }, 'OK')) : null,
             v.items.length
               ? h('ul', { class: 'goal-list' }, v.items.map(it => goalRow(kind, v.p, it)))
-              : h('div', { class: 'empty small' }, isD ? `Noch keine Tagesziele. Sie werden jeden Abend um ${U.minToTime(c.dailyTime)} abgefragt.` : `Noch keine Wochenziele. Sie werden am Sonntag um ${U.minToTime(c.weeklyTime)} abgefragt.`),
+              : h('div', { class: 'empty small' }, isD ? 'Keine Tagesziele' : 'Keine Wochenziele'),
             h('div', { class: 'card-foot' },
               h('div', { class: 't-meta grow' }, status, next),
-              h('button', { class: 'btn btn-sm', onclick: () => openAdd(ctx, kind), disabled: ctx.readOnly }, ctx.ui.icon('plus'), isD ? 'Tagesziel' : 'Wochenziel')));
+              h('button', { class: 'btn btn-sm', title: isD ? 'Tagesziel' : 'Wochenziel', 'aria-label': isD ? 'Neues Tagesziel' : 'Neues Wochenziel', onclick: () => openAdd(ctx, kind), disabled: ctx.readOnly }, ctx.ui.icon('plus'))));
         };
 
         const histRow = (kind, v, editable) => {
@@ -4024,21 +4099,17 @@
 
           const perm = ctx.notify.permission();
           const anyGoals = s.d.items.length || s.w.items.length;
-          hintBox.replaceChildren(...(anyGoals && perm !== 'granted' ? [h('div', { class: 'card hint' },
+          hintBox.replaceChildren(...(anyGoals && perm === 'denied' ? [h('div', { class: 'card hint' },
             ctx.ui.icon(perm === 'denied' ? 'bell-off' : 'bell'),
-            h('div', { class: 'grow small' }, perm === 'denied' ? 'Benachrichtigungen sind blockiert – die Abfrage kann dich nicht erreichen. Erlaube sie in den System-/Browser-Einstellungen.'
-              : perm === 'unsupported' ? 'Dieser Browser zeigt keine Benachrichtigungen. iPhone: App über „Teilen → Zum Home-Bildschirm“ installieren und von dort öffnen.'
-              : 'Für die Abfrage am Abend brauche ich Benachrichtigungen.'),
+            h('div', { class: 'grow small' }, 'Benachrichtigungen blockiert'),
             perm === 'default' ? h('button', { class: 'btn btn-sm btn-primary', onclick: async () => { await ctx.notify.request(); render(); } }, 'Erlauben') : null)] : []));
 
           statsBox.replaceChildren(h('div', { class: 'card' },
             h('div', { class: 'stats' },
               stat('star', s.points.toLocaleString('de-DE'), 'Punkte'),
-              stat('flame', s.streakD, s.streakD === 1 ? 'Tag in Folge' : 'Tage in Folge'),
-              stat('calendar', s.streakW, s.streakW === 1 ? 'Woche in Folge' : 'Wochen in Folge')),
-            h('div', { class: 'small muted rules' },
-              s.bestD > 1 ? `Rekord: ${s.bestD} Tage in Folge · ` : '',
-              `Punkte: alle Tagesziele erledigt +${DAY_POINTS} · je Wochenziel +${WEEK_GOAL_POINTS} · alle Wochenziele +${WEEK_ALL_BONUS} Bonus`)));
+              stat('flame', s.streakD, 'Tage'),
+              stat('calendar', s.streakW, 'Wochen')),
+            s.bestD > 1 ? h('div', { class: 'small muted rules' }, `Rekord ${s.bestD} Tage`) : null));
 
           dayBox.replaceChildren(periodCard('daily', s.d, c, remD, now));
           weekBox.replaceChildren(periodCard('weekly', s.w, c, remW, now));
@@ -4054,11 +4125,10 @@
           if (!dayRows.length && !weekRows.length) { histBox.replaceChildren(); }
           else {
             const det = h('details', { class: 'fold', open: histOpen, ontoggle: () => { histOpen = det.open; } },
-              h('summary', {}, 'Verlauf & nachtragen'),
+              h('summary', {}, 'Verlauf'),
               h('div', { class: 'card' },
                 dayRows.length ? [h('div', { class: 'section-title' }, 'Tage'), h('ul', { class: 'hist' }, dayRows.map(x => histRow('daily', x.v, x.editable)))] : null,
-                weekRows.length ? [h('div', { class: 'section-title' }, 'Wochen'), h('ul', { class: 'hist' }, weekRows.map(x => histRow('weekly', x.v, x.editable)))] : null,
-                h('p', { class: 'small muted', style: { margin: '10px 0 0' } }, `Nachtragen geht für die letzten ${EDIT_DAYS} Tage und ${EDIT_WEEKS} Wochen. Ein nicht beantworteter Tag beendet die Serie.`)));
+                weekRows.length ? [h('div', { class: 'section-title' }, 'Wochen'), h('ul', { class: 'hist' }, weekRows.map(x => histRow('weekly', x.v, x.editable)))] : null));
             histBox.replaceChildren(det);
           }
 
@@ -4084,6 +4154,15 @@
       /** „Erledigt“ / „1 Std später“ aus der Mitteilung: keine Ziele automatisch abhaken (welche, ist unbekannt).
           Nach „Erledigt“ beendet der Kern die Erinnerung; armAll() legt sie für den nächsten Abend neu an. */
       async onReminderAction(itemId, action, ctx) { ctx.log.info(`Abfrage ${itemId}: ${action}`); },
+
+      /** Kennzahlen für die Startseite (oben rechts) */
+      async homeStats() {
+        const s = await stats();
+        return [
+          { icon: 'flame', value: s.streakD, title: `${s.streakD} ${s.streakD === 1 ? 'Tag' : 'Tage'} in Folge`, route: 'ziele' },
+          { icon: 'star', value: s.points.toLocaleString('de-DE'), title: 'Punkte', route: 'ziele' },
+        ];
+      },
     });
   })();
   /* ==== ENDE MODUL: ziele ==== */
