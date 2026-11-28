@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.4 – 2026-11-28
+
+- App-Logo: Fehler beim Erzeugen der kleinen Größen behoben. Beim Apple-Touch-Icon (180 px) und beim 192-px-Icon war der dunkle Hintergrund nur oben links ein Viertel groß, der Rest weiß. Ursache: Das Render-Skript hat die Größenangabe auch im Hintergrund-Rechteck ersetzt. Skript jetzt als `icons/logo-render.py` im Repo.
+- Icon-Dateien `icons/*-v5.png` (neue Namen gegen Caches), v4 entfernt. Service Worker 1.7.0.
+
+Geänderte Dateien: `index.html`, `sw.js`, `manifest.webmanifest`, `icons/` (neu: `*-v5.png`, `logo-render.py`, entfernt: `*-v4.png`). Worker unverändert. Keine Datenänderung.
+
 ## 1.9.3 – 2026-11-28
 
 - App-Logo überarbeitet: Griff weiter waagerecht, etwas kleiner; dafür stehen Korkenzieher, Flaschenöffner und Schere heraus (keine Klinge). Gleicher kräftiger Stil mit dicken Konturen.
