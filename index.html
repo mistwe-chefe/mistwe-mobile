@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.14.0">
+  <meta name="app-version" content="1.15.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v5.png">
@@ -243,6 +243,12 @@
   .widget[data-module="todos"] .t-meta .pill { flex: 0 0 auto; }
   .widget[data-module="todos"] .empty { padding: 28px 8px; }
   [data-module="todos"].widget { padding-bottom: 0; }
+  [data-module="todos"] .daynav { display: flex; align-items: center; gap: 4px; margin: 10px 0 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+  [data-module="todos"] .daynav .day-label { flex: 1; font-weight: 600; gap: 8px; }
+  [data-module="todos"] .daynav .day-label.not-today { color: var(--primary); }
+  [data-module="todos"] .section-title.missed { color: var(--danger); }
+  [data-module="todos"] .missed-link { margin-top: 8px; color: var(--danger); }
+  .pill.timer { font-variant-numeric: tabular-nums; }
   /* ==== ENDE MODUL-CSS: todos ==== */
 
   /* ==== MODUL-CSS: ernaehrung ==== */
@@ -584,7 +590,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.14.0',
+    APP_VERSION: '1.15.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -600,6 +606,14 @@
   };
 
   const CHANGELOG = [
+    { version: '1.15.0', date: '2026-11-28', items: [
+      'Modul todos 2.0.0: ToDos gehören zu einem Tag (Frist 23:59) statt einer Abgabe; Tage durchblättern mit ‹ ›, Antippen des Datums → heute',
+      'Modul todos: Tag beim Anlegen und Bearbeiten wählen (Heute/Morgen/Übermorgen/Datum); Verschieben über die Bearbeitung',
+      'Modul todos: offene ToDos vergangener Tage → Bereich „Verpasst“ (ohne Tag, erinnern weiter im Intervall) bis zur Neuzuweisung',
+      'Modul todos: Timer bis 23:59 statt „×“-Anzeige, Farbe von Grün (Ende Ruhezeit) bis Rot (23:59); erste Erinnerung am Tag zum Ende der Ruhezeit',
+      'Modul todos: bestehende offene ToDos → heute, Abgaben entfallen; Einstellung „Überfällig“ entfernt',
+      'Kern + Worker: Eskalation entfernt – Erinnerungen immer im gewählten Intervall; Option „Abgaben dürfen stören“ entfernt',
+    ] },
     { version: '1.14.0', date: '2026-11-28', items: [
       'Einstellungen als Menü: Push & Sync, Benachrichtigungen, Darstellung, Daten & Speicher, Module, Dokumentation, Über & Diagnose – je mit kurzem Status, Bereiche auf eigenen Unterseiten (#/einstellungen/<bereich>) mit Zurück-Pfeil',
       'Hinweise „Sync einrichten/verbinden“ führen direkt zu Push & Sync',
@@ -1846,7 +1860,7 @@
       if (!this.enabled()) return;
       const q = Settings.data.quiet;
       let tz = 'Europe/Berlin'; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (_) {}
-      try { await Api.req('PUT', '/v1/settings', { timezone: tz, quietStart: q.enabled ? q.start : null, quietEnd: q.enabled ? q.end : null, breakForDeadline: !!q.breakForDeadline }); }
+      try { await Api.req('PUT', '/v1/settings', { timezone: tz, quietStart: q.enabled ? q.start : null, quietEnd: q.enabled ? q.end : null, breakForDeadline: false }); }
       catch (e) { Log.warn('Ruhezeiten an Server: ' + e.message); }
     },
     startLoops() {
@@ -1928,7 +1942,8 @@
   Sync.schedule = U.debounce(() => Sync.run(), 2000);
 
   /* ---- CORE: Schedule ---- */
-  /* Eskalationsregel – identisch zu worker/src/schedule.js (Architektur 10.2). Änderungen immer an beiden Stellen! */
+  /* Erinnerungsregel – identisch zu worker/src/schedule.js. Änderungen immer an beiden Stellen!
+     Ab 1.15.0 ohne Eskalation: immer das gewählte Intervall (Abgabe-Felder werden ignoriert). */
   const Schedule = {
     STAGES: [
       { id: '1m', label: '1 Minute (Test)', short: '1 Min', min: 1 },   // zum Testen von Erinnerungen/Push
@@ -1942,24 +1957,11 @@
       { id: '2w', label: '2 Wochen', short: '2 Wochen', min: 20160 },
       { id: '1mo', label: '1 Monat', short: '1 Monat', min: 43200 },
     ],
-    DEADLINE_STEPS: [5, 10, 15, 30, 60, 90, 180, 360, 720, 1440, 4320, 10080],
     stageMin(id) { const s = this.STAGES.find(x => x.id === id); return s ? s.min : 1440; },
     stageLabel(id) { const s = this.STAGES.find(x => x.id === id); return s ? s.label : id; },
     stageShort(id) { const s = this.STAGES.find(x => x.id === id); return s ? s.short : id; },
-    nextInterval(stageMin, deadline, overdueMin, now) {
-      if (!deadline) return stageMin;
-      const remainingMin = (deadline - now) / 60000;
-      if (remainingMin <= 0) return overdueMin || 15;
-      const target = remainingMin / 4;
-      let step = 5;
-      for (const s of this.DEADLINE_STEPS) if (s <= target) step = s;
-      return Math.min(stageMin, step);
-    },
-    nextAt(r, now) {
-      let t = now + this.nextInterval(r.stageMin, r.deadline, r.overdueMin, now) * 60000;
-      if (r.deadline && now < r.deadline && t > r.deadline) t = r.deadline;
-      return t;
-    },
+    nextInterval(stageMin) { return Math.max(1, stageMin || 1440); },
+    nextAt(r, now) { return now + this.nextInterval(r.stageMin) * 60000; },
     /** Ende der Ruhezeit, falls `now` darin liegt, sonst null */
     quietEnd(now, start, end) {
       if (start == null || end == null || start === end) return null;
@@ -1975,7 +1977,6 @@
       if (!q || !q.enabled) return null;
       const end = this.quietEnd(now, q.start, q.end);
       if (end == null) return null;
-      if (q.breakForDeadline && r.deadline && r.deadline >= now - 60000 && r.deadline <= Math.max(end, now + 2 * 3600000)) return null;
       return end;
     },
     snoozeOptions(now = Date.now()) {
@@ -1987,18 +1988,13 @@
         { label: 'Morgen 08:00', until: tm.getTime() },
       ];
     },
-    /** Testtabelle aus Architektur 10.2 (Stufe „1 Tag“) */
+    /** Selbsttest (identisch zu worker/test/schedule.test.mjs) */
     selfTest() {
-      const now = Date.UTC(2026, 0, 1, 12, 0, 0);
-      const M = 60000, H = 60 * M, D = 24 * H;
-      const cases = [
-        ['5 Tage', 5 * D, 1440], ['2 Tage', 2 * D, 720], ['1 Tag', D, 360], ['12 Stunden', 12 * H, 180],
-        ['6 Stunden', 6 * H, 90], ['2 Stunden', 2 * H, 30], ['1 Stunde', H, 15], ['30 Minuten', 30 * M, 5],
-        ['überfällig', -10 * M, 15],
-      ];
-      const res = cases.map(([label, rem, exp]) => { const got = this.nextInterval(1440, now + rem, 15, now); return { label, expected: exp, got, ok: got === exp }; });
-      const noDl = this.nextInterval(90, null, 15, now); res.push({ label: 'ohne Abgabe, Stufe 90 Min', expected: 90, got: noDl, ok: noDl === 90 });
-      const cl = this.nextAt({ stageMin: 1440, deadline: now + 3 * M, overdueMin: 15 }, now); res.push({ label: 'Abgabe in 3 Min → pünktlich zur Abgabe', expected: '+3 Min', got: `+${(cl - now) / M} Min`, ok: cl === now + 3 * M });
+      const now = Date.UTC(2026, 0, 1, 12, 0, 0), M = 60000, D = 1440 * M;
+      const res = [[120, null], [45, null], [1440, now + 3 * M], [1, now + 5 * D]].map(([iv, dl]) => {
+        const got = (this.nextAt({ stageMin: iv, deadline: dl, overdueMin: 15 }, now) - now) / M;
+        return { label: `Intervall ${iv} Min${dl ? ' (alte Abgabe ignoriert)' : ''}`, expected: iv, got, ok: got === iv };
+      });
       return res;
     },
   };
@@ -2120,6 +2116,8 @@
         /** intervalMin (frei in Minuten) hat Vorrang vor der Stufen-ID */
         preview: ({ stage, intervalMin, deadline = null, overdueMin = 15 }, now = Date.now()) => Schedule.nextAt({ stageMin: intervalMin ? Math.max(1, Math.round(intervalMin)) : Schedule.stageMin(stage), deadline, overdueMin }, now),
         snoozeOptions: () => Schedule.snoozeOptions(),
+        /** Ruhezeit (Minuten nach Mitternacht); dayStart = Ende der Ruhezeit bzw. 07:00, wenn aus */
+        quiet: () => { const q = Settings.data.quiet || {}; return { enabled: !!q.enabled, start: q.start, end: q.end, dayStart: q.enabled && q.end != null ? q.end : 420 }; },
         async set(id, { stage, intervalMin, deadline = null, overdueMin = 15, title = '' }) {
           guard();
           const now = Date.now();
@@ -2152,12 +2150,7 @@
         remove(id) { return mutate(id, (r, now) => { r.deletedAt = now; r.done = true; r.nextAt = null; r.unseen = false; }); },
       };
     },
-    describe(r, now, atDeadline) {
-      if (r.deadline) {
-        if (atDeadline || Math.abs(now - r.deadline) < 60000) return 'Jetzt fällig!';
-        if (now > r.deadline) return `Überfällig seit ${U.formatDuration((now - r.deadline) / 60000)}`;
-        return `Abgabe ${U.relTime(r.deadline, now)} (${U.formatDate(r.deadline)})`;
-      }
+    describe(r) {
       return `${r.sentCount}. Erinnerung · alle ${U.formatDuration(r.stageMin || Schedule.stageMin(r.stage))}`;
     },
     async tick({ catchUp = false } = {}) {
@@ -2173,7 +2166,7 @@
             if (r.deletedAt || r.done || r.nextAt == null || r.nextAt > now) continue;
             const qEnd = Schedule.quietDefer(now, r, q);
             if (qEnd) { r.nextAt = qEnd; await this.putRec(def.id, r, { silent: true }); continue; }
-            const atDeadline = !!r.deadline && r.nextAt === r.deadline;
+            const atDeadline = false;
             r.lastSentAt = now; r.sentCount = (r.sentCount || 0) + 1; r.unseen = true;
             r.nextAt = Schedule.nextAt(r, now);
             await this.putRec(def.id, r, { silent: true });
@@ -2666,8 +2659,7 @@
             sw('Vibration', S.Settings.get('vibrate'), v => S.Settings.set('vibrate', v)),
             h('h3', { style: { marginTop: '16px' } }, ctx.ui.icon('moon'), 'Ruhezeiten'),
             sw('Aktiv', q.enabled, v => { saveQ({ enabled: v }); }),
-            h('div', { class: 'row nowrap' }, h('label', { class: 'field grow' }, h('span', {}, 'Von'), startIn), h('label', { class: 'field grow' }, h('span', {}, 'Bis'), endIn)),
-            sw('Abgaben dürfen stören', q.breakForDeadline, v => saveQ({ breakForDeadline: v }))));
+            h('div', { class: 'row nowrap' }, h('label', { class: 'field grow' }, h('span', {}, 'Von'), startIn), h('label', { class: 'field grow' }, h('span', {}, 'Bis'), endIn))));
         };
         renderNotify();
 
@@ -2907,15 +2899,16 @@
             'iPhone: Die Home-Bildschirm-App hat einen eigenen Speicher, getrennt von Safari. Entfernst du sie vom Home-Bildschirm, ist dieser Speicher weg. Vorher: Push & Sync verbunden und „ok“ – oder Export.',
             'Nach dem Neu-Hinzufügen: Einstellungen → Push & Sync → Verbinden (Server-Adresse + Sync-Passwort). ToDos, Tägliche Ziele, Ernährung und Einkaufen kommen zurück. Nicht synchronisiert werden: Moduleinstellungen (z. B. kcal-Ziel, Abfragezeiten, Standard-Intervall), Wecker, Ruhezeiten, Darstellung, Schnappschüsse.'),
           doc('Erinnerungen',
-            'Ein offenes ToDo erinnert im gewählten Intervall, bis du es abhakst. Mit Abgabe werden die Abstände kürzer, je näher sie rückt (ca. 4 Erinnerungen je verbleibendem Abschnitt, nie seltener als das Intervall). Pünktlich zur Abgabe: „Jetzt fällig“. Danach im Abstand „Überfällig“ (Standard 15 Min).',
+            'Ein offenes ToDo erinnert im gewählten Intervall, bis du es abhakst – ohne Eskalation, immer im selben Abstand. An seinem Tag beginnt es mit dem Ende der Ruhezeit (bzw. 07:00), danach im Intervall. Heute angelegte ToDos erinnern erstmals ein Intervall nach dem Anlegen.',
             'Je ToDo ist immer nur eine Mitteilung sichtbar. Sie verschwindet, sobald du das Modul öffnest, abhakst oder verschiebst.',
-            'Ruhezeit (Standard 22–7 Uhr): Erinnerungen werden auf das Ende verschoben und kommen gesammelt. „Abgaben dürfen stören“: ToDos mit Abgabe in der Ruhezeit oder den nächsten 2 Std erinnern trotzdem.',
+            'Ruhezeit (Standard 22–7 Uhr): Erinnerungen werden auf das Ende verschoben und kommen gesammelt.',
             'Ohne Push & Sync erinnert die App nur, solange sie geöffnet ist; Verpasstes wird beim Öffnen gesammelt nachgeholt.'),
           doc('ToDos',
-            ['Symbole: ↻ Intervall · Glocke nächste Erinnerung · Kalender Abgabe · Warnung überfällig · „18×“ bisherige Erinnerungen.',
-             'Farbe von „×“: Beim Standard-Intervall 2 Std bis 2 Tage offen grün, dann über Gelb/Orange bis 5 Tage rot. Andere Intervalle verschieben die Grenzen im selben Verhältnis (30 Min: 12 Std / 30 Std; 1 Tag: 24 / 60 Tage).',
-             'Linker Farbbalken: Abgabe in < 24 Std (orange) oder überfällig (rot).',
-             'Startseite: Abhaken direkt dort, Antippen springt zum ToDo, + legt ein neues an.']),
+            ['Jedes ToDo gehört zu einem Tag; Frist ist immer das Tagesende (23:59). Mit ‹ › blätterst du durch die Tage, Antippen des Datums springt zu heute.',
+             'Tag ändern: ToDo antippen → Tag wählen. Neue ToDos landen auf dem gerade angezeigten Tag (vergangene Tage → heute).',
+             'Verpasst: Offene ToDos eines vergangenen Tages verlieren ihren Tag und stehen unter „Verpasst“ (bei heute). Sie erinnern weiter im Intervall, bis du sie abhakst oder einem neuen Tag zuweist.',
+             'Symbole: ↻ Intervall · Glocke nächste Erinnerung · Uhr = Zeit bis 23:59, Farbe von Grün (Ende der Ruhezeit) bis Rot (23:59).',
+             'Startseite: ToDos von heute und Verpasste; Abhaken direkt dort, Antippen springt zum ToDo, + legt ein neues für heute an.']),
           doc('Tägliche Ziele',
             ['Abfrage jeden Abend (Standard 20:30) und sonntags für die Woche (20:00); im Modul über das Einstellungs-Symbol änderbar. Liegt die Uhrzeit in der Ruhezeit, kommt sie danach. Ist schon alles abgehakt, entfällt die Abfrage.',
              `Punkte: alle Tagesziele erledigt +${1} · je Wochenziel +3 · alle Wochenziele +5 Bonus. Punkte werden beim Speichern festgehalten.`,
@@ -2990,8 +2983,8 @@
           const tests = S.Schedule.selfTest();
           const allOk = tests.every(t => t.ok);
           parts.diagnose.replaceChildren(card('activity Diagnose',
-            h('details', { class: 'fold' }, h('summary', {}, `Eskalation ${allOk ? '✓' : '✗'}`),
-              h('table', { class: 'simple' }, h('thead', {}, h('tr', {}, h('th', {}, 'Verbleibend (Stufe 1 Tag)'), h('th', {}, 'Erwartet'), h('th', {}, 'Ergebnis'))),
+            h('details', { class: 'fold' }, h('summary', {}, `Erinnerungsregel ${allOk ? '✓' : '✗'}`),
+              h('table', { class: 'simple' }, h('thead', {}, h('tr', {}, h('th', {}, 'Fall'), h('th', {}, 'Erwartet'), h('th', {}, 'Ergebnis'))),
                 h('tbody', {}, tests.map(t => h('tr', {}, h('td', {}, t.label), h('td', {}, typeof t.expected === 'number' ? `${t.expected} Min` : t.expected), h('td', { class: t.ok ? 'test-ok' : 'test-fail' }, (typeof t.got === 'number' ? `${t.got} Min` : t.got) + (t.ok ? ' ✓' : ' ✗'))))))),
             h('details', { class: 'fold' }, h('summary', {}, `Protokoll (${S.Log.entries.length})`),
               h('div', { class: 'log' }, S.Log.entries.slice().reverse().map(e => `${new Date(e.ts).toLocaleString('de-DE')} [${e.level}] ${e.moduleId}: ${e.msg}\n`)),
@@ -3018,51 +3011,83 @@
   <script>
   /* ==== MODUL: todos ==== */
   (() => {
-    const OVERDUE_OPTS = [5, 10, 15, 30, 60];
     let col;
 
     const DEFAULT_INTERVAL = 120; // 2 Stunden
-    const NAG_OK_DAYS = 2;        // so lange darf ein ToDo liegen bleiben (grün)
-    const NAG_MAX_DAYS = 5;       // ab hier rot
-    const cfg = async ctx => ({ intervalMin: await ctx.settings.get('defaultIntervalMin', DEFAULT_INTERVAL), overdueMin: await ctx.settings.get('overdueMin', 15) });
+    const cfg = async ctx => ({ intervalMin: await ctx.settings.get('defaultIntervalMin', DEFAULT_INTERVAL) });
     /** Intervall eines ToDos in Minuten (ältere Einträge haben nur eine Stufen-ID) */
     const ivOf = (ctx, t) => t.intervalMin || (ctx.reminders.STAGES.find(s => s.id === t.stage) || { min: 1440 }).min;
-    const remArgs = (ctx, t) => ({ intervalMin: ivOf(ctx, t), deadline: t.deadline || null, overdueMin: t.overdueMin || 15, title: t.title });
+    const remArgs = (ctx, t) => ({ intervalMin: ivOf(ctx, t), deadline: null, overdueMin: 15, title: t.title });
 
-    /** Dringlichkeit einer Abgabe → Farbe */
-    function urgency(deadline, now) {
-      if (!deadline) return null;
-      const h = (deadline - now) / 3600000;
-      if (h <= 0) return 'red';
-      if (h <= 24) return 'orange';
-      if (h <= 72) return 'yellow';
-      return 'blue';
+    /* ---- Tage (lokal, Schlüssel JJJJ-MM-TT) ---- */
+    const pad = n => String(n).padStart(2, '0');
+    const dayKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const parseDay = k => { const [y, m, d] = String(k).split('-').map(Number); return new Date(y, m - 1, d); };
+    const addDays = (k, n) => { const d = parseDay(k); d.setDate(d.getDate() + n); return dayKey(d); };
+    const dayAt = (k, min) => { const d = parseDay(k); d.setHours(Math.floor(min / 60), min % 60, 0, 0); return d.getTime(); };
+    const dayEnd = k => dayAt(k, 23 * 60 + 59);   // Frist: 23:59
+    function dayLabel(k, long = false) {
+      const t = dayKey(), d = parseDay(k);
+      const rel = k === t ? 'Heute' : k === addDays(t, 1) ? 'Morgen' : k === addDays(t, -1) ? 'Gestern' : k === addDays(t, 2) ? 'Übermorgen' : null;
+      const date = d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+      return rel ? (long ? `${rel}, ${date}` : rel) : date;
+    }
+    /** Tag eines ToDos: zugewiesener Tag; Erledigte ohne Tag (Altbestand) nach Erledigt-Datum; null = verpasst */
+    const dayOf = t => t.day !== undefined ? t.day : (t.done ? dayKey(new Date(t.doneAt || t.updatedAt || Date.now())) : dayKey());
+    const isMissed = t => !t.done && (t.day === null || (t.day && t.day < dayKey()));
+
+    /** Erste Erinnerung am Tag: Ende der Ruhezeit (bzw. 07:00), danach im Intervall. force = Tag/Intervall neu gesetzt */
+    async function scheduleDay(ctx, t, force) {
+      if (t.done || !t.day) return;                 // Verpasste erinnern einfach weiter im Intervall
+      const today = dayKey(), start = dayAt(t.day, ctx.reminders.quiet().dayStart), now = Date.now();
+      if (t.day > today) await ctx.reminders.moveTo(t.id, start);
+      else if (t.day === today && force) await ctx.reminders.moveTo(t.id, now < start ? start : now + ivOf(ctx, t) * 60000);
+    }
+
+    /** Altbestand und Tageswechsel: ToDos ohne Tag → heute (Abgabe entfällt); offene vergangener Tage → „Verpasst“ */
+    let normalizing = null;
+    async function normalize(ctx, todos) {
+      if (ctx.readOnly) return false;
+      if (normalizing) { await normalizing; return false; }
+      let changed = false;
+      normalizing = (async () => {
+        const today = dayKey();
+        for (const t of todos) {
+          if (t.done) continue;
+          if (t.day === undefined) {
+            await col.update(t.id, { day: today, deadline: null });
+            const r = await ctx.reminders.get(t.id);
+            if (r && r.deadline) await ctx.reminders.set(t.id, remArgs(ctx, t));
+            changed = true;
+          } else if (t.day && t.day < today) {
+            await col.update(t.id, { day: null, missedFrom: t.day });
+            changed = true;
+          }
+        }
+      })();
+      try { await normalizing; } finally { normalizing = null; }
+      return changed;
     }
 
     async function loadAll(ctx) {
-      const [todos, rems] = await Promise.all([col.all(), ctx.reminders.list()]);
+      let todos = await col.all();
+      if (await normalize(ctx, todos)) todos = await col.all();
+      const rems = await ctx.reminders.list();
       const rm = new Map(rems.map(r => [r.id, r]));
       return todos.map(t => ({ ...t, _r: rm.get(t.id) || null }));
     }
 
-    function sortOpen(now) {
-      return (a, b) => {
-        const ao = !!a.deadline && a.deadline <= now, bo = !!b.deadline && b.deadline <= now;
-        if (ao !== bo) return ao ? -1 : 1;
-        if (a.deadline && b.deadline && a.deadline !== b.deadline) return a.deadline - b.deadline;
-        if (!!a.deadline !== !!b.deadline) return a.deadline ? -1 : 1;
-        return (a._r?.nextAt ?? Infinity) - (b._r?.nextAt ?? Infinity);
-      };
-    }
+    const byNext = (a, b) => (a._r?.nextAt ?? Infinity) - (b._r?.nextAt ?? Infinity) || (a.createdAt || 0) - (b.createdAt || 0);
 
-    async function create(ctx, { title, note = '', intervalMin, deadline }) {
-      const c = await cfg(ctx);
-      const t = await col.add({ title, note, stage: 'custom', intervalMin, deadline: deadline || null, overdueMin: c.overdueMin, done: false, doneAt: null, seenAt: null });
+    async function create(ctx, { title, note = '', intervalMin, day }) {
+      const t = await col.add({ title, note, stage: 'custom', intervalMin, day, deadline: null, overdueMin: 15, done: false, doneAt: null, seenAt: null });
       await ctx.reminders.set(t.id, remArgs(ctx, t));
+      await scheduleDay(ctx, t, true);
       return t;
     }
     async function complete(ctx, id) {
-      await col.update(id, { done: true, doneAt: Date.now() });
+      const t = await col.get(id);
+      await col.update(id, { done: true, doneAt: Date.now(), ...(t && !t.day ? { day: dayKey() } : {}) });
       await ctx.reminders.done(id);
     }
     async function reopen(ctx, id) {
@@ -3070,24 +3095,7 @@
       const r = await ctx.reminders.get(id);
       if (!r) await ctx.reminders.set(id, remArgs(ctx, t));
       else await ctx.reminders.reopen(id);
-    }
-    async function markSeen(ctx, id) {
-      await ctx.reminders.seen(id);
-      await col.update(id, { seenAt: Date.now() });
-    }
-
-    /** Schnellwahl für die Abgabe */
-    function quickDeadlines() {
-      const now = new Date();
-      const at = (addDays, h, m = 0) => { const d = new Date(now); d.setDate(d.getDate() + addDays); d.setHours(h, m, 0, 0); return d.getTime(); };
-      const opts = [];
-      if (now.getHours() < 17) opts.push({ label: 'Heute 18:00', ts: at(0, 18) });
-      else if (now.getHours() < 21) opts.push({ label: 'Heute 22:00', ts: at(0, 22) });
-      opts.push({ label: 'Morgen 09:00', ts: at(1, 9) });
-      opts.push({ label: 'Morgen 18:00', ts: at(1, 18) });
-      opts.push({ label: 'In 3 Tagen', ts: at(3, 18) });
-      opts.push({ label: 'In 1 Woche', ts: at(7, 18) });
-      return opts;
+      await scheduleDay(ctx, t, true);
     }
 
     /** Intervall frei einstellen: Tage / Stunden / Minuten */
@@ -3104,38 +3112,41 @@
       return { el: box, get: total };
     }
 
-    function deadlineEditor(ctx, current, onChange) {
-      const { h } = ctx.ui; const U = ctx.util;
-      const input = h('input', { type: 'datetime-local', value: U.toLocalInput(current), 'aria-label': 'Abgabe Datum und Uhrzeit', onchange: () => onChange(U.fromLocalInput(input.value)) });
-      const quick = h('div', { class: 'chips' },
-        h('button', { type: 'button', class: 'chip', onclick: () => { input.value = ''; onChange(null); } }, 'Keine'),
-        ...quickDeadlines().map(q => h('button', { type: 'button', class: 'chip', onclick: () => { input.value = U.toLocalInput(q.ts); onChange(q.ts); } }, q.label)));
-      return { el: h('div', { class: 'stack' }, quick, h('div', { class: 'dl-row' }, input)), input, set: ts => { input.value = U.toLocalInput(ts); } };
+    /** Tag wählen: Schnellwahl + Datumsfeld (nicht in der Vergangenheit). current null = verpasst/ohne Tag */
+    function dayPicker(ctx, current, onChange) {
+      const { h } = ctx.ui;
+      const today = dayKey();
+      const quick = [['Heute', today], ['Morgen', addDays(today, 1)], ['Übermorgen', addDays(today, 2)]];
+      const input = h('input', { type: 'date', min: today, value: current || '', 'aria-label': 'Tag', onchange: () => { if (input.value) pick(input.value < today ? today : input.value); } });
+      const chips = h('div', { class: 'chips' });
+      const pick = k => { input.value = k || ''; chips.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-checked', String(c.dataset.k === k))); onChange(k); };
+      chips.append(...quick.map(([l, k]) => h('button', { type: 'button', class: 'chip', role: 'radio', 'data-k': k, 'aria-checked': String(k === current), onclick: () => pick(k) }, l)));
+      return h('div', { class: 'stack' }, chips, h('div', { class: 'dl-row' }, input));
+    }
+
+    /** Zeit bis 23:59 des ToDo-Tags; Farbe von Grün (Ende der Ruhezeit) bis Rot (23:59) */
+    function timerPill(ctx, t, now) {
+      if (t.done || !t.day) return null;
+      const end = dayEnd(t.day), start = dayAt(t.day, ctx.reminders.quiet().dayStart);
+      const rem = end - now;
+      if (rem <= 0) return null;
+      const f = Math.min(1, Math.max(0, (now - start) / Math.max(1, end - start)));
+      const mins = Math.floor(rem / 60000), dd = Math.floor(mins / 1440), hh = Math.floor((mins % 1440) / 60), mm = mins % 60;
+      const txt = dd ? `${dd} T ${hh} h` : `${hh}:${pad(mm)}`;
+      return ctx.ui.h('span', { class: 'pill nag timer', style: { '--nag-h': String(Math.round(120 * (1 - f))) }, title: 'Zeit bis 23:59' }, ctx.ui.icon('clock'), txt);
     }
 
     /** Meta-Zeile eines ToDos */
     function metaLine(ctx, t, now) {
       const { h } = ctx.ui; const U = ctx.util;
       const r = t._r;
-      const out = [h('span', { class: 'pill', title: 'Intervall' }, ctx.ui.icon('repeat'), U.formatDuration(ivOf(ctx, t)))];
-      if (t.deadline) {
-        const u = urgency(t.deadline, now);
-        const txt = t.deadline <= now ? `seit ${U.formatDuration((now - t.deadline) / 60000)}` : U.formatDate(t.deadline);
-        out.push(h('span', { class: 'pill ' + u }, ctx.ui.icon(t.deadline <= now ? 'alert' : 'calendar'), txt));
-      }
+      const out = [];
+      if (!t.done) out.push(timerPill(ctx, t, now));
+      if (isMissed(t)) out.push(h('span', { class: 'pill red' }, ctx.ui.icon('alert'), t.missedFrom ? dayLabel(t.missedFrom) : 'verpasst'));
+      out.push(h('span', { class: 'pill', title: 'Intervall' }, ctx.ui.icon('repeat'), U.formatDuration(ivOf(ctx, t))));
       if (!t.done && r && r.nextAt) out.push(h('span', { class: 'pill', title: U.formatDateTimeFull(r.nextAt) }, ctx.ui.icon('bell'), r.nextAt <= now ? 'gleich' : U.relTime(r.nextAt, now)));
-      if (r && r.sentCount) {
-        // Farbskala nach offener Zeit, bezogen auf den Standard-Turnus 2 Std: dort bis 2 Tage grün, ab 5 Tagen rot.
-        // Andere Intervalle verschieben die Grenzen im selben Verhältnis (30 Min → 12 Std / 30 Std, 1 Tag → 24 / 60 Tage).
-        const days = Math.max(0, (now - (t.createdAt || now)) / 86400000);
-        const k = ivOf(ctx, t) / DEFAULT_INTERVAL, okD = NAG_OK_DAYS * k, maxD = NAG_MAX_DAYS * k;
-        const f = t.done ? null : Math.min(1, Math.max(0, (days - okD) / (maxD - okD)));
-        const hue = f == null ? null : Math.round(120 * (1 - f));
-        out.push(h('span', { class: 'pill' + (hue == null ? '' : ' nag'), style: hue == null ? null : { '--nag-h': String(hue) },
-          title: `${r.sentCount}× erinnert · offen seit ${U.formatDuration(days * 1440)}` }, `${r.sentCount}×`));
-      }
       if (t.done && t.doneAt) out.push(h('span', { class: 'pill green' }, ctx.ui.icon('check'), U.formatDate(t.doneAt)));
-      return h('div', { class: 't-meta' }, out);
+      return h('div', { class: 't-meta' }, out.filter(Boolean));
     }
 
     /** Bearbeiten-Dialog */
@@ -3144,30 +3155,25 @@
       const t = await col.get(id);
       if (!t) { toast('ToDo nicht gefunden'); return; }
       const r = await ctx.reminders.get(id);
-      if (r && r.unseen) await markSeen(ctx, id);
-      let iv = ivOf(ctx, t), deadline = t.deadline;
+      if (r && r.unseen) await ctx.reminders.seen(id);
+      const missed = isMissed(t);
+      let iv = ivOf(ctx, t), day = t.done ? dayOf(t) : (missed ? null : t.day);
       const titleIn = h('input', { type: 'text', value: t.title, autofocus: true, 'aria-label': 'Titel' });
       const noteIn = h('textarea', { 'aria-label': 'Notiz', placeholder: 'Notiz (optional)' }); noteIn.value = t.note || '';
-      const overdueSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: (t.overdueMin || 15) === m }, `alle ${m} Min`)));
       const preview = h('div', { class: 'small muted' });
       const upd = () => {
-        if (t.done) { preview.textContent = 'Erledigt – keine Erinnerungen.'; return; }
-        const changed = iv !== ivOf(ctx, t) || (deadline || null) !== (t.deadline || null) || Number(overdueSel.value) !== (t.overdueMin || 15);
-        const n = changed || !r ? ctx.reminders.preview({ intervalMin: iv, deadline, overdueMin: Number(overdueSel.value) }) : r.nextAt;
-        preview.textContent = n ? `Nächste: ${U.formatDate(n)}` : '';
+        if (t.done) { preview.textContent = 'Erledigt'; return; }
+        preview.textContent = day ? `Frist: ${dayLabel(day, true)}, 23:59` : (t.missedFrom ? `Verpasst (${dayLabel(t.missedFrom, true)}) – neuen Tag wählen` : 'Verpasst – neuen Tag wählen');
       };
-      overdueSel.onchange = upd;
-      const dl = deadlineEditor(ctx, deadline, v => { deadline = v; upd(); });
       upd();
       const result = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close('save'); } },
         h('h3', {}, 'ToDo bearbeiten'),
         h('div', { class: 'stack' },
           titleIn, noteIn,
+          h('div', { class: 'small muted' }, 'Tag'),
+          dayPicker(ctx, day, v => { day = v; upd(); }),
           h('div', { class: 'small muted' }, 'Intervall'),
-          intervalEditor(ctx, iv, v => { iv = v; upd(); }).el,
-          h('div', { class: 'small muted' }, 'Abgabe'),
-          dl.el,
-          h('label', { class: 'field' }, h('span', {}, 'Überfällig'), overdueSel),
+          intervalEditor(ctx, iv, v => { iv = v; }).el,
           preview,
           r ? h('div', { class: 'small muted' }, `${r.sentCount}× · seit ${U.formatDate(t.createdAt)}`) : null),
         h('div', { class: 'dlg-actions' },
@@ -3178,42 +3184,39 @@
       if (result === 'save') {
         const title = titleIn.value.trim();
         if (!title) { toast('Titel darf nicht leer sein'); return; }
-        const overdueMin = Number(overdueSel.value);
-        const nt = await col.update(id, { title, note: noteIn.value, stage: 'custom', intervalMin: iv, deadline: deadline || null, overdueMin });
+        const dayChanged = (day || null) !== (missed ? null : (t.day || null));
+        const ivChanged = iv !== ivOf(ctx, t);
+        const patch = { title, note: noteIn.value, stage: 'custom', intervalMin: iv, deadline: null };
+        if (dayChanged && day) Object.assign(patch, { day, missedFrom: null });
+        const nt = await col.update(id, patch);
         await ctx.reminders.set(id, remArgs(ctx, nt));
-        toast('Gespeichert');
+        await scheduleDay(ctx, nt, dayChanged || ivChanged);
+        toast(dayChanged && day && !t.done ? `Verschoben: ${dayLabel(day)}` : 'Gespeichert');
       } else if (result === 'delete') {
         if (await confirm(`„${t.title}“ löschen?`, { ok: 'Löschen', danger: true })) {
           await col.remove(id); await ctx.reminders.remove(id);
-          toast('Gelöscht', { action: 'Rückgängig', onAction: async () => { await col.update(id, { deletedAt: null }); await ctx.reminders.set(id, remArgs(ctx, t)); if (t.done) await ctx.reminders.done(id); } });
+          toast('Gelöscht', { action: 'Rückgängig', onAction: async () => { await col.update(id, { deletedAt: null }); await ctx.reminders.set(id, remArgs(ctx, t)); if (t.done) await ctx.reminders.done(id); else await scheduleDay(ctx, t, true); } });
         }
       }
     }
 
     /** Fenster „Neues ToDo“ – liegt über der Modul-Oberfläche */
-    async function openCreate(ctx) {
-      const { h, dialog, toast } = ctx.ui; const U = ctx.util;
+    async function openCreate(ctx, presetDay) {
+      const { h, dialog, toast } = ctx.ui;
       const c = await cfg(ctx);
-      let iv = c.intervalMin, deadline = null;
+      const today = dayKey();
+      let iv = c.intervalMin, day = presetDay && presetDay >= today ? presetDay : today;
       const titleIn = h('input', { type: 'text', class: 'title-input', placeholder: 'Was ist zu tun?', enterkeyhint: 'done', 'aria-label': 'Titel', autocomplete: 'off', autofocus: true });
       const noteIn = h('textarea', { 'aria-label': 'Notiz', placeholder: 'Notiz (optional)', rows: 2 });
-      const preview = h('div', { class: 'preview' });
-      const upd = () => {
-        const n = ctx.reminders.preview({ intervalMin: iv, deadline, overdueMin: c.overdueMin });
-        preview.textContent = `1. Erinnerung ${U.formatDate(n)}`;
-      };
-      const dl = deadlineEditor(ctx, deadline, v => { deadline = v; upd(); });
-      upd();
       const ok = await dialog(close => {
         const form = h('form', { class: 'composer', onsubmit: e => { e.preventDefault(); if (titleIn.value.trim()) close(true); else titleIn.focus(); } },
           h('h3', {}, 'Neues ToDo'),
           titleIn,
+          h('div', { class: 'lbl' }, 'Tag'),
+          dayPicker(ctx, day, v => { day = v || today; }),
           h('div', { class: 'lbl' }, 'Intervall'),
-          intervalEditor(ctx, iv, v => { iv = v; upd(); }).el,
-          h('div', { class: 'lbl' }, 'Abgabe (opt.)'),
-          dl.el,
+          intervalEditor(ctx, iv, v => { iv = v; }).el,
           h('div', { style: { marginTop: '10px' } }, noteIn),
-          preview,
           h('div', { class: 'dlg-actions' },
             h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
             h('button', { type: 'submit', class: 'btn btn-primary' }, 'Anlegen')));
@@ -3222,9 +3225,9 @@
       }, { label: 'Neues ToDo' });
       if (!ok) return;
       try {
-        await create(ctx, { title: titleIn.value.trim(), note: noteIn.value.trim() ? noteIn.value : '', intervalMin: iv, deadline });
+        await create(ctx, { title: titleIn.value.trim(), note: noteIn.value.trim() ? noteIn.value : '', intervalMin: iv, day });
         if (ctx.notify.permission() === 'default') toast('Benachrichtigungen aus', { action: 'Erlauben', onAction: () => ctx.notify.request(), timeout: 9000 });
-        else toast('Angelegt');
+        else toast(day === today ? 'Angelegt' : `Angelegt: ${dayLabel(day)}`);
       } catch (err) { toast('Fehler: ' + err.message, { type: 'error' }); }
     }
 
@@ -3232,20 +3235,16 @@
     async function openSettings(ctx) {
       const { h, dialog, toast } = ctx.ui;
       const c = await cfg(ctx);
-      let iv = c.intervalMin;
-      const ivEd = intervalEditor(ctx, iv, v => { iv = v; });
-      const overSel = h('select', {}, OVERDUE_OPTS.map(m => h('option', { value: m, selected: m === c.overdueMin }, `alle ${m} Min`)));
+      const ivEd = intervalEditor(ctx, c.intervalMin, () => {});
       const ok = await dialog(close => h('form', { onsubmit: e => { e.preventDefault(); close(true); } },
         h('h3', { class: 'row', style: { gap: '8px' } }, ctx.ui.icon('settings'), 'ToDos'),
         h('div', { class: 'stack' },
-          h('div', { class: 'field' }, h('span', { class: 'small muted', style: { display: 'block', marginBottom: '4px' } }, 'Standard-Intervall'), ivEd.el),
-          h('label', { class: 'field' }, h('span', {}, 'Überfällig'), overSel)),
+          h('div', { class: 'field' }, h('span', { class: 'small muted', style: { display: 'block', marginBottom: '4px' } }, 'Standard-Intervall'), ivEd.el)),
         h('div', { class: 'dlg-actions' },
           h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Abbrechen'),
           h('button', { type: 'submit', class: 'btn btn-primary' }, 'Speichern'))), { label: 'ToDo-Einstellungen' });
       if (!ok) return;
       if (ivEd.get() >= 1) await ctx.settings.set('defaultIntervalMin', ivEd.get());
-      await ctx.settings.set('overdueMin', Number(overSel.value));
       toast('Gespeichert');
     }
 
@@ -3257,33 +3256,42 @@
     }
 
     let highlightId = null;
+    let viewDay = null;   // angezeigter Tag (null = heute)
 
     App.register({
       id: 'todos', name: 'ToDos', icon: 'todos', order: 10, homeTile: false,
-      description: 'Aufgaben mit hartnäckigen Erinnerungen', category: 'Alltag',
-      version: '1.6.1', schemaVersion: 1, migrations: {},
+      description: 'Aufgaben je Tag mit hartnäckigen Erinnerungen', category: 'Alltag',
+      version: '2.0.0', schemaVersion: 1, migrations: {},
 
       async init(ctx) { col = ctx.store.collection('todos', { sync: true }); },
 
+      async background(ctx) { if (!ctx.readOnly) await loadAll(ctx); },
+
       async mount(el, ctx, route) {
         const { h, toast } = ctx.ui; const U = ctx.util;
-        const openBox = h('div');
-        const doneBox = h('div');
+        const cur = () => viewDay || dayKey();
+        const dayBtn = h('button', { class: 'btn btn-ghost day-label', title: 'Heute', 'aria-label': 'Zu heute springen', onclick: () => { viewDay = null; render(); } });
+        const go = n => { viewDay = addDays(cur(), n); if (viewDay === dayKey()) viewDay = null; render(); };
+        const missedBox = h('div'), openBox = h('div'), doneBox = h('div');
         el.append(
           h('div', { class: 'head' },
             h('h2', {}, 'ToDos'),
             h('button', { class: 'btn btn-ghost', title: 'Einstellungen', 'aria-label': 'ToDo-Einstellungen', onclick: () => openSettings(ctx), disabled: ctx.readOnly }, ctx.ui.icon('settings'))),
-          openBox, doneBox,
-          h('button', { class: 'btn btn-primary fab', title: 'Neues ToDo', 'aria-label': 'Neues ToDo', onclick: () => openCreate(ctx), disabled: ctx.readOnly }, ctx.ui.icon('plus')));
+          h('div', { class: 'daynav' },
+            h('button', { class: 'btn btn-ghost', title: 'Vorheriger Tag', 'aria-label': 'Vorheriger Tag', onclick: () => go(-1) }, ctx.ui.icon('chevron-left')),
+            dayBtn,
+            h('button', { class: 'btn btn-ghost', title: 'Nächster Tag', 'aria-label': 'Nächster Tag', onclick: () => go(1) }, ctx.ui.icon('chevron-right'))),
+          missedBox, openBox, doneBox,
+          h('button', { class: 'btn btn-primary fab', title: 'Neues ToDo', 'aria-label': 'Neues ToDo', onclick: () => openCreate(ctx, cur()), disabled: ctx.readOnly }, ctx.ui.icon('plus')));
 
         let doneOpen = false;
 
         const row = (t, now) => {
-          const u = t.deadline && !t.done ? urgency(t.deadline, now) : null;
-          return h('li', { class: 'todo' + (t.done ? ' done' : '') + (u === 'red' ? ' overdue' : u === 'orange' ? ' soon' : '') + (t.id === highlightId ? ' flash' : ''), 'data-id': t.id },
+          const missed = isMissed(t);
+          return h('li', { class: 'todo' + (t.done ? ' done' : '') + (missed ? ' overdue' : '') + (t.id === highlightId ? ' flash' : ''), 'data-id': t.id },
             h('button', { class: 'check', 'aria-label': t.done ? 'Wieder öffnen' : 'Abhaken', title: t.done ? 'Wieder öffnen' : 'Abhaken', disabled: ctx.readOnly, onclick: async () => {
               if (t.done) { await reopen(ctx, t.id); toast('Wieder offen'); }
-              else { await complete(ctx, t.id); toast(`„${t.title}“ erledigt `, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) }); }
+              else { await complete(ctx, t.id); toast(`„${t.title}“ erledigt`, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) }); }
             } }, h('span')),
             h('div', { class: 't-body', onclick: () => openEdit(ctx, t.id) },
               h('div', { class: 't-title' }, t.title),
@@ -3298,20 +3306,30 @@
 
         const render = async () => {
           const now = Date.now();
+          if (viewDay && viewDay === dayKey()) viewDay = null;
+          const k = cur(), today = dayKey(), isToday = k === today;
+          dayBtn.replaceChildren(ctx.ui.icon('calendar'), h('span', {}, dayLabel(k, true)));
+          dayBtn.classList.toggle('not-today', !isToday);
           const all = await loadAll(ctx);
-          const open = all.filter(t => !t.done).sort(sortOpen(now));
-          const done = all.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+          const missed = all.filter(isMissed).sort((a, b) => (a.missedFrom || '').localeCompare(b.missedFrom || '') || byNext(a, b));
+          const open = all.filter(t => !t.done && !isMissed(t) && t.day === k).sort(byNext);
+          const done = all.filter(t => t.done && dayOf(t) === k).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+          missedBox.replaceChildren(...(isToday && missed.length ? [
+            h('div', { class: 'section-title missed' }, ctx.ui.icon('alert'), `Verpasst (${missed.length})`),
+            h('ul', { class: 'todo-list' }, missed.map(t => row(t, now)))] : []));
           openBox.replaceChildren(
-            h('div', { class: 'section-title' }, `Aktiv (${open.length})`),
-            open.length ? h('ul', { class: 'todo-list' }, open.map(t => row(t, now))) : h('div', { class: 'card empty' }, 'Nichts offen.'));
+            h('div', { class: 'section-title' }, `Offen (${open.length})`),
+            open.length ? h('ul', { class: 'todo-list' }, open.map(t => row(t, now)))
+              : h('div', { class: 'card empty' }, k < today ? (done.length ? 'Alles erledigt.' : 'Nichts an diesem Tag.') : 'Nichts offen.'));
+          if (!isToday && missed.length) openBox.append(h('button', { class: 'btn btn-ghost btn-sm missed-link', onclick: () => { viewDay = null; render(); } }, ctx.ui.icon('alert'), `${missed.length} verpasst`));
           if (done.length) {
-            const det = h('details', { class: 'fold', open: doneOpen, ontoggle: () => { doneOpen = det.open; } },
+            const det = h('details', { class: 'fold', open: doneOpen || k < today, ontoggle: () => { doneOpen = det.open; } },
               h('summary', {}, `Erledigt (${done.length})`),
               h('ul', { class: 'todo-list' }, done.slice(0, 200).map(t => row(t, now))));
             doneBox.replaceChildren(det);
           } else doneBox.replaceChildren();
           if (highlightId) {
-            const li = openBox.querySelector(`li[data-id="${CSS.escape(highlightId)}"]`) || doneBox.querySelector(`li[data-id="${CSS.escape(highlightId)}"]`);
+            const li = el.querySelector(`li[data-id="${CSS.escape(highlightId)}"]`);
             if (li) li.scrollIntoView({ block: 'center', behavior: 'smooth' });
             highlightId = null;
           }
@@ -3328,18 +3346,20 @@
         if (route.parts[0]) await this.onRoute(route, ctx); else await render();
       },
 
-      /** #/todos/<id> (z. B. aus der Startseiten-Kachel) markiert das ToDo in der Liste – kein Bearbeiten-Fenster */
+      /** #/todos/<id> (z. B. von der Startseite) springt zum Tag des ToDos und markiert es – kein Bearbeiten-Fenster */
       async onRoute(route, ctx) {
         const id = route.parts[0];
         if (!id) return;
+        const t = await col.get(id);
+        if (t) { const k = isMissed(t) ? null : dayOf(t); viewDay = k && k !== dayKey() ? k : null; }
         highlightId = id;
         ctx.router.navigate('todos', { replace: true });
         if (this._render) await this._render();
       },
 
-      unmount() { this._render = null; },
+      unmount() { this._render = null; viewDay = null; },
 
-      /** Ausschnitt für die Startseite: aktive ToDos in einem scrollbaren Feld (ca. 1/3 der Bildschirmhöhe) */
+      /** Ausschnitt für die Startseite: ToDos von heute und Verpasste in einem scrollbaren Feld */
       async widget(el, ctx) {
         const { h, toast } = ctx.ui;
         const scroll = h('div', { class: 'w-scroll' });
@@ -3347,24 +3367,22 @@
         el.append(
           h('div', { class: 'w-head' },
             h('a', { class: 'w-title', href: ctx.router.link('todos'), 'aria-label': 'ToDos' }, ctx.ui.icon('todos'), count),
-            h('button', { class: 'btn btn-ghost btn-sm', title: 'Neues ToDo', 'aria-label': 'Neues ToDo', disabled: ctx.readOnly, onclick: () => openCreate(ctx) }, ctx.ui.icon('plus'))),
+            h('button', { class: 'btn btn-ghost btn-sm', title: 'Neues ToDo', 'aria-label': 'Neues ToDo', disabled: ctx.readOnly, onclick: () => openCreate(ctx, dayKey()) }, ctx.ui.icon('plus'))),
           scroll);
-        const wrow = (t, now) => {
-          const u = t.deadline ? urgency(t.deadline, now) : null;
-          return h('li', { class: 'todo' + (u === 'red' ? ' overdue' : u === 'orange' ? ' soon' : '') },
-            h('button', { class: 'check', 'aria-label': 'Abhaken', title: 'Abhaken', disabled: ctx.readOnly, onclick: async () => {
-              await complete(ctx, t.id); toast(`„${t.title}“ erledigt `, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) });
-            } }, h('span')),
-            h('div', { class: 't-body', onclick: () => ctx.router.navigate(`todos/${t.id}`) },
-              h('div', { class: 't-title' }, t.title),
-              metaLine(ctx, t, now)));
-        };
+        const wrow = (t, now) => h('li', { class: 'todo' + (isMissed(t) ? ' overdue' : '') },
+          h('button', { class: 'check', 'aria-label': 'Abhaken', title: 'Abhaken', disabled: ctx.readOnly, onclick: async () => {
+            await complete(ctx, t.id); toast(`„${t.title}“ erledigt`, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) });
+          } }, h('span')),
+          h('div', { class: 't-body', onclick: () => ctx.router.navigate(`todos/${t.id}`) },
+            h('div', { class: 't-title' }, t.title),
+            metaLine(ctx, t, now)));
         const render = async () => {
-          const now = Date.now();
-          const open = (await loadAll(ctx)).filter(t => !t.done).sort(sortOpen(now));
+          const now = Date.now(), today = dayKey();
+          const all = await loadAll(ctx);
+          const list = [...all.filter(isMissed).sort(byNext), ...all.filter(t => !t.done && !isMissed(t) && t.day === today).sort(byNext)];
           const top = scroll.scrollTop;
-          count.textContent = String(open.length);
-          scroll.replaceChildren(open.length ? h('ul', { class: 'todo-list' }, open.map(t => wrow(t, now))) : h('div', { class: 'empty small' }, 'Nichts offen.'));
+          count.textContent = String(list.length);
+          scroll.replaceChildren(list.length ? h('ul', { class: 'todo-list' }, list.map(t => wrow(t, now))) : h('div', { class: 'empty small' }, 'Nichts offen.'));
           scroll.scrollTop = top;
         };
         const re = ctx.util.debounce(render, 150);
@@ -3376,7 +3394,7 @@
       },
 
       async onReminderAction(itemId, action, ctx) {
-        if (action === 'done') { const t = await col.get(itemId); if (t && !t.done) await col.update(itemId, { done: true, doneAt: Date.now() }); }
+        if (action === 'done') { const t = await col.get(itemId); if (t && !t.done) await col.update(itemId, { done: true, doneAt: Date.now(), ...(!t.day ? { day: dayKey() } : {}) }); }
         if (action === 'snooze') { const t = await col.get(itemId); if (t) await col.update(itemId, { seenAt: Date.now() }); }
       },
     });

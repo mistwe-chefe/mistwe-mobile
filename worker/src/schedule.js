@@ -1,27 +1,18 @@
-/* Eskalationsregel – identisch zu index.html (Kern: Schedule), Architektur 10.2.
+/* Erinnerungsregel – identisch zu index.html (Kern: Schedule). Ab 1.15.0 ohne Eskalation.
  * Änderungen IMMER an beiden Stellen und gegen die Testtabelle (test/schedule.test.mjs) prüfen.
  */
-
-export const DEADLINE_STEPS = [5, 10, 15, 30, 60, 90, 180, 360, 720, 1440, 4320, 10080]; // Minuten
 
 export const STAGES = {
   '1m': 1, '30m': 30, '90m': 90, '3h': 180, '6h': 360, '1d': 1440, '3d': 4320, '1w': 10080, '2w': 20160, '1mo': 43200,
 };
 
-export function nextInterval(stageMin, deadline, overdueMin, now) {
-  if (!deadline) return stageMin;
-  const remainingMin = (deadline - now) / 60000;
-  if (remainingMin <= 0) return overdueMin || 15;
-  const target = remainingMin / 4;
-  let step = 5;
-  for (const s of DEADLINE_STEPS) if (s <= target) step = s;
-  return Math.min(stageMin, step);
+/** Ab 1.15.0 ohne Eskalation: immer das gewählte Intervall. deadline/overdueMin werden ignoriert (API bleibt kompatibel). */
+export function nextInterval(stageMin) {
+  return Math.max(1, stageMin || 1440);
 }
 
 export function nextAt(r, now) {
-  let t = now + nextInterval(r.stageMin, r.deadline, r.overdueMin, now) * 60000;
-  if (r.deadline && now < r.deadline && t > r.deadline) t = r.deadline;
-  return t;
+  return now + nextInterval(r.stageMin) * 60000;
 }
 
 /** Minuten nach Mitternacht in einer Zeitzone */
@@ -46,11 +37,10 @@ export function quietEnd(now, start, end, timeZone) {
   return minuteStart + delta * 60000;
 }
 
-/** Verschiebung wegen Ruhezeit (oder null = jetzt senden). q = { enabled, start, end, breakForDeadline, timeZone } */
+/** Verschiebung wegen Ruhezeit (oder null = jetzt senden). q = { enabled, start, end, timeZone } */
 export function quietDefer(now, r, q) {
   if (!q || !q.enabled) return null;
   const end = quietEnd(now, q.start, q.end, q.timeZone);
   if (end == null) return null;
-  if (q.breakForDeadline && r.deadline && r.deadline >= now - 60000 && r.deadline <= Math.max(end, now + 2 * 3600000)) return null;
   return end;
 }

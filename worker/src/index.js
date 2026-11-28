@@ -146,7 +146,7 @@ async function runCron(env, now = Date.now()) {
       upd = env.DB.prepare(`UPDATE reminders SET next_at = ?, last_sent_at = ?, sent_count = sent_count + 1, seq = ${SEQ_VAL}
                             WHERE module = ? AND item_id = ? AND next_at = ? AND done = 0`)
         .bind(next, now, r.module, r.item_id, r.next_at);
-      plan.push({ m: r.module, id: r.item_id, t: r.title_enc || null, dl: r.deadline || null, n: r.sent_count + 1, at: atDeadline ? 1 : 0 });
+      plan.push({ m: r.module, id: r.item_id, t: r.title_enc || null, dl: null, n: r.sent_count + 1, at: 0 });
     }
     stmts.push(env.DB.prepare(SEQ_INC), upd);
   }

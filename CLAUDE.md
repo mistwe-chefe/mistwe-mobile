@@ -13,7 +13,7 @@ Verbindliche Architektur: `ARCHITEKTUR.md` im Claude-Projekt „Persönliche App
 4. Ändert sich der Worker: zuerst Worker deployen, dann Frontend. Worker-API nur abwärtskompatibel. Neue D1-Migration = neue Datei.
 5. Kein Datenverlust: Modul-IDs nie ändern, veröffentlichte Migrationen nie ändern, Schema-Version bei Strukturänderungen erhöhen und Migration mitliefern.
 6. Keine Geheimnisse und keine persönlichen Daten im Repo.
-7. Eskalationsregel für Erinnerungen existiert in `index.html` (Kern: Schedule) und `worker/src/schedule.js` – immer an beiden Stellen ändern.
+7. Erinnerungsregel (ab 1.15.0 ohne Eskalation: immer Intervall) existiert in `index.html` (Kern: Schedule) und `worker/src/schedule.js` – immer an beiden Stellen ändern.
 8. Vor dem Push prüfen: alle `<script>`-Blöcke syntaktisch fehlerfrei (`node --check`), bei Änderungen an Erinnerungen/Sync möglichst im Browser testen.
 
 ## Oberfläche

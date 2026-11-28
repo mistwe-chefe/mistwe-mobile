@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.15.0 – 2026-11-28
+
+- Modul `todos` 2.0.0: Jedes ToDo gehört zu einem Tag (Feld `day`, JJJJ-MM-TT), Frist ist 23:59. Tage durchblättern (‹ ›), Antippen des Datums springt zu heute.
+- Tag wählen beim Anlegen (Standard: angezeigter Tag) und in der Bearbeitung (Verschieben).
+- Offene ToDos vergangener Tage verlieren den Tag (`day: null`, `missedFrom`) und stehen unter „Verpasst“; sie erinnern weiter im Intervall, bis sie abgehakt oder einem neuen Tag zugewiesen werden.
+- Timer bis 23:59 mit Farbskala Grün (Ende der Ruhezeit) → Rot (23:59) ersetzt die „×“-Anzeige. Erste Erinnerung am Tag: Ende der Ruhezeit (bzw. 07:00), danach im Intervall.
+- Bestehende offene ToDos werden einmalig auf heute gesetzt, Abgaben entfallen (`deadline: null`). Neue optionale Felder, Schema bleibt 1.
+- Kern + Worker: Eskalation entfernt (`Schedule.nextAt` / `worker/src/schedule.js` = immer Intervall), Option „Abgaben dürfen stören“ entfernt, Worker sendet keine Abgabe mehr im Push.
+- Startseite: ToDo-Fenster zeigt Verpasste und heutige ToDos.
+
+Geänderte Dateien: `index.html`, `worker/src/schedule.js`, `worker/src/index.js`, `worker/test/schedule.test.mjs`, `CHANGELOG.md`, `CLAUDE.md`. `sw.js` unverändert.
+
 ## 1.14.0 – 2026-11-28
 
 - **Einstellungen als Menü:** Statt einer langen Seite eine Liste mit sieben Punkten, jeweils mit kurzem Status: Push & Sync (aus/an, Push), Benachrichtigungen (Status, Ruhezeit), Darstellung, Daten & Speicher (letzter Export), Module (x von y aktiv), Dokumentation, Über & Diagnose (Version). Jeder Punkt öffnet eine eigene Unterseite (`#/einstellungen/<bereich>`) mit Zurück-Pfeil; Daten & Speicher sowie Über & Diagnose fassen je zwei Bereiche zusammen. Der doppelte Kartentitel entfällt auf Unterseiten mit nur einem Bereich.
