@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.10.0">
+  <meta name="app-version" content="1.10.1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v5.png">
@@ -385,7 +385,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.10.0',
+    APP_VERSION: '1.10.1',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -401,6 +401,9 @@
   };
 
   const CHANGELOG = [
+    { version: '1.10.1', date: '2026-11-28', items: [
+      'Modul wecker: Einrichtungsanleitung (und Test-Knopf) aus dem Modul entfernt; die Anleitung steht jetzt in Einstellungen → Dokumentation → Wecker',
+    ] },
     { version: '1.10.0', date: '2026-11-28', items: [
       'Aufgeräumt: knappe Beschriftungen, mehr Symbole, Erklär- und Einrichtungstexte entfernt',
       'Einstellungen: neuer Punkt „Dokumentation“ mit allen Erklärungen (u. a. Daten & iPhone, Erinnerungen, je Modul)',
@@ -2622,7 +2625,10 @@
              'Einträge bis 30 Tage im Voraus sind möglich (geplant); Diagramme reichen nur bis heute.',
              'Ziele (kcal, Gewicht) über das Einstellungs-Symbol im Modul; sie erscheinen als gestrichelte Linie.']),
           doc('Wecker',
-            ['Nur iPhone/iPad mit der App „Kurzbefehle“: Eine Web-App darf keine Wecker stellen. Zwei Kurzbefehle („PA Wecker stellen“, „PA Wecker löschen“) übernehmen das; Anleitung im Modul unter „Einrichtung“.',
+            ['Nur iPhone/iPad mit der App „Kurzbefehle“: Eine Web-App darf keine Wecker stellen. Das übernehmen zwei Kurzbefehle, deren Namen genau stimmen müssen. Die App legt die Uhrzeiten in die Zwischenablage, der Kurzbefehl liest sie dort.',
+             'Kurzbefehl „PA Wecker stellen“: Zwischenablage abrufen → Text teilen (Zwischenablage, nach Neue Zeilen) → Wiederholen mit jedem (Geteilter Text) → darin: Datumsangaben aus Eingabe abrufen (Wiederholungsobjekt) → Wecker erstellen (Uhrzeit: Datumsangaben). Optional zum Schluss: Mitteilung anzeigen.',
+             'Kurzbefehl „PA Wecker löschen“: Alle Wecker abrufen → Wecker löschen (Wecker).',
+             'Nicht mit ▶ im Kurzbefehl-Editor testen (dann fehlen die Uhrzeiten), immer aus der App starten. Beim ersten Mal fragt iOS nach Erlaubnis (Öffnen, Zwischenablage, Wecker löschen) – jeweils „Immer erlauben“.',
              '„Heute!“: Die erste Uhrzeit ist heute noch nicht vorbei – die Wecker klingeln schon heute.',
              '„Alle löschen“ entfernt auch eigene Wecker in der Uhr-App. Ob der Kurzbefehl lief, siehst du in der Uhr-App.']),
           doc('Push & Sync',
@@ -3589,7 +3595,7 @@
     App.register({
       id: 'wecker', name: 'Wecker', icon: 'alarm', order: 30,
       description: 'Viele Wecker auf einmal stellen und alle Wecker löschen (über iOS-Kurzbefehle)', category: 'Alltag',
-      version: '1.1.0', schemaVersion: 1, migrations: {},
+      version: '1.2.0', schemaVersion: 1, migrations: {},
       /* Daten (lokal, nicht synchronisiert): Einstellung „cfg“ { start: 'HH:MM', count, gapMin },
          Wert „letzte“ { at, kind: 'set'|'test'|'delete', times: ['HH:MM', …] } */
 
@@ -3665,33 +3671,6 @@
           lastBox.textContent = `Zuletzt: ${what} · ${U.formatDate(l.at)}`;
         };
 
-        const copyBtn = name => h('button', { type: 'button', class: 'btn btn-sm', onclick: async () => {
-          try { await navigator.clipboard.writeText(name); toast('Name kopiert'); } catch (_) { toast('Kopieren nicht möglich – bitte abtippen'); }
-        } }, 'Name kopieren');
-        const b = t => h('strong', {}, t);
-        const setup = h('details', { class: 'fold' },
-          h('summary', {}, 'Einrichtung'),
-          h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Eine Web-App darf keine Wecker in der Uhr-App stellen. Das übernehmen zwei Kurzbefehle, die du einmal in der App „Kurzbefehle“ anlegst. Die Namen müssen genau stimmen. Die App legt die Uhrzeiten in die Zwischenablage, der Kurzbefehl liest sie dort. Aktionen findest du über das Suchfeld „Aktion suchen“. Benötigt iOS 17 oder neuer.'),
-          h('div', { class: 'sc-name' }, h('code', {}, SC_SET), copyBtn(SC_SET)),
-          h('ol', { class: 'steps' },
-            h('li', {}, 'In „Kurzbefehle“ oben rechts auf ', b('+'), ' tippen und den Kurzbefehl oben genau so benennen.'),
-            h('li', {}, 'Aktion ', b('Zwischenablage abrufen'), ' hinzufügen.'),
-            h('li', {}, 'Aktion ', b('Text teilen'), ' hinzufügen: ', b('Zwischenablage'), ' teilen nach ', b('Neue Zeilen'), '.'),
-            h('li', {}, 'Aktion ', b('Wiederholen mit jedem'), ' hinzufügen, Eingabe: ', b('Geteilter Text'), '.'),
-            h('li', {}, 'In die Wiederholung die Aktion ', b('Datumsangaben aus Eingabe abrufen'), ' ziehen (Suche: „Datum“), Eingabe: ', b('Wiederholungsobjekt'), '.'),
-            h('li', {}, 'Darunter, ebenfalls in der Wiederholung, die Aktion ', b('Wecker erstellen'), '. Uhrzeit-Feld: Variable ', b('Datumsangaben'), ' (Leiste über der Tastatur). Name z. B. „Aufstehen“.'),
-            h('li', {}, 'Optional ganz unten: ', b('Mitteilung anzeigen'), ' („Wecker gestellt“).')),
-          h('div', { class: 'sc-name' }, h('code', {}, SC_DEL), copyBtn(SC_DEL)),
-          h('ol', { class: 'steps' },
-            h('li', {}, 'Neuen Kurzbefehl anlegen und genau so benennen.'),
-            h('li', {}, 'Aktion ', b('Alle Wecker abrufen'), ' hinzufügen.'),
-            h('li', {}, 'Aktion ', b('Wecker löschen'), ' hinzufügen, Wecker: ', b('Wecker'), ' (Ergebnis der vorigen Aktion).')),
-          h('p', { class: 'small muted' }, 'Nicht mit ▶ im Kurzbefehl-Editor testen – dann fehlen die Uhrzeiten in der Zwischenablage. Immer aus der App starten. Beim ersten Ausführen fragt iOS, ob Kurzbefehle geöffnet, die Zwischenablage gelesen und Wecker gelöscht werden dürfen – jeweils mit „Öffnen“ bzw. „Immer erlauben“ bestätigen. Danach kehrst du über „◀“ oben links zurück.'),
-          h('button', { type: 'button', class: 'btn btn-sm', disabled: ctx.readOnly, onclick: () => {
-            const n = new Date(Date.now() + 2 * 60000); const t = fmt(n.getHours() * 60 + n.getMinutes());
-            sendTimes('test', [t], [stamp(n)]);
-          } }, ctx.ui.icon('clock'), 'Test (+2 Min)'));
-
         el.append(h('div', {},
           h('div', { class: 'head' }, h('h2', {}, 'Wecker')),
           U.isIOS() ? null : h('div', { class: 'ro-banner' }, 'Nur iPhone/iPad'),
@@ -3701,13 +3680,11 @@
               h('label', { class: 'field' }, h('span', {}, 'Anzahl'), countIn),
               h('label', { class: 'field' }, h('span', {}, 'Min'), gapIn)),
             chips, preview, setBtn, lastBox),
-          h('div', { class: 'card' }, delBox),
-          h('div', { class: 'card' }, setup)));
+          h('div', { class: 'card' }, delBox)));
 
         update();
         renderDel(false);
         await renderLast();
-        if (!(await ctx.store.get('letzte', null))) setup.open = true;
         ctx.events.on('app:visible', () => { update(); renderLast(); });
       },
     });

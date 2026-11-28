@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.10.1 – 2026-11-28
+
+- Modul Wecker: Einrichtungsanleitung samt „Name kopieren“ und Test-Knopf aus dem Modul entfernt. Die Anleitung für die beiden Kurzbefehle steht in Kurzform unter Einstellungen → Dokumentation → Wecker.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.10.0 – 2026-11-28
 
 - **Aufgeräumtes Layout:** knappe Beschriftungen und Abkürzungen, mehr Symbole (z. B. „+“ statt „Neues ToDo“, „Tagesziel“, „Dazu“), Erklär- und Einrichtungstexte aus Modulen und Einstellungen entfernt. Hinweise auf der Startseite sind einzeilig und kurz.
