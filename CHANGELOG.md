@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.5 – 2026-11-28
+
+- Kern: Die untere Tab-Leiste zeigt nur noch Symbole, ohne Beschriftung. Der Name bleibt für Bedienungshilfen und als Tooltip erhalten; die breite Seitenleiste ab 900 px zeigt weiter Symbol und Name. Alle Tabs passen jetzt ohne Scrollen auf ein Handy.
+- Modul Ernährung: neues Symbol Apfel statt Waage.
+- Neu: `CLAUDE.md` mit den Grundregeln (direkt auf `main` pushen, alles mitaktualisieren, Tab-Leiste nur Symbole).
+
+Geänderte Dateien: `index.html`, `CLAUDE.md` (neu). Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.8.4 – 2026-11-28
 
 - Modul Tägliche Ziele: **Endlosschleife behoben.** Nach Mitternacht hat die App die Abfrage vom Vortag ständig gelöscht, neu angelegt und mit dem Server abgeglichen. Der Server behielt dabei „zuletzt gesendet“, sodass das Gerät die Abfrage bei jedem Abgleich für neu ausgelöst hielt. Folge: Die Tab-Leiste flackerte etwa jede Sekunde, die App rief den Server rund 20-mal pro Minute auf, und der Hinweis „Ansehen“ kehrte immer wieder.
