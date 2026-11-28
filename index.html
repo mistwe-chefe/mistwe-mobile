@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.12.1">
+  <meta name="app-version" content="1.12.2">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v5.png">
@@ -561,7 +561,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.12.1',
+    APP_VERSION: '1.12.2',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -577,6 +577,11 @@
   };
 
   const CHANGELOG = [
+    { version: '1.12.2', date: '2026-11-28', items: [
+      'Kern: Update-Prüfung und „Neu laden“ umgehen alle Caches (Browser, Service Worker, GitHub-Pages-CDN) – neue Versionen werden zuverlässig erkannt und geladen, auch in der Home-Bildschirm-App',
+      'Einstellungen → Über: „Updates prüfen“ meldet das Ergebnis (neue Version / aktuell / fehlgeschlagen), neuer Knopf „Neu laden“',
+      'Service Worker 1.8.0: Anfragen mit Cache-Buster werden nicht zwischengespeichert',
+    ] },
     { version: '1.12.1', date: '2026-11-28', items: [
       'Modul rechner: passt ohne Scrollen genau zwischen Kopfzeile und Tab-Leiste – Display und Tastenhöhe richten sich nach der Bildschirmhöhe (auch beim Drehen)',
     ] },
@@ -1471,14 +1476,26 @@
       const { h } = UI;
       UI.banner('update', [h('span', { class: 'grow' }, '' + text), h('button', { class: 'btn btn-primary btn-sm', onclick: () => SWReg.applyUpdate() }, 'Jetzt neu laden')]);
     },
+    /** Neueste index.html vom Server lesen. Cache-Buster (?u=…), damit weder Browser-/Service-Worker-Cache
+        noch das GitHub-Pages-CDN eine alte Kopie liefern. → { status: 'newer'|'current'|'error', version } */
     async checkRemote() {
-      if (location.protocol === 'file:' || !navigator.onLine) return;
+      if (location.protocol === 'file:') return { status: 'error' };
       try {
-        const res = await fetch(new URL('index.html', location.href).href, { cache: 'no-cache' });
-        if (!res.ok) return;
+        if (SWReg.reg) SWReg.reg.update().catch(() => {});
+        const url = new URL('index.html', location.href); url.searchParams.set('u', Date.now());
+        const res = await fetch(url.href, { cache: 'no-store' });
+        if (!res.ok) return { status: 'error' };
         const m = (await res.text()).match(/<meta\s+name=["']app-version["']\s+content=["']([^"']+)["']/i);
-        if (m && U.semverCompare(m[1], CONFIG.APP_VERSION) > 0) this.showUpdate(`Neue Version ${m[1]} verfügbar.`);
-      } catch (_) { /* offline */ }
+        if (!m) return { status: 'error' };
+        if (U.semverCompare(m[1], CONFIG.APP_VERSION) > 0) { this.showUpdate(`Neue Version ${m[1]} verfügbar.`); return { status: 'newer', version: m[1] }; }
+        return { status: 'current', version: m[1] };
+      } catch (_) { return { status: 'error' }; }
+    },
+    /** Beim Start: Cache-Buster aus der Adresse entfernen (Adresse bleibt sauber) */
+    cleanUrl() {
+      if (!/[?&]u=/.test(location.search)) return;
+      const q = new URLSearchParams(location.search); q.delete('u');
+      history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
     },
     start() {
       if (this.newerSeen) UI.banner('older', [UI.h('span', { class: 'grow' }, `Auf diesem Gerät lief schon Version ${this.newerSeen}. Du nutzt gerade ${CONFIG.APP_VERSION} (z. B. aus dem Cache).`), UI.h('button', { class: 'btn btn-sm', onclick: () => SWReg.applyUpdate() }, 'Neu laden')], 'warn');
@@ -2341,8 +2358,13 @@
       } catch (e) { Log.warn('Service Worker nicht registriert: ' + e.message); }
     },
     applyUpdate() {
-      if (this.reg && this.reg.waiting) { this.wantReload = true; this.reg.waiting.postMessage({ type: 'skipWaiting' }); setTimeout(() => location.reload(), 3000); }
-      else location.reload();
+      if (this.reg && this.reg.waiting) { this.wantReload = true; this.reg.waiting.postMessage({ type: 'skipWaiting' }); setTimeout(() => this.hardReload(), 3000); }
+      else this.hardReload();
+    },
+    /** Neu laden an allen Caches vorbei: Adresse mit ?u=<Zeit> (wird beim Start wieder entfernt) */
+    hardReload() {
+      const u = new URL(location.href); u.searchParams.set('u', Date.now());
+      location.replace(u.href);
     },
   };
 
@@ -2416,6 +2438,7 @@
   const App = {
     register: def => Registry.register(def),
     async boot() {
+      VersionGuard.cleanUrl();
       Theme.start();
       window.addEventListener('error', e => { Log.error(`${e.message} (${e.filename?.split('/').pop()}:${e.lineno})`); });
       window.addEventListener('unhandledrejection', e => { Log.error('Unbehandelt: ' + (e.reason && e.reason.message || e.reason)); });
@@ -2859,12 +2882,23 @@
             ['Export = unverschlüsselte JSON-Datei mit allen Daten, ohne Zugangsdaten. Sicher ablegen.',
              'Import: Zusammenführen (neuere Einträge gewinnen) oder Ersetzen. Vorher wird automatisch ein Schnappschuss angelegt.',
              'Schnappschüsse entstehen automatisch vor Updates, Migrationen, Importen und täglich; sie liegen nur auf diesem Gerät.',
-             '„Dauerhaft“: Der Browser löscht die Daten nicht bei Speichermangel. Installation als App hilft.'])));
+             '„Dauerhaft“: Der Browser löscht die Daten nicht bei Speichermangel. Installation als App hilft.']),
+          doc('Updates',
+            ['Neue Versionen erscheinen nach dem Hochladen in 1–2 Minuten (GitHub Pages). Die App prüft beim Start und alle 30 Min; dann erscheint oben „Jetzt neu laden“.',
+             'Über → „Updates prüfen“ prüft sofort; „Neu laden“ lädt die App an allen Zwischenspeichern vorbei neu (wichtig in der Home-Bildschirm-App ohne Neu-laden-Knopf). Daten bleiben dabei erhalten.'])));
 
         /* Über */
         parts.ueber.append(card('info Über',
           h('dl', { class: 'kv' }, h('dt', {}, 'Version'), h('dd', {}, S.CONFIG.APP_VERSION), h('dt', {}, 'Datenbank'), h('dd', {}, S.CONFIG.DB_NAME)),
-          h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'btn btn-sm', onclick: async () => { await S.VersionGuard.checkRemote(); toast('Auf Updates geprüft'); } }, 'Updates prüfen')),
+          h('div', { class: 'row', style: { marginTop: '10px' } },
+            h('button', { class: 'btn btn-sm', onclick: async e => {
+              const b = e.currentTarget; b.disabled = true;
+              const r = await S.VersionGuard.checkRemote(); b.disabled = false;
+              if (r.status === 'newer') toast(`Neue Version ${r.version}`, { action: 'Neu laden', onAction: () => S.SWReg.applyUpdate() });
+              else if (r.status === 'current') toast(`Aktuell (${r.version})`);
+              else toast('Prüfung fehlgeschlagen – offline?', { type: 'error' });
+            } }, ctx.ui.icon('refresh'), 'Updates prüfen'),
+            h('button', { class: 'btn btn-sm', onclick: () => S.SWReg.applyUpdate() }, ctx.ui.icon('download'), 'Neu laden')),
           h('details', { class: 'fold' }, h('summary', {}, 'Changelog'),
             ...S.CHANGELOG.map(c => h('div', {}, h('strong', {}, `${c.version} · ${c.date}`), h('ul', { class: 'small' }, c.items.map(i => h('li', {}, i))))))));
 

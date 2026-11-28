@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.12.2 – 2026-11-28
+
+- **Updates zuverlässig erkennen und laden:** Die Update-Prüfung holt `index.html?u=<Zeit>` mit `cache: 'no-store'` und stößt `registration.update()` an. Bisher konnte auf dem iPhone bzw. über das GitHub-Pages-CDN noch die alte Datei zurückkommen, sodass keine neue Version erkannt wurde.
+- **„Neu laden“ umgeht alle Caches:** Ohne wartenden Service Worker lädt die App jetzt `…?u=<Zeit>` statt `location.reload()` (das lieferte oft wieder die alte Version, in der Home-Bildschirm-App gab es keinen anderen Weg). Der Parameter wird beim Start sofort aus der Adresse entfernt.
+- Einstellungen → Über: „Updates prüfen“ meldet „Neue Version x (Neu laden)“, „Aktuell (x)“ oder „Prüfung fehlgeschlagen“; zusätzlicher Knopf „Neu laden“. Dokumentation → Updates.
+- Service Worker 1.8.0: Nicht-Navigations-Anfragen mit Query (Cache-Buster) gehen direkt ans Netz und werden nicht gecacht.
+
+Geänderte Dateien: `index.html`, `sw.js`, `CHANGELOG.md`. Worker und Manifest unverändert. Keine Datenänderung.
+
 ## 1.12.1 – 2026-11-28
 
 - **Taschenrechner ohne Scrollen:** Das Modul misst den freien Platz zwischen Kopfzeile und Tab-Leiste und passt sich an. Zuerst ändert sich die Displayhöhe (120–240 px), reicht das nicht, werden die Tasten flacher (bis 60 %), zuletzt das Display (min. 92 px). Neu berechnet bei Größenänderung und Drehen. Seitenabstände auf der Rechner-Seite verkleinert.

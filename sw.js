@@ -2,7 +2,7 @@
  * Bewusst klein und ohne Fachlogik. Kennt keine Module.
  * Liest nur `meta`, schreibt nur `outbox` (Architektur 4.2).
  */
-const SW_VERSION = '1.7.0';
+const SW_VERSION = '1.8.0';
 const CACHE = 'pa-shell-' + SW_VERSION;
 const DB_NAME = 'persoenliche-app';
 const DB_VERSION = 1;
@@ -50,6 +50,8 @@ function isShellRequest(req) {
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET' || !isShellRequest(req)) return; // alles andere (z. B. API) unverändert
+  // Update-Prüfung mit Cache-Buster (?u=…): direkt ans Netz, nicht cachen
+  if (req.mode !== 'navigate' && new URL(req.url).search) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     try {
