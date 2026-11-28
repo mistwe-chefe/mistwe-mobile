@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.12.0">
+  <meta name="app-version" content="1.12.1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v5.png">
@@ -367,10 +367,15 @@
 
   /* ==== MODUL-CSS: rechner ==== */
   [data-module="rechner"] { --c-body: #2a2c31; --c-key: #3a3d43; --c-key-hi: #4a4e55; --c-key-txt: #f3f4f6; --c-shift: #d9b65c; --c-alpha: #e0679a; --c-gold: #e9b93c; --c-lcd: #dfe5e1; --c-lcd-txt: #16191d; }
-  [data-module="rechner"] .calc { max-width: 430px; margin: -4px auto 0; background: var(--c-body); background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.025) 0 2px, transparent 2px 5px), repeating-linear-gradient(-45deg, rgba(0,0,0,.08) 0 2px, transparent 2px 5px); border-radius: 22px; padding: 12px 10px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.3); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  /* Kein Scrollen: das Modul füllt genau den Platz zwischen Kopfzeile und Tab-Leiste (Größen per JS: --s, --sf, --lcd-h) */
+  main#view:has(> [data-module="rechner"]) { padding-top: 8px; padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 6px); }
+  @media (min-width: 900px) { main#view:has(> [data-module="rechner"]) { padding-bottom: 12px; } }
+  [data-module="rechner"] .calc { --s: 1; --sf: 1; max-width: 430px; margin: 0 auto; background: var(--c-body); background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.025) 0 2px, transparent 2px 5px), repeating-linear-gradient(-45deg, rgba(0,0,0,.08) 0 2px, transparent 2px 5px); border-radius: 22px; padding: calc(10px * var(--s)) 10px calc(12px * var(--s)); box-shadow: 0 8px 24px rgba(0,0,0,.3); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   [data-module="rechner"] button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; font-family: inherit; }
   /* Display */
-  [data-module="rechner"] .lcd { background: linear-gradient(180deg, #e7ece9, var(--c-lcd)); color: var(--c-lcd-txt); border: 7px solid #15171a; border-radius: 12px; height: 168px; padding: 4px 9px 6px; margin-bottom: 10px; box-shadow: inset 0 2px 6px rgba(0,0,0,.28); display: flex; flex-direction: column; overflow: hidden; font-size: 21px; line-height: 1.25; user-select: text; -webkit-user-select: text; }
+  [data-module="rechner"] .lcd { background: linear-gradient(180deg, #e7ece9, var(--c-lcd)); color: var(--c-lcd-txt); border: 7px solid #15171a; border-radius: 12px; height: var(--lcd-h, 168px); padding: 4px 9px 6px; margin-bottom: calc(10px * var(--s)); box-shadow: inset 0 2px 6px rgba(0,0,0,.28); display: flex; flex-direction: column; overflow: hidden; font-size: 21px; line-height: 1.25; user-select: text; -webkit-user-select: text; }
+  [data-module="rechner"] .lcd.low .ln { min-height: 34px; padding: 1px 0; }
+  [data-module="rechner"] .lcd.low .res .rin { min-height: 32px; font-size: 23px; }
   [data-module="rechner"] .lcd.is-off { background: #9ea6a1; }
   [data-module="rechner"] .lcd .sb { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; min-height: 15px; color: #3b4248; }
   [data-module="rechner"] .lcd .sb .ind { opacity: 0; }
@@ -433,20 +438,20 @@
   [data-module="rechner"] .lcd .off { flex: 1; }
   /* Tasten */
   [data-module="rechner"] .kc { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
-  [data-module="rechner"] .cap { height: 14px; display: flex; justify-content: center; align-items: flex-end; gap: 5px; font-size: 9.5px; font-weight: 600; line-height: 1; white-space: nowrap; overflow: visible; letter-spacing: -.01em; }
+  [data-module="rechner"] .cap { height: calc(14px * var(--sf)); display: flex; justify-content: center; align-items: flex-end; gap: 5px; font-size: calc(9.5px * var(--sf)); font-weight: 600; line-height: 1; white-space: nowrap; overflow: visible; letter-spacing: -.01em; }
   [data-module="rechner"] .cap .s { color: var(--c-shift); }
   [data-module="rechner"] .cap .a { color: var(--c-alpha); }
   [data-module="rechner"] .cap .cm { color: #e8e9eb; }
   [data-module="rechner"] .cap sup, [data-module="rechner"] .k sup { font-size: .62em; vertical-align: .75em; line-height: 0; margin-left: 1px; }
-  [data-module="rechner"] .k[data-k="exp"] { font-size: 18px; }
+  [data-module="rechner"] .k[data-k="exp"] { font-size: calc(18px * var(--sf)); }
   [data-module="rechner"] .k[data-k="exp"] sup { font-family: "Times New Roman", Georgia, serif; font-style: italic; font-size: .75em; }
   [data-module="rechner"] .cap sub, [data-module="rechner"] .k sub { font-size: .68em; vertical-align: -.2em; line-height: 0; }
-  [data-module="rechner"] .k { appearance: none; border: 0; border-radius: 7px; background: linear-gradient(180deg, var(--c-key-hi), var(--c-key) 55%, #2f3237); color: var(--c-key-txt); height: 32px; padding: 0 2px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 #121316, 0 3px 4px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12); white-space: nowrap; overflow: hidden; }
+  [data-module="rechner"] .k { appearance: none; border: 0; border-radius: 7px; background: linear-gradient(180deg, var(--c-key-hi), var(--c-key) 55%, #2f3237); color: var(--c-key-txt); height: calc(32px * var(--s)); padding: 0 2px; font-size: calc(15px * var(--sf)); font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 #121316, 0 3px 4px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12); white-space: nowrap; overflow: hidden; }
   [data-module="rechner"] .k:active, [data-module="rechner"] .dp:active { transform: translateY(1px); box-shadow: 0 1px 0 #121316, inset 0 1px 3px rgba(0,0,0,.4); filter: brightness(1.15); }
-  [data-module="rechner"] .k.it { font-family: "Times New Roman", Georgia, serif; font-size: 19px; font-style: italic; }
-  [data-module="rechner"] .k.num { height: 42px; font-size: 21px; border-radius: 9px; background: linear-gradient(180deg, #34373c, #26282c 60%, #1f2124); }
-  [data-module="rechner"] .k.gold { background: linear-gradient(180deg, #f4cd5c, var(--c-gold) 60%, #d6a52c); color: #1b1c1f; box-shadow: 0 2px 0 #7d6116, 0 3px 4px rgba(0,0,0,.35); font-size: 18px; }
-  [data-module="rechner"] .k.round { width: 40px; height: 40px; border-radius: 50%; margin: 0 auto; background: radial-gradient(circle at 50% 40%, #4a4d53, #2b2d31 62%, #1a1b1e); box-shadow: 0 2px 0 #0e0f11, 0 3px 6px rgba(0,0,0,.5); }
+  [data-module="rechner"] .k.it { font-family: "Times New Roman", Georgia, serif; font-size: calc(19px * var(--sf)); font-style: italic; }
+  [data-module="rechner"] .k.num { height: calc(42px * var(--s)); font-size: calc(21px * var(--sf)); border-radius: 9px; background: linear-gradient(180deg, #34373c, #26282c 60%, #1f2124); }
+  [data-module="rechner"] .k.gold { background: linear-gradient(180deg, #f4cd5c, var(--c-gold) 60%, #d6a52c); color: #1b1c1f; box-shadow: 0 2px 0 #7d6116, 0 3px 4px rgba(0,0,0,.35); font-size: calc(18px * var(--sf)); }
+  [data-module="rechner"] .k.round { width: calc(40px * var(--s)); height: calc(40px * var(--s)); border-radius: 50%; margin: 0 auto; background: radial-gradient(circle at 50% 40%, #4a4d53, #2b2d31 62%, #1a1b1e); box-shadow: 0 2px 0 #0e0f11, 0 3px 6px rgba(0,0,0,.5); }
   [data-module="rechner"] .k.round.lit { box-shadow: 0 0 0 2px var(--c-shift), 0 3px 6px rgba(0,0,0,.5); }
   [data-module="rechner"] .k[data-k="alpha"].lit { box-shadow: 0 0 0 2px var(--c-alpha), 0 3px 6px rgba(0,0,0,.5); }
   [data-module="rechner"] .k .kfr { display: inline-flex; flex-direction: column; align-items: center; gap: 1.5px; }
@@ -458,7 +463,7 @@
   [data-module="rechner"] .cap .kmix { display: inline-flex; align-items: center; gap: 1px; }
   [data-module="rechner"] .cap .kmix .w { display: block; width: 4px; height: 5px; background: currentColor; }
   [data-module="rechner"] .cap .krep { text-decoration: overline; }
-  [data-module="rechner"] .kt { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: auto auto; column-gap: 7px; row-gap: 4px; margin-bottom: 4px; }
+  [data-module="rechner"] .kt { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: auto auto; column-gap: 7px; row-gap: calc(4px * var(--s)); margin-bottom: calc(4px * var(--s)); }
   [data-module="rechner"] .kt .dpad { grid-column: 3 / span 2; grid-row: 1 / span 2; }
   [data-module="rechner"] .kt [data-c="menu"] { grid-column: 5; grid-row: 1; }
   [data-module="rechner"] .kt [data-c="on"] { grid-column: 6; grid-row: 1; }
@@ -476,11 +481,9 @@
   [data-module="rechner"] .dp.l { grid-column: 1; grid-row: 2; }
   [data-module="rechner"] .dp.r { grid-column: 3; grid-row: 2; }
   [data-module="rechner"] .dpad .dc { grid-column: 2; grid-row: 2; border-radius: 50%; background: radial-gradient(circle, #2e3035, #1b1c1f); margin: 2px; box-shadow: inset 0 1px 3px rgba(0,0,0,.6); }
-  [data-module="rechner"] .kf { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: 7px; row-gap: 3px; margin-bottom: 8px; }
-  [data-module="rechner"] .kn { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: 9px; row-gap: 3px; }
-  [data-module="rechner"] .kn .cap { height: 14px; }
-  @media (max-height: 780px) { [data-module="rechner"] .lcd { height: 132px; } [data-module="rechner"] .k.num { height: 38px; } [data-module="rechner"] .k.round { width: 36px; height: 36px; } }
-  @media (max-width: 360px) { [data-module="rechner"] .cap { font-size: 8.5px; gap: 3px; } [data-module="rechner"] .k { font-size: 14px; } }
+  [data-module="rechner"] .kf { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: 7px; row-gap: calc(3px * var(--s)); margin-bottom: calc(8px * var(--s)); }
+  [data-module="rechner"] .kn { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: 9px; row-gap: calc(3px * var(--s)); }
+  @media (max-width: 360px) { [data-module="rechner"] .cap { gap: 3px; } }
   /* ==== ENDE MODUL-CSS: rechner ==== */
 
   /* ==== MODUL-CSS: einkaufen ==== */
@@ -558,7 +561,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.12.0',
+    APP_VERSION: '1.12.1',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -574,6 +577,9 @@
   };
 
   const CHANGELOG = [
+    { version: '1.12.1', date: '2026-11-28', items: [
+      'Modul rechner: passt ohne Scrollen genau zwischen Kopfzeile und Tab-Leiste – Display und Tastenhöhe richten sich nach der Bildschirmhöhe (auch beim Drehen)',
+    ] },
     { version: '1.12.0', date: '2026-11-28', items: [
       'Neues Modul einkaufen (Einkaufen, Symbol cart): getrennte Bereiche Lebensmittel, Drogerie, Online, Anschaffungen',
       'Lebensmittel: mehrere Einkaufslisten, Gerne-Liste mit Vorschlägen beim Anlegen einer neuen Liste (fällige vorausgewählt) und beim Hinzufügen',
@@ -4822,7 +4828,7 @@
     const ARIA = { frac: 'Bruch', sqrt: 'Wurzel', sq: 'x hoch 2', pow: 'Potenz', logb: 'Logarithmus zur Basis', inv: 'x hoch minus 1', neg: 'Vorzeichen minus', dms: 'Grad Minuten Sekunden', exp: 'mal 10 hoch x', lp: 'Klammer auf', rp: 'Klammer zu', sd: 'S zu D', mp: 'M plus', xv: 'Variable x', del: 'Löschen', ac: 'Alles löschen', exe: 'Gleich', sub: 'Minus', add: 'Plus', mul: 'Mal', div: 'Geteilt', dot: 'Komma' };
 
     /* ---------- Zustand (bleibt beim Tab-Wechsel erhalten) ---------- */
-    let ST = null, keyHandler = null;
+    let ST = null, keyHandler = null, resizeHandler = null;
     const fresh = () => ({
       on: true, app: 'calc', mode: 'edit', root: [], cur: null, shift: false, alpha: false, ins: false, pending: null,
       res: null, view: 'auto', eng: null, mixed: null, err: null, hIdx: -1, menu: null, undo: [], note: '',
@@ -4834,7 +4840,7 @@
     App.register({
       id: 'rechner', name: 'Taschenrechner', icon: 'calculator', order: 40,
       description: 'Wissenschaftlicher Taschenrechner nach dem Vorbild Casio ClassWiz', category: 'Werkzeuge',
-      version: '1.0.0', schemaVersion: 1, migrations: {},
+      version: '1.1.0', schemaVersion: 1, migrations: {},
       /* Daten (lokal, nicht synchronisiert): Wert „state“ { vars, ans, hist: [{ tree, res }] (max 30) },
          Einstellung „setup“ { io: 'mathO'|'decO', ang: 'D'|'R'|'G', fmt: { t: 'norm'|'fix'|'sci', n }, frac: 'dc'|'abc' } */
 
@@ -5401,6 +5407,30 @@
         const body = h('div', { class: 'calc' }, lcd, top, h('div', { class: 'kf' }, KEYS_FN.map(keyEl)), h('div', { class: 'kn' }, KEYS_NUM.map(keyEl)));
         el.append(body);
 
+        /** Größe an den freien Platz zwischen Kopfzeile und Tab-Leiste anpassen – kein Scrollen.
+            Zuerst wächst/schrumpft das Display (120–240 px), danach werden Tasten flacher (bis 60 %), zuletzt das Display bis 92 px. */
+        const fit = () => {
+          if (!body.isConnected) return;
+          const nav = document.getElementById('nav');
+          const bottom = nav && getComputedStyle(nav).position === 'fixed' ? nav.getBoundingClientRect().top : window.innerHeight;
+          const avail = Math.floor(bottom - (body.getBoundingClientRect().top + window.scrollY) - (nav && getComputedStyle(nav).position === 'fixed' ? 6 : 12));
+          const set = (s, lcdH) => {
+            body.style.setProperty('--s', s.toFixed(3)); body.style.setProperty('--sf', Math.max(0.86, Math.min(1, s)).toFixed(3));
+            body.style.setProperty('--lcd-h', Math.round(lcdH) + 'px'); lcd.classList.toggle('low', lcdH < 130);
+          };
+          set(1, 168);
+          const rest = body.offsetHeight - lcd.offsetHeight;  // alles außer Display
+          if (avail - rest >= 120) { set(1, Math.min(240, avail - rest)); return; }
+          let s = 1;
+          for (; s > 0.6; s -= 0.02) { set(s, 120); if (body.offsetHeight <= avail) return; }
+          set(0.6, 120); set(0.6, Math.max(92, avail - (body.offsetHeight - lcd.offsetHeight)));
+        };
+        const onResize = () => requestAnimationFrame(fit);
+        if (resizeHandler) { window.removeEventListener('resize', resizeHandler); window.removeEventListener('orientationchange', resizeHandler); }
+        resizeHandler = onResize;
+        window.addEventListener('resize', onResize); window.addEventListener('orientationchange', onResize);
+        if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+
         const render = () => {
           renderLcd();
           body.querySelectorAll('.k[data-k="shift"]').forEach(b => b.classList.toggle('lit', S.shift));
@@ -5423,8 +5453,13 @@
         };
         document.addEventListener('keydown', keyHandler);
         render();
+        fit(); requestAnimationFrame(fit); setTimeout(fit, 300);
       },
-      unmount() { if (keyHandler) document.removeEventListener('keydown', keyHandler); keyHandler = null; },
+      unmount() {
+        if (keyHandler) document.removeEventListener('keydown', keyHandler); keyHandler = null;
+        if (resizeHandler) { window.removeEventListener('resize', resizeHandler); window.removeEventListener('orientationchange', resizeHandler); if (window.visualViewport) window.visualViewport.removeEventListener('resize', resizeHandler); }
+        resizeHandler = null;
+      },
     });
   })();
   /* ==== ENDE MODUL: rechner ==== */

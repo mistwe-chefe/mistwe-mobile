@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.1 – 2026-11-28
+
+- **Taschenrechner ohne Scrollen:** Das Modul misst den freien Platz zwischen Kopfzeile und Tab-Leiste und passt sich an. Zuerst ändert sich die Displayhöhe (120–240 px), reicht das nicht, werden die Tasten flacher (bis 60 %), zuletzt das Display (min. 92 px). Neu berechnet bei Größenänderung und Drehen. Seitenabstände auf der Rechner-Seite verkleinert.
+
+Geänderte Dateien: `index.html`, `CHANGELOG.md`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.12.0 – 2026-11-28
 
 - **Neues Modul Einkaufen** (`einkaufen`, Symbol `cart`) mit vier getrennten Bereichen:
