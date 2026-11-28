@@ -19,7 +19,7 @@ Verbindliche Architektur: `ARCHITEKTUR.md` im Claude-Projekt „Persönliche App
 ## Oberfläche
 
 - **Untere Tab-Leiste: nur Symbole, keine Beschriftung.** Der Modulname steht nur als `aria-label`/Tooltip (und in der breiten Seitenleiste ab 900 px). Jedes neue Modul braucht deshalb ein eindeutiges, schlichtes Linien-Symbol (`ctx.ui.icon`), keine Emojis.
-- Symbol des Moduls Ernährung: Apfel (`apple`). Taschenrechner: `calculator`.
+- Symbol des Moduls Ernährung: Apfel (`apple`). Taschenrechner: `calculator`. Einkaufen: Einkaufswagen (`cart`).
 - Tab-Leiste scrollt waagerecht, wenn nicht alle Symbole passen (kein Scrollbalken); das aktive Symbol wird eingeblendet.
 - **Cleanes Layout:** knappe Beschriftungen, Abkürzungen, wo möglich nur Symbole (mit `aria-label`/`title`). Keine Erklär- oder Einrichtungstexte in Modulen und Einstellungen – Erklärungen gehören in **Einstellungen → Dokumentation** (bei neuen Funktionen dort ergänzen). Hinweise nur, wenn sie wirklich nötig sind (z. B. Datenverlust droht), dann einzeilig.
 - Startseite: Datum + Kennzahlen (`homeStats`) oben, Hinweise, Widgets (`widget`), darunter Modul-Schaltflächen.

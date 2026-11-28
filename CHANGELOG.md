@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.12.0 – 2026-11-28
+
+- **Neues Modul Einkaufen** (`einkaufen`, Symbol `cart`) mit vier getrennten Bereichen:
+  - **Lebensmittel:** mehrere Einkaufslisten. **Gerne-Liste** (Stern) mit Lebensmitteln, die du gerne kaufst. Beim Anlegen einer neuen Liste werden alle Gerne-Einträge vorgeschlagen, „fällige“ (üblicher Abstand seit dem letzten Kauf verstrichen) sind vorausgewählt; offene Posten älterer Listen lassen sich übernehmen. Unter dem Eingabefeld Vorschläge aus der Gerne-Liste, die noch fehlen. Stern am Posten fügt ihn der Gerne-Liste hinzu bzw. entfernt ihn. Abgeschlossene Listen unter „Erledigt“, wieder öffnen möglich.
+  - **Drogerie:** eigene fortlaufende Liste, frühere Einträge als Vorschläge.
+  - **Online:** Offen → Bestellt → Erhalten, mit Shop, Link, Preis, Lieferdatum, Notiz.
+  - **Anschaffungen:** Preis ca., Priorität, Link, Notiz, Summe der offenen Preise, abhaken = gekauft.
+- Alle Bereiche synchronisiert (Collections `listen`, `posten`, `gerne`, `online`, `gross`). Startseite oben rechts: Einkaufswagen mit Zahl offener Posten.
+- Kern: neues Symbol `cart`.
+- Einstellungen → Dokumentation → Einkaufen.
+
+Geänderte Dateien: `index.html`, `CHANGELOG.md`, `CLAUDE.md`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung bestehender Module.
+
 ## 1.11.0 – 2026-11-28
 
 - **Neues Modul Taschenrechner** (`rechner`, Symbol `calculator`) nach dem Vorbild Casio ClassWiz CW (fx-87DE CW): gleiches Tastenfeld mit SHIFT- (gold) und ALPHA-Belegung (pink), Display darüber. Natural Display (Bruch, Wurzel, Potenz, log zur Basis, Abs, ×10ˣ), exakte Ergebnisse (Bruch, Wurzelterm, π) mit S⇔D, Variablen A–F/x/y/M mit STO/RECALL/M+/M−/CALC, Verlauf, DEL/INS/UNDO, °′″, ENG, ÷R, Pol/Rec, nPr/nCr, FACT, Rnd/RndFix, Ran#/RanInt, periodische Dezimalzahlen; OPTN mit Hyperbelfunktionen, Winkeleinheiten, technischen Symbolen, ∫, d/dx, Σ, GCD/LCM. MENU: Berechnungen, Tabelle, Gleichungen (LGS 2–4, Polynom Grad 2–4 inkl. komplexer Lösungen). SETUP, RESET, OFF/ON. Tastaturbedienung am Computer. Daten nur lokal (nicht synchronisiert).

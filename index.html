@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.11.0">
+  <meta name="app-version" content="1.12.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v5.png">
@@ -482,6 +482,60 @@
   @media (max-height: 780px) { [data-module="rechner"] .lcd { height: 132px; } [data-module="rechner"] .k.num { height: 38px; } [data-module="rechner"] .k.round { width: 36px; height: 36px; } }
   @media (max-width: 360px) { [data-module="rechner"] .cap { font-size: 8.5px; gap: 3px; } [data-module="rechner"] .k { font-size: 14px; } }
   /* ==== ENDE MODUL-CSS: rechner ==== */
+
+  /* ==== MODUL-CSS: einkaufen ==== */
+  [data-module="einkaufen"] .ek-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  [data-module="einkaufen"] .ek-head h2 { flex: 1; margin: 0; }
+  [data-module="einkaufen"] .ek-actions { gap: 6px; }
+  :is([data-module="einkaufen"], dialog.dlg) .ek-add { width: 44px; padding: 0; flex: 0 0 44px; }
+  [data-module="einkaufen"] .ek-tabs { margin-bottom: 12px; }
+  [data-module="einkaufen"] .ek-tabs .chip { display: inline-flex; align-items: center; gap: 6px; }
+  [data-module="einkaufen"] .ek-n { font-size: .72rem; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--surface-2); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
+  [data-module="einkaufen"] .ek-tabs .chip.on .ek-n { background: rgba(255,255,255,.25); color: inherit; }
+  [data-module="einkaufen"] .ek-card { padding: 10px; }
+  [data-module="einkaufen"] .ek-lhead { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
+  [data-module="einkaufen"] .ek-ltitle { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 6px 4px; font: inherit; font-weight: 700; font-size: 1.05rem; color: var(--text); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  [data-module="einkaufen"] .ek-adder input { min-width: 0; }
+  [data-module="einkaufen"] .ek-sugg { margin-top: 8px; }
+  [data-module="einkaufen"] .ek-sugg[hidden] { display: none; }
+  :is([data-module="einkaufen"], dialog.dlg) .chip { display: inline-flex; align-items: center; gap: 4px; }
+  [data-module="einkaufen"] .ek-sugg .chip svg.icon { width: .9em; height: .9em; color: var(--muted); }
+  [data-module="einkaufen"] .ek-sugg .chip.due { border-color: var(--warn); }
+  :is([data-module="einkaufen"], dialog.dlg) ul.ek-list { list-style: none; margin: 8px 0 0; padding: 0; }
+  [data-module="einkaufen"] ul.ek-list.card-list { margin: 0 0 var(--gap); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  [data-module="einkaufen"] ul.ek-list.card-list .ek-item { padding-left: 10px; }
+  :is([data-module="einkaufen"], dialog.dlg) .ek-item { display: flex; align-items: center; gap: 4px; min-height: 48px; border-bottom: 1px solid var(--border); padding-right: 4px; }
+  :is([data-module="einkaufen"], dialog.dlg) .ek-item:last-child { border-bottom: 0; }
+  [data-module="einkaufen"] .ek-item.hi { box-shadow: inset 4px 0 0 var(--danger); }
+  :is([data-module="einkaufen"], dialog.dlg) .ek-body { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 0; cursor: pointer; }
+  :is([data-module="einkaufen"], dialog.dlg) .ek-name { word-break: break-word; }
+  [data-module="einkaufen"] .ek-meta { display: flex; flex-wrap: wrap; gap: 4px 6px; flex-basis: 100%; }
+  [data-module="einkaufen"] .ek-meta:empty { display: none; }
+  [data-module="einkaufen"] .ek-note { font-size: .82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  [data-module="einkaufen"] .ek-item.done .ek-name { text-decoration: line-through; color: var(--muted); }
+  [data-module="einkaufen"] .ek-check { flex: 0 0 44px; height: 44px; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  [data-module="einkaufen"] .ek-check span { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--muted); display: block; transition: background .15s; }
+  [data-module="einkaufen"] .ek-check:hover span { border-color: var(--ok); background: var(--ok-bg); }
+  [data-module="einkaufen"] .ek-check.on span { background: var(--ok); border-color: var(--ok); position: relative; }
+  [data-module="einkaufen"] .ek-check.on span::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  :is([data-module="einkaufen"], dialog.dlg) .ek-ib { width: 40px; padding: 0; color: var(--muted); flex: 0 0 40px; }
+  [data-module="einkaufen"] .ek-ib.fav.on { color: var(--warn); }
+  [data-module="einkaufen"] .ek-ib.fav.on svg.icon { fill: currentColor; }
+  [data-module="einkaufen"] .ek-step { flex: 0 0 auto; gap: 4px; }
+  [data-module="einkaufen"] .ek-sec { display: flex; align-items: center; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 14px 4px 8px; }
+  [data-module="einkaufen"] .ek-foot { display: flex; justify-content: flex-end; margin-top: 6px; }
+  [data-module="einkaufen"] .ek-empty { padding: 24px 8px; }
+  dialog.dlg .ek-form h3 { margin-top: 0; display: flex; align-items: center; gap: 6px; }
+  dialog.dlg .ek-form .ek-lbl, dialog.dlg .ek-form .field > .ek-lbl { display: flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+  dialog.dlg .ek-form input[type=date] { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); min-height: 44px; padding: 8px 12px; width: 100%; }
+  dialog.dlg .ek-form textarea { min-height: 60px; }
+  dialog.dlg .ek-form .ek-del { color: var(--danger); margin-right: auto; width: 44px; padding: 0; }
+  dialog.dlg .ek-pickhead { margin: 14px 0 6px; gap: 4px; }
+  dialog.dlg .ek-pick { max-height: 40dvh; overflow-y: auto; }
+  dialog.dlg .ek-form > .switch { margin-top: 10px; }
+  dialog.dlg .ek-form > .row.nowrap { margin-top: 6px; }
+  dialog.dlg ul.ek-gerne { max-height: 50dvh; overflow-y: auto; }
+  /* ==== ENDE MODUL-CSS: einkaufen ==== */
   </style>
 </head>
 <body>
@@ -504,7 +558,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.11.0',
+    APP_VERSION: '1.12.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -520,6 +574,11 @@
   };
 
   const CHANGELOG = [
+    { version: '1.12.0', date: '2026-11-28', items: [
+      'Neues Modul einkaufen (Einkaufen, Symbol cart): getrennte Bereiche Lebensmittel, Drogerie, Online, Anschaffungen',
+      'Lebensmittel: mehrere Einkaufslisten, Gerne-Liste mit Vorschlägen beim Anlegen einer neuen Liste (fällige vorausgewählt) und beim Hinzufügen',
+      'Kern: neues Symbol cart',
+    ] },
     { version: '1.11.0', date: '2026-11-28', items: [
       'Neues Modul rechner (Taschenrechner) nach dem Vorbild Casio ClassWiz CW: Natural Display, SHIFT/ALPHA, Variablen, Verlauf, SETUP, OPTN, Apps Berechnungen/Tabelle/Gleichungen',
       'Kern: untere Tab-Leiste waagerecht scrollbar ohne Scrollbalken, aktives Symbol wird eingeblendet; neues Symbol calculator',
@@ -1113,6 +1172,7 @@
     flame: '<path d="M12 3c.5 3.5 5 5.5 5 10.5a5 5 0 0 1-10 0c0-2.4 1.2-4 2.4-5 .2 1.6.9 2.6 1.9 3.1.6-2.9-.6-5.6.7-8.6z"/>',
     star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
     calculator: '<rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 6h7v3h-7z"/><path d="M9 13h.01M12 13h.01M15 13h.01M9 16.5h.01M12 16.5h.01M15 16.5h.01"/>',
+    cart: '<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
   };
   const ICON_CACHE = new Map();
 
@@ -2734,7 +2794,7 @@
           doc('Wichtig: Daten & iPhone',
             'Deine Daten liegen im Speicher des Browsers bzw. der Home-Bildschirm-App – nicht in den Dateien der App. Neue Versionen ändern daran nichts.',
             'iPhone: Die Home-Bildschirm-App hat einen eigenen Speicher, getrennt von Safari. Entfernst du sie vom Home-Bildschirm, ist dieser Speicher weg. Vorher: Push & Sync verbunden und „ok“ – oder Export.',
-            'Nach dem Neu-Hinzufügen: Einstellungen → Push & Sync → Verbinden (Server-Adresse + Sync-Passwort). ToDos, Tägliche Ziele und Ernährung kommen zurück. Nicht synchronisiert werden: Moduleinstellungen (z. B. kcal-Ziel, Abfragezeiten, Standard-Intervall), Wecker, Ruhezeiten, Darstellung, Schnappschüsse.'),
+            'Nach dem Neu-Hinzufügen: Einstellungen → Push & Sync → Verbinden (Server-Adresse + Sync-Passwort). ToDos, Tägliche Ziele, Ernährung und Einkaufen kommen zurück. Nicht synchronisiert werden: Moduleinstellungen (z. B. kcal-Ziel, Abfragezeiten, Standard-Intervall), Wecker, Ruhezeiten, Darstellung, Schnappschüsse.'),
           doc('Erinnerungen',
             'Ein offenes ToDo erinnert im gewählten Intervall, bis du es abhakst. Mit Abgabe werden die Abstände kürzer, je näher sie rückt (ca. 4 Erinnerungen je verbleibendem Abschnitt, nie seltener als das Intervall). Pünktlich zur Abgabe: „Jetzt fällig“. Danach im Abstand „Überfällig“ (Standard 15 Min).',
             'Je ToDo ist immer nur eine Mitteilung sichtbar. Sie verschwindet, sobald du das Modul öffnest, abhakst oder verschiebst.',
@@ -2763,6 +2823,16 @@
              'Nicht mit ▶ im Kurzbefehl-Editor testen (dann fehlen die Uhrzeiten), immer aus der App starten. Beim ersten Mal fragt iOS nach Erlaubnis (Öffnen, Zwischenablage, Wecker löschen) – jeweils „Immer erlauben“.',
              '„Heute!“: Die erste Uhrzeit ist heute noch nicht vorbei – die Wecker klingeln schon heute.',
              '„Alle löschen“ entfernt auch eigene Wecker in der Uhr-App. Ob der Kurzbefehl lief, siehst du in der Uhr-App.']),
+          doc('Einkaufen',
+            ['Vier getrennte Bereiche: Lebensmittel, Drogerie, Online, Anschaffungen. Die Zahl am Bereich = offene Einträge; auf der Startseite oben rechts: offene Posten auf Lebensmittel- und Drogerie-Listen.',
+             'Lebensmittel: + legt eine neue Liste an. Dabei werden alle Einträge der Gerne-Liste vorgeschlagen; „fällige“ (üblicher Abstand seit dem letzten Kauf verstrichen) sind vorausgewählt. Offene Posten älterer Listen lassen sich übernehmen, die alten Listen gelten dann als erledigt.',
+             'Gerne-Liste (Stern oben): Lebensmittel, die du gerne kaufst. Der Stern an einem Posten fügt ihn hinzu oder entfernt ihn. Beim Abhaken wird der Kauf vermerkt (höchstens einmal je 12 Std); daraus ergibt sich der übliche Abstand (↻ … T).',
+             'Unter dem Eingabefeld: Vorschläge aus der Gerne-Liste, die noch nicht auf der Liste stehen (orange umrandet = fällig); Tippen fügt hinzu. Gleiche Namen werden nicht doppelt angelegt, abgehakte wieder geöffnet.',
+             'Listenname antippen: umbenennen oder löschen. ✓ oben schließt die Liste ab; unter „Erledigt“ lässt sie sich wieder öffnen. Posten antippen: Name und Menge.',
+             'Drogerie: eine fortlaufende Liste; frühere Einträge werden beim Tippen vorgeschlagen. „Erledigte“ entfernt alle abgehakten.',
+             'Online: Status Offen → Bestellt → Erhalten über den Knopf rechts; Shop, Link, Preis, Lieferdatum (orange = überschritten) und Notiz im Bearbeiten-Fenster.',
+             'Anschaffungen: Preis ca., Priorität (Hoch = roter Balken), Link, Notiz. Σ = Summe der offenen Preise. Abhaken = gekauft.',
+             'Alle Bereiche werden mit Push & Sync zwischen Geräten abgeglichen.']),
           doc('Taschenrechner',
             ['Belegung wie Casio ClassWiz CW (fx-87DE CW): goldene Beschriftung = SHIFT, pinke = ALPHA. Statuszeile: S/A, M (Speicher ≠ 0), STO, INS, Winkeleinheit, Math/Dec.',
              'Natural Display: Bruch, Wurzel, Potenz, log zur Basis, Abs, ×10ˣ als Vorlagen. ◀ ▶ bewegen den Cursor, ▲ ▼ wechseln zwischen Zähler und Nenner bzw. blättern im Verlauf (letzte 30 Rechnungen).',
@@ -5358,6 +5428,514 @@
     });
   })();
   /* ==== ENDE MODUL: rechner ==== */
+  </script>
+
+  <script>
+  /* ==== MODUL: einkaufen ==== */
+  (() => {
+    /* Einkaufen: vier getrennte Bereiche
+         food   – Lebensmittel: mehrere Einkaufslisten (Collection „listen“), Posten in „posten“ (area 'food', listId),
+                  Gerne-Liste „gerne“ liefert Vorschläge beim Anlegen einer neuen Liste und beim Hinzufügen
+         drug   – Drogerie: eine fortlaufende Liste (Posten mit area 'drug', listId null)
+         online – Online-Einkäufe „online“: status 'open' → 'ordered' → 'received'
+         big    – größere Anschaffungen „gross“: Preis, Priorität, gekauft
+       Alle Collections synchronisiert. Lesecode toleriert fehlende Felder. */
+    const TABS = [
+      { id: 'food', name: 'Lebensmittel' },
+      { id: 'drug', name: 'Drogerie' },
+      { id: 'online', name: 'Online' },
+      { id: 'big', name: 'Anschaffungen' },
+    ];
+    const PRIO = [{ v: 1, label: 'Hoch' }, { v: 2, label: 'Mittel' }, { v: 3, label: 'Niedrig' }];
+    const DAY = 86400000;
+    let listen, posten, gerne, online, gross;
+
+    const norm = s => String(s || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('de-DE');
+    const clean = s => String(s || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+    const eur = n => (n == null || !Number.isFinite(Number(n))) ? '' : Number(n).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: Number(n) % 1 ? 2 : 0 });
+    const parsePrice = s => {
+      let t = String(s ?? '').replace(/[€\s]/g, '');
+      if (!t) return null;
+      if (t.includes(',') || /^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '').replace(',', '.');
+      const n = Number(t);
+      return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
+    };
+    const safeUrl = u => {
+      const s = String(u || '').trim(); if (!s) return null;
+      try { const x = new URL(/^https?:\/\//i.test(s) ? s : 'https://' + s); return /^https?:$/.test(x.protocol) ? x.href : null; } catch (_) { return null; }
+    };
+    const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (_) { return ''; } };
+    const byName = (a, b) => a.name.localeCompare(b.name, 'de');
+    const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    const fmtKey = k => { const [y, m, d] = String(k).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
+
+    /** Gerne-Eintrag: fällig, wenn der übliche Abstand (aus Käufen) verstrichen ist */
+    const gInfo = (g, now = Date.now()) => {
+      const n = g.count || 0;
+      const avg = n >= 2 && g.firstAt && g.lastAt > g.firstAt ? (g.lastAt - g.firstAt) / (n - 1) : null;
+      const since = g.lastAt ? now - g.lastAt : null;
+      return { avg, since, due: !!(avg && since != null && since >= avg * 0.85) };
+    };
+    const gSort = (a, b) => {
+      const ia = gInfo(a), ib = gInfo(b);
+      if (ia.due !== ib.due) return ia.due ? -1 : 1;
+      if (ia.due) return (ib.since / ib.avg) - (ia.since / ia.avg);
+      return byName(a, b);
+    };
+
+    /** Kauf vermerken (Abhaken eines Lebensmittels) – höchstens einmal je 12 Std */
+    const noteBought = async name => {
+      const k = norm(name), now = Date.now();
+      const g = (await gerne.all()).find(x => norm(x.name) === k);
+      if (!g || (g.lastAt && now - g.lastAt < DAY / 2)) return;
+      await gerne.update(g.id, { lastAt: now, firstAt: g.firstAt || now, count: (g.count || 0) + 1 });
+    };
+
+    /* ---------- Bausteine ---------- */
+    const fill = (box, ...c) => box.replaceChildren(...c.flat(Infinity).filter(x => x != null && x !== false));
+    const check = (h, ctx, done, label, onclick) => h('button', { type: 'button', class: 'ek-check' + (done ? ' on' : ''), 'aria-label': label, title: label, disabled: ctx.readOnly, onclick }, h('span'));
+    const iconBtn = (h, ctx, icon, label, onclick, cls = '') => h('button', { type: 'button', class: 'btn btn-ghost btn-sm ek-ib ' + cls, 'aria-label': label, title: label, disabled: ctx.readOnly, onclick }, ctx.ui.icon(icon));
+
+    /** Formular-Dialog: fields = [{ k, label, type: 'text'|'price'|'url'|'date'|'note'|'chips', options, autofocus }] */
+    const formDialog = (ctx, { title, fields, value = {}, ok = 'Speichern', onDelete }) => {
+      const { h } = ctx.ui;
+      return ctx.ui.dialog(close => {
+        const vals = { ...value };
+        const inputs = {};
+        const rows = fields.map(f => {
+          if (f.type === 'chips') {
+            const box = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': f.label });
+            const draw = () => fill(box, ...f.options.map(o => h('button', { type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(vals[f.k] === o.v), onclick: () => { vals[f.k] = o.v; draw(); } }, o.label)));
+            draw();
+            return h('div', { class: 'field' }, h('span', { class: 'ek-lbl' }, f.label), box);
+          }
+          const attrs = { autofocus: f.autofocus, 'aria-label': f.label };
+          let inp;
+          if (f.type === 'note') inp = h('textarea', { ...attrs, rows: 2 }, '');
+          else if (f.type === 'date') inp = h('input', { ...attrs, type: 'date' });
+          else if (f.type === 'price') inp = h('input', { ...attrs, type: 'text', inputmode: 'decimal', placeholder: '€' });
+          else if (f.type === 'url') inp = h('input', { ...attrs, type: 'text', inputmode: 'url', autocapitalize: 'off', spellcheck: 'false', placeholder: 'https://' });
+          else inp = h('input', { ...attrs, type: 'text', enterkeyhint: 'done' });
+          const v = vals[f.k];
+          inp.value = v == null ? '' : f.type === 'price' ? String(v).replace('.', ',') : String(v);
+          inputs[f.k] = inp;
+          return h('label', { class: 'field' }, h('span', {}, f.label), inp);
+        });
+        const submit = e => {
+          e.preventDefault();
+          const out = { ...vals };
+          for (const f of fields) {
+            const inp = inputs[f.k]; if (!inp) continue;
+            const s = inp.value.trim();
+            if (f.type === 'price') { out[f.k] = parsePrice(s); if (s && out[f.k] == null) { inp.focus(); ctx.ui.toast('Preis ungültig', { type: 'error' }); return; } }
+            else if (f.type === 'url') { out[f.k] = safeUrl(s); if (s && !out[f.k]) { inp.focus(); ctx.ui.toast('Link ungültig', { type: 'error' }); return; } }
+            else if (f.type === 'date') out[f.k] = s || null;
+            else if (f.type === 'note') out[f.k] = s.slice(0, 2000);
+            else out[f.k] = clean(s);
+          }
+          if (!out.name) { inputs.name && inputs.name.focus(); return; }
+          close(out);
+        };
+        return h('form', { class: 'ek-form', onsubmit: submit },
+          h('h3', {}, title), h('div', { class: 'stack' }, rows),
+          h('div', { class: 'dlg-actions' },
+            onDelete ? h('button', { type: 'button', class: 'btn btn-ghost ek-del', 'aria-label': 'Löschen', title: 'Löschen', onclick: () => close('__delete') }, ctx.ui.icon('trash')) : null,
+            h('button', { type: 'button', class: 'btn', onclick: () => close(undefined) }, 'Abbrechen'),
+            h('button', { type: 'submit', class: 'btn btn-primary' }, ok)));
+      }, { label: title }).then(async r => {
+        if (r === '__delete') { if (onDelete) await onDelete(); return undefined; }
+        return r;
+      });
+    };
+
+    /** Gemeinsame Postenzeile (Lebensmittel, Drogerie) */
+    const postRow = (h, ctx, p, { isFav, onFav } = {}) => h('li', { class: 'ek-item' + (p.done ? ' done' : '') },
+      check(h, ctx, p.done, p.done ? 'Wieder offen' : 'Abhaken', async () => {
+        const done = !p.done;
+        await posten.update(p.id, { done, doneAt: done ? Date.now() : null });
+        if (done && p.area === 'food') await noteBought(p.name);
+      }),
+      h('div', { class: 'ek-body', onclick: () => editPost(ctx, p) },
+        h('span', { class: 'ek-name' }, p.name),
+        p.qty ? h('span', { class: 'pill' }, p.qty) : null),
+      onFav ? iconBtn(h, ctx, 'star', isFav ? 'Aus Gerne-Liste entfernen' : 'Zur Gerne-Liste', onFav, isFav ? 'fav on' : 'fav') : null,
+      iconBtn(h, ctx, 'x', 'Entfernen', async () => {
+        await posten.remove(p.id);
+        ctx.ui.toast(`„${p.name}“ entfernt`, { action: 'Rückgängig', onAction: () => posten.update(p.id, { deletedAt: null }) });
+      }));
+
+    const editPost = async (ctx, p) => {
+      if (ctx.readOnly) return;
+      const r = await formDialog(ctx, {
+        title: 'Bearbeiten', value: p,
+        fields: [{ k: 'name', label: 'Name', autofocus: true }, { k: 'qty', label: 'Menge' }],
+        onDelete: () => posten.remove(p.id),
+      });
+      if (r) await posten.update(p.id, { name: r.name, qty: r.qty || '' });
+    };
+
+    /** Posten hinzufügen; vorhandenen (auch abgehakten) gleichen Namens wieder öffnen statt doppelt anlegen */
+    const addPost = async (ctx, area, listId, name) => {
+      name = clean(name); if (!name) return;
+      const k = norm(name);
+      const same = (await posten.query(p => p.area === area && (p.listId || null) === (listId || null) && norm(p.name) === k))[0];
+      if (same && !same.done) { ctx.ui.toast(`„${same.name}“ steht schon drauf`); return; }
+      if (same) { await posten.update(same.id, { done: false, doneAt: null }); return; }
+      await posten.add({ area, listId: listId || null, name, qty: '', done: false, doneAt: null });
+    };
+
+    /** Eingabezeile mit Vorschlägen (Chips) und Autovervollständigung */
+    const adder = (h, ctx, { key, inputs, onAdd, suggest, datalistId }) => {
+      let inp = inputs.get(key);
+      if (!inp) {
+        inp = h('input', { type: 'text', placeholder: 'Hinzufügen …', 'aria-label': 'Hinzufügen', enterkeyhint: 'enter', autocomplete: 'off', list: datalistId, disabled: ctx.readOnly });
+        inputs.set(key, inp);
+      }
+      const chips = h('div', { class: 'chips scroll ek-sugg' });
+      const drawChips = () => {
+        const list = suggest ? suggest(norm(inp.value)) : [];
+        chips.hidden = !list.length;
+        chips.replaceChildren(...list.slice(0, 20).map(s => h('button', { type: 'button', class: 'chip' + (s.due ? ' due' : ''), disabled: ctx.readOnly, onclick: () => onAdd(s.name) }, ctx.ui.icon('plus'), s.name)));
+      };
+      inp.oninput = drawChips;
+      const go = () => { const v = inp.value; inp.value = ''; drawChips(); onAdd(v); };
+      inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+      drawChips();
+      return h('div', { class: 'ek-adder' },
+        h('div', { class: 'row nowrap' }, inp, h('button', { type: 'button', class: 'btn btn-primary ek-add', 'aria-label': 'Hinzufügen', title: 'Hinzufügen', disabled: ctx.readOnly, onclick: go }, ctx.ui.icon('plus'))),
+        chips);
+    };
+
+    /* ---------- Gerne-Liste ---------- */
+    const openGerne = async ctx => {
+      const { h } = ctx.ui;
+      await ctx.ui.dialog(close => {
+        const listBox = h('ul', { class: 'ek-list ek-gerne' });
+        const inp = h('input', { type: 'text', placeholder: 'Lebensmittel …', 'aria-label': 'Lebensmittel', autofocus: true, enterkeyhint: 'enter', disabled: ctx.readOnly });
+        const draw = async () => {
+          const all = (await gerne.all()).sort(byName);
+          listBox.replaceChildren(...(all.length ? all.map(g => {
+            const i = gInfo(g);
+            return h('li', { class: 'ek-item' },
+              h('div', { class: 'ek-body' }, h('span', { class: 'ek-name' }, g.name),
+                i.avg ? h('span', { class: 'pill' + (i.due ? ' orange' : ''), title: 'üblicher Abstand' }, ctx.ui.icon('repeat'), `${Math.max(1, Math.round(i.avg / DAY))} T`) : null),
+              iconBtn(h, ctx, 'trash', 'Entfernen', async () => { await gerne.remove(g.id); draw(); }));
+          }) : [h('li', { class: 'empty' }, 'Leer')]));
+        };
+        const add = async () => {
+          const name = clean(inp.value); inp.value = ''; inp.focus();
+          if (!name) return;
+          if ((await gerne.all()).some(g => norm(g.name) === norm(name))) { ctx.ui.toast(`„${name}“ ist schon drin`); return; }
+          await gerne.add({ name, lastAt: null, firstAt: null, count: 0 });
+          draw();
+        };
+        inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); add(); } };
+        draw();
+        return h('div', { class: 'ek-form' },
+          h('h3', {}, ctx.ui.icon('star'), ' Gerne-Liste'),
+          h('div', { class: 'row nowrap' }, inp, h('button', { type: 'button', class: 'btn btn-primary ek-add', 'aria-label': 'Hinzufügen', disabled: ctx.readOnly, onclick: add }, ctx.ui.icon('plus'))),
+          listBox,
+          h('div', { class: 'dlg-actions' }, h('button', { type: 'button', class: 'btn btn-primary', onclick: () => close() }, 'Fertig')));
+      }, { label: 'Gerne-Liste' });
+    };
+
+    const toggleFav = async (ctx, name) => {
+      const g = (await gerne.all()).find(x => norm(x.name) === norm(name));
+      if (g) { await gerne.remove(g.id); ctx.ui.toast(`„${g.name}“ aus Gerne-Liste`); }
+      else { await gerne.add({ name: clean(name), lastAt: null, firstAt: null, count: 0 }); ctx.ui.toast(`„${clean(name)}“ in Gerne-Liste`); }
+    };
+
+    /* ---------- Neue Lebensmittel-Liste ---------- */
+    const newFoodList = async ctx => {
+      const { h } = ctx.ui;
+      const favs = (await gerne.all()).sort(gSort);
+      const active = (await listen.query(l => l.kind === 'food' && !l.done));
+      const openOld = (await posten.query(p => p.area === 'food' && !p.done && active.some(l => l.id === p.listId)));
+      const r = await ctx.ui.dialog(close => {
+        const sel = new Set(favs.filter(g => gInfo(g).due).map(g => g.id));
+        let carry = openOld.length > 0;
+        const title = h('input', { type: 'text', value: `Einkauf ${new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}`, 'aria-label': 'Name' });
+        const chips = h('div', { class: 'chips ek-pick' });
+        const draw = () => chips.replaceChildren(...favs.map(g => h('button', { type: 'button', class: 'chip' + (sel.has(g.id) ? ' on' : ''), 'aria-pressed': String(sel.has(g.id)),
+          onclick: () => { sel.has(g.id) ? sel.delete(g.id) : sel.add(g.id); draw(); } }, g.name)));
+        draw();
+        return h('form', { class: 'ek-form', onsubmit: e => { e.preventDefault(); close({ title: clean(title.value) || 'Einkauf', names: favs.filter(g => sel.has(g.id)).map(g => g.name), carry }); } },
+          h('h3', {}, 'Neue Liste'),
+          h('label', { class: 'field' }, h('span', {}, 'Name'), title),
+          favs.length
+            ? h('div', {},
+                h('div', { class: 'row ek-pickhead' }, h('span', { class: 'ek-lbl grow' }, ctx.ui.icon('star'), ' Vorschläge'),
+                  h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => { favs.forEach(g => sel.add(g.id)); draw(); } }, 'Alle'),
+                  h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => { sel.clear(); draw(); } }, 'Keine')),
+                chips)
+            : h('p', { class: 'small muted' }, 'Gerne-Liste leer'),
+          openOld.length ? h('label', { class: 'switch' }, h('input', { type: 'checkbox', checked: carry, onchange: e => { carry = e.target.checked; } }), `${openOld.length} offene übernehmen`) : null,
+          h('div', { class: 'dlg-actions' },
+            h('button', { type: 'button', class: 'btn', onclick: () => close(undefined) }, 'Abbrechen'),
+            h('button', { type: 'submit', class: 'btn btn-primary' }, 'Anlegen')));
+      }, { label: 'Neue Liste' });
+      if (!r) return null;
+      const list = await listen.add({ kind: 'food', title: r.title, done: false, doneAt: null });
+      const have = new Set();
+      if (r.carry) {
+        for (const p of openOld) { await posten.update(p.id, { listId: list.id }); have.add(norm(p.name)); }
+        for (const l of active) await listen.update(l.id, { done: true, doneAt: Date.now() });
+      }
+      for (const n of r.names) if (!have.has(norm(n))) { have.add(norm(n)); await posten.add({ area: 'food', listId: list.id, name: n, qty: '', done: false, doneAt: null }); }
+      return list;
+    };
+
+    /* ---------- Ansichten ---------- */
+    const renderFood = async (box, ctx, st) => {
+      const { h } = ctx.ui; const U = ctx.util;
+      const [ls, ps, favs] = await Promise.all([listen.query(l => l.kind === 'food'), posten.query(p => p.area === 'food'), gerne.all()]);
+      const favSet = new Set(favs.map(g => norm(g.name)));
+      const active = ls.filter(l => !l.done).sort((a, b) => b.createdAt - a.createdAt);
+      const finished = ls.filter(l => l.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+      const itemsOf = id => ps.filter(p => p.listId === id);
+      const dl = h('datalist', { id: 'ek-dl-food' }, [...new Set([...favs.map(g => g.name), ...ps.map(p => p.name)])].sort((a, b) => a.localeCompare(b, 'de')).map(n => h('option', { value: n })));
+
+      const listCard = l => {
+        const its = itemsOf(l.id);
+        const open = its.filter(p => !p.done).sort((a, b) => a.createdAt - b.createdAt);
+        const done = its.filter(p => p.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+        const onList = new Set(its.map(p => norm(p.name)));
+        const suggest = q => favs.filter(g => !onList.has(norm(g.name)) && (!q || norm(g.name).includes(q))).sort(gSort).map(g => ({ name: g.name, due: gInfo(g).due }));
+        return h('div', { class: 'card ek-card' },
+          h('div', { class: 'ek-lhead' },
+            h('button', { type: 'button', class: 'ek-ltitle', disabled: ctx.readOnly, onclick: () => editList(ctx, l) }, l.title || 'Einkauf'),
+            its.length ? h('span', { class: 'pill' + (open.length ? '' : ' green') }, `${done.length}/${its.length}`) : null,
+            iconBtn(h, ctx, 'check', 'Abschließen', async () => {
+              await listen.update(l.id, { done: true, doneAt: Date.now() });
+              ctx.ui.toast('Liste abgeschlossen', { action: 'Rückgängig', onAction: () => listen.update(l.id, { done: false, doneAt: null }) });
+            })),
+          adder(h, ctx, { key: 'food:' + l.id, inputs: st.inputs, datalistId: 'ek-dl-food', suggest, onAdd: n => addPost(ctx, 'food', l.id, n) }),
+          open.length || done.length
+            ? h('ul', { class: 'ek-list' }, [...open, ...done].map(p => postRow(h, ctx, p, { isFav: favSet.has(norm(p.name)), onFav: () => toggleFav(ctx, p.name) })))
+            : null);
+      };
+
+      fill(box, dl,
+        active.length ? h('div', {}, active.map(listCard))
+          : h('div', { class: 'card empty ek-empty' }, h('button', { type: 'button', class: 'btn btn-primary', disabled: ctx.readOnly, onclick: () => newFoodList(ctx) }, ctx.ui.icon('plus'), 'Neue Liste')),
+        finished.length ? h('details', { class: 'fold', open: st.foldFood || null, ontoggle: e => { st.foldFood = e.target.open; } },
+          h('summary', {}, `Erledigt (${finished.length})`),
+          h('ul', { class: 'ek-list' }, finished.slice(0, 30).map(l => {
+            const its = itemsOf(l.id);
+            return h('li', { class: 'ek-item' },
+              h('div', { class: 'ek-body', onclick: () => editList(ctx, l) },
+                h('span', { class: 'ek-name' }, l.title || 'Einkauf'),
+                h('span', { class: 'pill' }, U.formatDate(l.doneAt, false)),
+                h('span', { class: 'pill' }, `${its.filter(p => p.done).length}/${its.length}`)),
+              iconBtn(h, ctx, 'repeat', 'Wieder öffnen', () => listen.update(l.id, { done: false, doneAt: null })));
+          }))) : null);
+    };
+
+    const editList = async (ctx, l) => {
+      if (ctx.readOnly) return;
+      const r = await formDialog(ctx, {
+        title: 'Liste', value: { name: l.title },
+        fields: [{ k: 'name', label: 'Name', autofocus: true }],
+        onDelete: async () => {
+          if (!(await ctx.ui.confirm(`„${l.title}“ mit allen Posten löschen?`, { ok: 'Löschen', danger: true }))) return;
+          for (const p of await posten.query(p => p.listId === l.id)) await posten.remove(p.id);
+          await listen.remove(l.id);
+        },
+      });
+      if (r) await listen.update(l.id, { title: r.name });
+    };
+
+    const renderDrug = async (box, ctx, st) => {
+      const { h } = ctx.ui;
+      const ps = await posten.query(p => p.area === 'drug');
+      const open = ps.filter(p => !p.done).sort((a, b) => a.createdAt - b.createdAt);
+      const done = ps.filter(p => p.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+      // frühere Posten als Vorschläge (Autovervollständigung, häufigste zuerst)
+      const all = (await posten.raw()).filter(p => p.area === 'drug');
+      const freq = new Map();
+      for (const p of all) { const k = norm(p.name); const e = freq.get(k) || { name: p.name, n: 0 }; e.n++; freq.set(k, e); }
+      const onList = new Set(open.map(p => norm(p.name)));
+      const suggest = q => q ? [...freq.entries()].filter(([k]) => !onList.has(k) && k.includes(q)).sort((a, b) => b[1].n - a[1].n).map(([, e]) => ({ name: e.name })) : [];
+      fill(box, 
+        h('datalist', { id: 'ek-dl-drug' }, [...freq.values()].map(e => h('option', { value: e.name }))),
+        h('div', { class: 'card ek-card' },
+          adder(h, ctx, { key: 'drug', inputs: st.inputs, datalistId: 'ek-dl-drug', suggest, onAdd: n => addPost(ctx, 'drug', null, n) }),
+          open.length || done.length ? h('ul', { class: 'ek-list' }, [...open, ...done].map(p => postRow(h, ctx, p))) : null,
+          done.length ? h('div', { class: 'ek-foot' }, h('button', { type: 'button', class: 'btn btn-ghost btn-sm', disabled: ctx.readOnly, onclick: async () => {
+            for (const p of done) await posten.remove(p.id);
+            ctx.ui.toast(`${done.length} entfernt`, { action: 'Rückgängig', onAction: async () => { for (const p of done) await posten.update(p.id, { deletedAt: null }); } });
+          } }, ctx.ui.icon('trash'), 'Erledigte')) : null));
+    };
+
+    /* Online-Einkäufe */
+    const ONLINE_FIELDS = [
+      { k: 'name', label: 'Was', autofocus: true }, { k: 'shop', label: 'Shop' }, { k: 'url', label: 'Link', type: 'url' },
+      { k: 'price', label: 'Preis', type: 'price' },
+      { k: 'status', label: 'Status', type: 'chips', options: [{ v: 'open', label: 'Offen' }, { v: 'ordered', label: 'Bestellt' }, { v: 'received', label: 'Erhalten' }] },
+      { k: 'eta', label: 'Lieferung', type: 'date' }, { k: 'note', label: 'Notiz', type: 'note' },
+    ];
+    const setOnlineStatus = (o, status) => online.update(o.id, {
+      status, orderedAt: status === 'open' ? null : (o.orderedAt || Date.now()), receivedAt: status === 'received' ? (o.receivedAt || Date.now()) : null,
+    });
+    const editOnline = async (ctx, o) => {
+      if (ctx.readOnly) return;
+      const r = await formDialog(ctx, { title: o ? 'Bearbeiten' : 'Online-Einkauf', value: o || { status: 'open' }, fields: ONLINE_FIELDS, ok: o ? 'Speichern' : 'Anlegen', onDelete: o ? () => online.remove(o.id) : null });
+      if (!r) return;
+      const data = { name: r.name, shop: r.shop || '', url: r.url || null, price: r.price, eta: r.eta || null, note: r.note || '' };
+      if (o) { await online.update(o.id, data); if (r.status !== (o.status || 'open')) await setOnlineStatus({ ...o, ...data }, r.status); }
+      else await online.add({ ...data, status: r.status || 'open', orderedAt: r.status !== 'open' ? Date.now() : null, receivedAt: r.status === 'received' ? Date.now() : null });
+    };
+    const renderOnline = async (box, ctx, st) => {
+      const { h } = ctx.ui; const U = ctx.util;
+      const all = await online.all();
+      const of = s => all.filter(o => (o.status || 'open') === s);
+      const today = todayKey();
+      const row = o => {
+        const s = o.status || 'open';
+        const next = s === 'open' ? { to: 'ordered', icon: 'check', label: 'Bestellt' } : s === 'ordered' ? { to: 'received', icon: 'download', label: 'Erhalten' } : { to: 'ordered', icon: 'repeat', label: 'Doch nicht erhalten' };
+        return h('li', { class: 'ek-item' + (s === 'received' ? ' done' : '') },
+          h('div', { class: 'ek-body', onclick: () => editOnline(ctx, o) },
+            h('span', { class: 'ek-name' }, o.name),
+            h('div', { class: 'ek-meta' },
+              o.shop || o.url ? h('span', { class: 'pill' }, o.shop || host(o.url)) : null,
+              o.price != null ? h('span', { class: 'pill' }, eur(o.price)) : null,
+              s === 'ordered' && o.eta ? h('span', { class: 'pill ' + (o.eta < today ? 'orange' : 'blue') }, ctx.ui.icon('calendar'), fmtKey(o.eta)) : null,
+              s === 'ordered' && !o.eta && o.orderedAt ? h('span', { class: 'pill', title: 'Bestellt' }, ctx.ui.icon('check'), U.formatDate(o.orderedAt, false)) : null,
+              s === 'received' && o.receivedAt ? h('span', { class: 'pill green' }, U.formatDate(o.receivedAt, false)) : null)),
+          o.url ? h('a', { class: 'btn btn-ghost btn-sm ek-ib', href: o.url, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Link öffnen', title: 'Link öffnen' }, ctx.ui.icon('external')) : null,
+          h('button', { type: 'button', class: 'btn btn-sm ek-step' + (s === 'received' ? ' btn-ghost' : ''), title: next.label, 'aria-label': next.label, disabled: ctx.readOnly, onclick: () => setOnlineStatus(o, next.to) }, ctx.ui.icon(next.icon), s === 'received' ? null : next.label));
+      };
+      const toOrder = of('open').sort((a, b) => a.createdAt - b.createdAt);
+      const ordered = of('ordered').sort((a, b) => (a.eta || '9').localeCompare(b.eta || '9') || (a.orderedAt || 0) - (b.orderedAt || 0));
+      const received = of('received').sort((a, b) => (b.receivedAt || 0) - (a.receivedAt || 0));
+      const sec = (title, items, sum) => items.length ? h('div', {},
+        h('div', { class: 'ek-sec' }, h('span', { class: 'grow' }, `${title} (${items.length})`), sum ? h('span', {}, eur(sum)) : null),
+        h('ul', { class: 'ek-list card-list' }, items.map(row))) : null;
+      const sum = l => l.reduce((s, o) => s + (Number(o.price) || 0), 0);
+      fill(box, 
+        !toOrder.length && !ordered.length ? h('div', { class: 'empty' }, 'Nichts offen') : null,
+        sec('Zu bestellen', toOrder, sum(toOrder)),
+        sec('Unterwegs', ordered),
+        received.length ? h('details', { class: 'fold', open: st.foldOnline || null, ontoggle: e => { st.foldOnline = e.target.open; } },
+          h('summary', {}, `Erhalten (${received.length})`), h('ul', { class: 'ek-list card-list' }, received.slice(0, 50).map(row))) : null);
+    };
+
+    /* Größere Anschaffungen */
+    const BIG_FIELDS = [
+      { k: 'name', label: 'Was', autofocus: true }, { k: 'price', label: 'Preis ca.', type: 'price' },
+      { k: 'prio', label: 'Priorität', type: 'chips', options: PRIO }, { k: 'url', label: 'Link', type: 'url' }, { k: 'note', label: 'Notiz', type: 'note' },
+    ];
+    const editBig = async (ctx, b) => {
+      if (ctx.readOnly) return;
+      const r = await formDialog(ctx, { title: b ? 'Bearbeiten' : 'Anschaffung', value: b || { prio: 2 }, fields: BIG_FIELDS, ok: b ? 'Speichern' : 'Anlegen', onDelete: b ? () => gross.remove(b.id) : null });
+      if (!r) return;
+      const data = { name: r.name, price: r.price, prio: r.prio || 2, url: r.url || null, note: r.note || '' };
+      if (b) await gross.update(b.id, data); else await gross.add({ ...data, done: false, doneAt: null });
+    };
+    const renderBig = async (box, ctx, st) => {
+      const { h } = ctx.ui; const U = ctx.util;
+      const all = await gross.all();
+      const open = all.filter(b => !b.done).sort((a, b) => (a.prio || 2) - (b.prio || 2) || a.createdAt - b.createdAt);
+      const done = all.filter(b => b.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+      const total = open.reduce((s, b) => s + (Number(b.price) || 0), 0);
+      const row = b => h('li', { class: 'ek-item' + (b.done ? ' done' : '') + (!b.done && b.prio === 1 ? ' hi' : '') },
+        check(h, ctx, b.done, b.done ? 'Wieder offen' : 'Gekauft', () => gross.update(b.id, { done: !b.done, doneAt: b.done ? null : Date.now() })),
+        h('div', { class: 'ek-body', onclick: () => editBig(ctx, b) },
+          h('span', { class: 'ek-name' }, b.name),
+          h('div', { class: 'ek-meta' },
+            b.price != null ? h('span', { class: 'pill' }, eur(b.price)) : null,
+            !b.done ? h('span', { class: 'pill' + (b.prio === 1 ? ' red' : b.prio === 3 ? '' : ' blue') }, (PRIO.find(p => p.v === (b.prio || 2)) || PRIO[1]).label) : null,
+            b.done && b.doneAt ? h('span', { class: 'pill green' }, U.formatDate(b.doneAt, false)) : null,
+            b.note ? h('span', { class: 'ek-note' }, b.note) : null)),
+        b.url ? h('a', { class: 'btn btn-ghost btn-sm ek-ib', href: b.url, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Link öffnen', title: 'Link öffnen' }, ctx.ui.icon('external')) : null);
+      fill(box, 
+        open.length ? h('div', {},
+          total ? h('div', { class: 'ek-sec' }, h('span', { class: 'grow' }, `Offen (${open.length})`), h('span', {}, 'Σ ' + eur(total))) : null,
+          h('ul', { class: 'ek-list card-list' }, open.map(row))) : h('div', { class: 'empty' }, 'Nichts geplant'),
+        done.length ? h('details', { class: 'fold', open: st.foldBig || null, ontoggle: e => { st.foldBig = e.target.open; } },
+          h('summary', {}, `Gekauft (${done.length})`), h('ul', { class: 'ek-list card-list' }, done.slice(0, 50).map(row))) : null);
+    };
+
+    const RENDER = { food: renderFood, drug: renderDrug, online: renderOnline, big: renderBig };
+
+    App.register({
+      id: 'einkaufen', name: 'Einkaufen', icon: 'cart', order: 25,
+      description: 'Lebensmittel mit Gerne-Liste, Drogerie, Online-Einkäufe, größere Anschaffungen', category: 'Alltag',
+      version: '1.0.0', schemaVersion: 1, migrations: {},
+      /* Daten (synchronisiert):
+           listen  { kind: 'food', title, done, doneAt }
+           posten  { area: 'food'|'drug', listId|null, name, qty, done, doneAt }
+           gerne   { name, lastAt, firstAt, count }          – Kaufhistorie für „fällig“
+           online  { name, shop, url, price, status: 'open'|'ordered'|'received', orderedAt, receivedAt, eta: 'JJJJ-MM-TT', note }
+           gross   { name, price, prio: 1|2|3, url, note, done, doneAt }
+         Einstellung (lokal): tab */
+
+      async init(ctx) {
+        listen = ctx.store.collection('listen', { sync: true });
+        posten = ctx.store.collection('posten', { sync: true });
+        gerne = ctx.store.collection('gerne', { sync: true });
+        online = ctx.store.collection('online', { sync: true });
+        gross = ctx.store.collection('gross', { sync: true });
+      },
+
+      async mount(el, ctx) {
+        const { h } = ctx.ui;
+        const st = { tab: await ctx.settings.get('tab', 'food'), inputs: new Map() };
+        if (!RENDER[st.tab]) st.tab = 'food';
+        const tabsBox = h('div', { class: 'chips scroll ek-tabs', role: 'tablist', 'aria-label': 'Bereich' });
+        const actions = h('div', { class: 'row nowrap ek-actions' });
+        const body = h('div', { class: 'ek-view' });
+
+        const counts = async () => {
+          const [ps, on, gr] = await Promise.all([posten.query(p => !p.done), online.query(o => (o.status || 'open') !== 'received'), gross.query(b => !b.done)]);
+          const ls = new Set((await listen.query(l => l.kind === 'food' && !l.done)).map(l => l.id));
+          return { food: ps.filter(p => p.area === 'food' && ls.has(p.listId)).length, drug: ps.filter(p => p.area === 'drug').length, online: on.length, big: gr.length };
+        };
+        const drawHead = async () => {
+          const c = await counts();
+          tabsBox.replaceChildren(...TABS.map(t => h('button', { type: 'button', class: 'chip' + (t.id === st.tab ? ' on' : ''), role: 'tab', 'aria-selected': String(t.id === st.tab),
+            onclick: () => { if (st.tab === t.id) return; st.tab = t.id; ctx.settings.set('tab', t.id).catch(() => {}); render(); } },
+            t.name, c[t.id] ? h('span', { class: 'ek-n' }, String(c[t.id])) : null)));
+          const plus = (label, fn) => h('button', { type: 'button', class: 'btn btn-primary ek-add', 'aria-label': label, title: label, disabled: ctx.readOnly, onclick: fn }, ctx.ui.icon('plus'));
+          actions.replaceChildren(...(
+            st.tab === 'food' ? [h('button', { type: 'button', class: 'btn btn-ghost', 'aria-label': 'Gerne-Liste', title: 'Gerne-Liste', onclick: () => openGerne(ctx) }, ctx.ui.icon('star')), plus('Neue Liste', () => newFoodList(ctx))]
+            : st.tab === 'online' ? [plus('Online-Einkauf', () => editOnline(ctx))]
+            : st.tab === 'big' ? [plus('Anschaffung', () => editBig(ctx))]
+            : []));
+        };
+        let busy = null, again = false;
+        const render = async () => {
+          if (busy) { again = true; return busy; }
+          busy = (async () => {
+            do {
+              again = false;
+              const focused = document.activeElement;
+              await drawHead();
+              await RENDER[st.tab](body, ctx, st);
+              const on = tabsBox.querySelector('.chip.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+              if (focused && focused.tagName === 'INPUT' && body.contains(focused) && document.activeElement !== focused) focused.focus();
+            } while (again);
+          })();
+          try { await busy; } finally { busy = null; }
+        };
+        const reRender = ctx.util.debounce(render, 60);
+        el.append(h('div', {},
+          h('div', { class: 'ek-head' }, h('h2', {}, 'Einkaufen'), actions),
+          tabsBox, body));
+        ctx.events.on('store:changed', e => { if (e && e.moduleId === 'einkaufen') reRender(); });
+        ctx.events.on('app:visible', reRender);
+        await render();
+      },
+
+      /** Kennzahl für die Startseite: offene Posten auf Lebensmittel- und Drogerie-Listen */
+      async homeStats() {
+        const ls = new Set((await listen.query(l => l.kind === 'food' && !l.done)).map(l => l.id));
+        const n = (await posten.query(p => !p.done && (p.area === 'drug' || ls.has(p.listId)))).length;
+        return n ? [{ icon: 'cart', value: n, title: `${n} offen zum Einkaufen`, route: 'einkaufen' }] : [];
+      },
+    });
+  })();
+  /* ==== ENDE MODUL: einkaufen ==== */
   </script>
 
   <script>/* ==== BOOT ==== */ App.boot();</script>
