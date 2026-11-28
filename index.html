@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.9.0">
+  <meta name="app-version" content="1.9.1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -118,6 +118,8 @@
   .pill.yellow { background: var(--caution-bg); color: var(--caution); }
   .pill.blue { background: var(--primary-bg); color: var(--primary); }
   .pill.green { background: var(--ok-bg); color: var(--ok); }
+  .pill.nag { --nag-l: 34%; background: hsl(var(--nag-h) 75% 45% / .16); color: hsl(var(--nag-h) 80% var(--nag-l)); font-weight: 600; }
+  [data-theme="dark"] .pill.nag { --nag-l: 62%; background: hsl(var(--nag-h) 70% 45% / .2); }
   .empty { text-align: center; color: var(--muted); padding: 24px 8px; }
   .toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px); z-index: 200; display: flex; flex-direction: column; gap: 8px; width: min(92vw, 440px); pointer-events: none; }
   @media (min-width: 900px) { .toasts { bottom: 24px; } }
@@ -367,7 +369,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.9.0',
+    APP_VERSION: '1.9.1',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -383,6 +385,10 @@
   };
 
   const CHANGELOG = [
+    { version: '1.9.1', date: '2026-11-28', items: [
+      'Kern: ui.h() setzt auch CSS-Variablen (style: { \'--name\': … })',
+      'Modul todos: Hinweis „… × erinnert“ farbig nach offener Zeit – bis 2 Tage grün, dann über Gelb und Orange bis 5 Tage rot (Liste und Startseite)',
+    ] },
     { version: '1.9.0', date: '2026-11-28', items: [
       'Startseite: scrollbarer Ausschnitt mit den aktiven ToDos (ca. ein Drittel der Bildschirmhöhe) – abhaken, antippen öffnet das ToDo in der Liste, „+“ legt ein neues an',
       'Startseite: Begrüßung („Guten Morgen/Abend“) entfernt, Modul-Schaltflächen stehen unter dem ToDo-Ausschnitt',
@@ -967,7 +973,7 @@
       for (const [k, v] of Object.entries(attrs || {})) {
         if (v == null || v === false) continue;
         if (k === 'class') el.className = v;
-        else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+        else if (k === 'style' && typeof v === 'object') { for (const [sk, sv] of Object.entries(v)) { if (sk.startsWith('--')) el.style.setProperty(sk, sv); else el.style[sk] = sv; } }
         else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
         else if (['value', 'checked', 'disabled', 'selected', 'hidden', 'open', 'indeterminate'].includes(k)) el[k] = v;
         else el.setAttribute(k, v === true ? '' : String(v));
@@ -2588,6 +2594,8 @@
     let col;
 
     const DEFAULT_INTERVAL = 120; // 2 Stunden
+    const NAG_OK_DAYS = 2;        // so lange darf ein ToDo liegen bleiben (grün)
+    const NAG_MAX_DAYS = 5;       // ab hier rot
     const cfg = async ctx => ({ intervalMin: await ctx.settings.get('defaultIntervalMin', DEFAULT_INTERVAL), overdueMin: await ctx.settings.get('overdueMin', 15) });
     /** Intervall eines ToDos in Minuten (ältere Einträge haben nur eine Stufen-ID) */
     const ivOf = (ctx, t) => t.intervalMin || (ctx.reminders.STAGES.find(s => s.id === t.stage) || { min: 1440 }).min;
@@ -2688,7 +2696,14 @@
         out.push(h('span', { class: 'pill ' + u }, ctx.ui.icon(t.deadline <= now ? 'alert' : 'calendar'), txt));
       }
       if (!t.done && r && r.nextAt) out.push(h('span', { class: 'pill', title: U.formatDateTimeFull(r.nextAt) }, ctx.ui.icon('bell'), r.nextAt <= now ? 'gleich' : U.relTime(r.nextAt, now)));
-      if (r && r.sentCount) out.push(h('span', { class: 'pill', title: 'Bisherige Erinnerungen' }, `${r.sentCount}× erinnert`));
+      if (r && r.sentCount) {
+        // Farbskala nach offener Zeit: bis 2 Tage grün, dann über Gelb/Orange bis 5 Tage rot
+        const days = Math.max(0, (now - (t.createdAt || now)) / 86400000);
+        const f = t.done ? null : Math.min(1, Math.max(0, (days - NAG_OK_DAYS) / (NAG_MAX_DAYS - NAG_OK_DAYS)));
+        const hue = f == null ? null : Math.round(120 * (1 - f));
+        out.push(h('span', { class: 'pill' + (hue == null ? '' : ' nag'), style: hue == null ? null : { '--nag-h': String(hue) },
+          title: `Bisherige Erinnerungen · offen seit ${U.formatDuration(days * 1440)}` }, `${r.sentCount}× erinnert`));
+      }
       if (t.done && t.doneAt) out.push(h('span', { class: 'pill green' }, ctx.ui.icon('check'), U.formatDate(t.doneAt)));
       return h('div', { class: 't-meta' }, out);
     }
@@ -2817,7 +2832,7 @@
     App.register({
       id: 'todos', name: 'ToDos', icon: 'todos', order: 10,
       description: 'Aufgaben mit hartnäckigen Erinnerungen', category: 'Alltag',
-      version: '1.4.0', schemaVersion: 1, migrations: {},
+      version: '1.5.0', schemaVersion: 1, migrations: {},
 
       async init(ctx) { col = ctx.store.collection('todos', { sync: true }); },
 

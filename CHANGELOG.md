@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.1 – 2026-11-28
+
+- Modul ToDos: Der Hinweis „… × erinnert“ ist farbig nach der Zeit, die das ToDo schon offen ist: bis 2 Tage grün, danach stufenlos über Gelb und Orange bis 5 Tage rot (ab 5 Tagen bleibt es rot). Gilt in der Liste und im Ausschnitt auf der Startseite; erledigte ToDos bleiben grau. Der Tooltip zeigt „offen seit …“.
+- Kern: `ui.h()` setzt auch CSS-Variablen (`style: { '--name': … }`).
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.9.0 – 2026-11-28
 
 - Startseite: scrollbarer Ausschnitt mit den **aktiven ToDos**, etwa ein Drittel der Bildschirmhöhe (mindestens 160 px). Sortiert wie im Modul (überfällig → Abgabe → nächste Erinnerung). Abhaken direkt im Ausschnitt (mit „Rückgängig“), Antippen springt zum ToDo in der Liste, „+“ legt ein neues an.
