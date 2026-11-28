@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.0 – 2026-11-28
+
+- Startseite: scrollbarer Ausschnitt mit den **aktiven ToDos**, etwa ein Drittel der Bildschirmhöhe (mindestens 160 px). Sortiert wie im Modul (überfällig → Abgabe → nächste Erinnerung). Abhaken direkt im Ausschnitt (mit „Rückgängig“), Antippen springt zum ToDo in der Liste, „+“ legt ein neues an.
+- Startseite: Begrüßung („Guten Morgen/Hallo/Guten Abend“) entfernt; das Datum bleibt klein oben. Die Modul-Schaltflächen stehen unter dem ToDo-Ausschnitt.
+- Kern: Der Modul-Hook `widget(el, ctx)` wird jetzt auf der Startseite angezeigt (`Registry.widget`); Ereignis-Abos und Intervalle des Widgets werden beim Verlassen der Startseite beendet. Weitere Module können so eigene Ausschnitte liefern.
+- Modul ToDos 1.4.0 (Widget), Modul Start 1.1.0.
+
+Geänderte Dateien: `index.html`. Worker, `sw.js` und Manifest unverändert. Keine Datenänderung.
+
 ## 1.8.5 – 2026-11-28
 
 - Kern: Die untere Tab-Leiste zeigt nur noch Symbole, ohne Beschriftung. Der Name bleibt für Bedienungshilfen und als Tooltip erhalten; die breite Seitenleiste ab 900 px zeigt weiter Symbol und Name. Alle Tabs passen jetzt ohne Scrollen auf ein Handy.

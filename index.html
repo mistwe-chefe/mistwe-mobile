@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="app-version" content="1.8.5">
+  <meta name="app-version" content="1.9.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192-v2.png">
@@ -149,6 +149,9 @@
   /* ==== ENDE CORE: KOMPONENTEN ==== */
 
   /* ==== MODUL-CSS: start ==== */
+  [data-module="start"] .date { margin: 0 4px 10px; font-size: .9rem; }
+  [data-module="start"] .widgets { display: flex; flex-direction: column; gap: var(--gap); margin-bottom: var(--gap); }
+  [data-module="start"] .widget { padding: 0; overflow: hidden; }
   [data-module="start"] .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--gap); }
   [data-module="start"] .module-btn { min-height: 64px; font-size: 1.05rem; font-weight: 600; background: var(--surface); box-shadow: var(--shadow); gap: 10px; }
   [data-module="start"] .module-btn svg.icon { width: 22px; height: 22px; color: var(--primary); }
@@ -202,6 +205,15 @@
   .iv .iv-field input { text-align: right; min-width: 0; }
   .iv .iv-field span { color: var(--muted); font-size: .88rem; }
   .iv.invalid input { border-color: var(--danger); }
+  /* Startseiten-Ausschnitt (Widget) */
+  .widget[data-module="todos"] .w-head { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-bottom: 1px solid var(--border); }
+  .widget[data-module="todos"] .w-title { flex: 1; display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--text); text-decoration: none; min-height: 40px; }
+  .widget[data-module="todos"] .w-title svg.icon { width: 20px; height: 20px; color: var(--primary); }
+  .widget[data-module="todos"] .w-count { background: var(--primary-bg); color: var(--primary); border-radius: 999px; font-size: .78rem; padding: 1px 8px; font-weight: 700; }
+  .widget[data-module="todos"] .w-scroll { height: max(160px, calc((100dvh - 57px - var(--nav-h) - env(safe-area-inset-bottom)) / 3)); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .widget[data-module="todos"] ul.todo-list { border: 0; border-radius: 0; box-shadow: none; }
+  .widget[data-module="todos"] .empty { padding: 28px 8px; }
+  [data-module="todos"].widget { padding-bottom: 0; }
   /* ==== ENDE MODUL-CSS: todos ==== */
 
   /* ==== MODUL-CSS: ernaehrung ==== */
@@ -355,7 +367,7 @@
 
   /* ---- CORE: Config ---- */
   const CONFIG = {
-    APP_VERSION: '1.8.5',
+    APP_VERSION: '1.9.0',
     DB_NAME: 'persoenliche-app',
     DB_VERSION: 1,                 // IndexedDB-Version: praktisch nie erhöhen
     LS_PREFIX: 'pa:',
@@ -371,6 +383,11 @@
   };
 
   const CHANGELOG = [
+    { version: '1.9.0', date: '2026-11-28', items: [
+      'Startseite: scrollbarer Ausschnitt mit den aktiven ToDos (ca. ein Drittel der Bildschirmhöhe) – abhaken, antippen öffnet das ToDo in der Liste, „+“ legt ein neues an',
+      'Startseite: Begrüßung („Guten Morgen/Abend“) entfernt, Modul-Schaltflächen stehen unter dem ToDo-Ausschnitt',
+      'Kern: Modul-Hook widget wird auf der Startseite angezeigt (Registry.widget mit eigener Aufräum-Funktion)',
+    ] },
     { version: '1.8.5', date: '2026-11-28', items: [
       'Kern: Untere Tab-Leiste zeigt nur noch Symbole, ohne Beschriftung (Name bleibt für Bedienungshilfen und als Tooltip; breite Seitenleiste ab 900 px unverändert)',
       'Modul ernaehrung: neues Symbol Apfel statt Waage',
@@ -1173,6 +1190,21 @@
         catch (e) { Log.error('mount: ' + e.message, id); inner.replaceChildren(UI.errorCard(e, undefined, () => { this.unmount(id); doMount(); })); }
       };
       await doMount();
+    },
+    /** Kachel/Ausschnitt eines Moduls (Hook widget) in el zeichnen, z. B. auf der Startseite.
+        Gibt eine Aufräum-Funktion zurück, die Ereignis-Abos und Intervalle des Widgets beendet. */
+    async widget(id, el) {
+      const def = this.modules.get(id);
+      if (!def || typeof def.widget !== 'function' || !this.isActive(id)) return () => {};
+      const base = this.ctx(id), offs = [];
+      const wctx = Object.create(base);
+      wctx.widget = true;
+      wctx.events = { ...base.events, on: (name, fn) => { const off = Events.on(name, fn); offs.push(off); return off; } };
+      wctx.every = (ms, fn) => { const t = setInterval(fn, ms); offs.push(() => clearInterval(t)); return () => clearInterval(t); };
+      el.setAttribute('data-module', id);   // Modul-CSS greift auch im Widget
+      try { await this.ensureInit(id); await def.widget(el, wctx); }
+      catch (e) { Log.error('widget: ' + e.message, id); el.replaceChildren(UI.errorCard(e)); }
+      return () => { offs.splice(0).forEach(f => { try { f(); } catch (_) {} }); };
     },
     unmount(id) {
       const def = this.modules.get(id), st = this.st(id);
@@ -2188,15 +2220,26 @@
   (() => {
     App.register({
       id: 'start', name: 'Start', icon: 'home', order: 0, system: true,
-      version: '1.0.0', schemaVersion: 1, migrations: {},
+      version: '1.1.0', schemaVersion: 1, migrations: {},
       async mount(el, ctx) {
         const { h } = ctx.ui;
         const S = ctx.system;
         const d = new Date();
-        const greet = d.getHours() < 11 ? 'Guten Morgen' : d.getHours() < 18 ? 'Hallo' : 'Guten Abend';
         const hintsBox = h('div');
+        const widgetsBox = h('div', { class: 'widgets' });
         const tiles = h('div', { class: 'tiles' });
-        el.append(h('h2', {}, greet), h('p', { class: 'muted', style: { marginTop: '-6px' } }, d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })), hintsBox, tiles);
+        el.append(h('p', { class: 'muted date' }, d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })), hintsBox, widgetsBox, tiles);
+
+        // Ausschnitte der Module (Hook widget), z. B. aktive ToDos – über den Kern, nie direkt
+        const renderWidgets = async () => {
+          this._disposeWidgets && this._disposeWidgets();
+          const disposers = [];
+          this._disposeWidgets = () => { disposers.splice(0).forEach(f => f()); };
+          const mods = S.Registry.list().filter(m => !m.system && typeof m.widget === 'function');
+          const boxes = mods.map(() => h('div', { class: 'widget card' }));
+          widgetsBox.replaceChildren(...boxes);
+          for (let i = 0; i < mods.length; i++) disposers.push(await S.Registry.widget(mods[i].id, boxes[i]));
+        };
 
         const renderHints = async () => {
           const hints = await S.hints();
@@ -2211,12 +2254,14 @@
             : [h('div', { class: 'empty' }, 'Keine Module aktiv.')]));
         };
         renderTiles();
+        await renderWidgets();
         await renderHints();
         ctx.events.on('notify:permission', renderHints);
         ctx.events.on('push:changed', renderHints);
         ctx.events.on('sync:status', ctx.util.debounce(renderHints, 500));
-        ctx.events.on('settings:changed', ({ key }) => { if (key === 'hiddenModules') renderTiles(); });
+        ctx.events.on('settings:changed', ({ key }) => { if (key === 'hiddenModules') { renderTiles(); renderWidgets(); } });
       },
+      unmount() { this._disposeWidgets && this._disposeWidgets(); this._disposeWidgets = null; },
     });
   })();
   /* ==== ENDE MODUL: start ==== */
@@ -2772,7 +2817,7 @@
     App.register({
       id: 'todos', name: 'ToDos', icon: 'todos', order: 10,
       description: 'Aufgaben mit hartnäckigen Erinnerungen', category: 'Alltag',
-      version: '1.3.0', schemaVersion: 1, migrations: {},
+      version: '1.4.0', schemaVersion: 1, migrations: {},
 
       async init(ctx) { col = ctx.store.collection('todos', { sync: true }); },
 
@@ -2849,6 +2894,42 @@
       },
 
       unmount() { this._render = null; },
+
+      /** Ausschnitt für die Startseite: aktive ToDos in einem scrollbaren Feld (ca. 1/3 der Bildschirmhöhe) */
+      async widget(el, ctx) {
+        const { h, toast } = ctx.ui;
+        const scroll = h('div', { class: 'w-scroll' });
+        const count = h('span', { class: 'w-count' });
+        el.append(
+          h('div', { class: 'w-head' },
+            h('a', { class: 'w-title', href: ctx.router.link('todos') }, ctx.ui.icon('todos'), h('span', {}, 'ToDos'), count),
+            h('button', { class: 'btn btn-ghost btn-sm', title: 'Neues ToDo', 'aria-label': 'Neues ToDo', disabled: ctx.readOnly, onclick: () => openCreate(ctx) }, ctx.ui.icon('plus'))),
+          scroll);
+        const wrow = (t, now) => {
+          const u = t.deadline ? urgency(t.deadline, now) : null;
+          return h('li', { class: 'todo' + (u === 'red' ? ' overdue' : u === 'orange' ? ' soon' : '') },
+            h('button', { class: 'check', 'aria-label': 'Abhaken', title: 'Abhaken', disabled: ctx.readOnly, onclick: async () => {
+              await complete(ctx, t.id); toast(`„${t.title}“ erledigt `, { action: 'Rückgängig', onAction: () => reopen(ctx, t.id) });
+            } }, h('span')),
+            h('div', { class: 't-body', onclick: () => ctx.router.navigate(`todos/${t.id}`) },
+              h('div', { class: 't-title' }, t.title),
+              metaLine(ctx, t, now)));
+        };
+        const render = async () => {
+          const now = Date.now();
+          const open = (await loadAll(ctx)).filter(t => !t.done).sort(sortOpen(now));
+          const top = scroll.scrollTop;
+          count.textContent = String(open.length);
+          scroll.replaceChildren(open.length ? h('ul', { class: 'todo-list' }, open.map(t => wrow(t, now))) : h('div', { class: 'empty small' }, 'Nichts offen.'));
+          scroll.scrollTop = top;
+        };
+        const re = ctx.util.debounce(render, 150);
+        ctx.events.on('store:changed', e => { if (e.moduleId === 'todos') re(); });
+        ctx.events.on('reminders:changed', re);
+        ctx.events.on('app:visible', re);
+        ctx.every(30000, render);
+        await render();
+      },
 
       async onReminderAction(itemId, action, ctx) {
         if (action === 'done') { const t = await col.get(itemId); if (t && !t.done) await col.update(itemId, { done: true, doneAt: Date.now() }); }
